@@ -2,7 +2,13 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.6: giro y centrado del taxímetro y del
+// Estado del spec: 2026-11-22 (v1.4.7: rediseño compacto del taxímetro
+// corriendo igual que la app real con EL MISMO ícono (MototaxiTopIcon),
+// giro calculado del desplazamiento entre lecturas cuando iOS no trae
+// coords.speed/coords.heading, etiqueta de inicio que nunca tapa el
+// círculo de velocidad, y arreglo del chofer que no podía ponerse en
+// línea (el cliente revisaba status 'activo' en vez de 'aprobado').
+// Antes v1.4.6: giro y centrado del taxímetro y del
 // viaje en vivo en UN SOLO easeTo por actualización — en MapLibre cada
 // easeTo cancela la animación anterior, así que el giro separado lo mataba
 // el centrado y el mapa quedaba siempre en norte-arriba (mototaxi de lado);
@@ -584,7 +590,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.6' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.7' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -1286,6 +1292,10 @@ async function api(req, res, pathname) {
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.status === 'aprobado') return send(res, 200, { ok: true, driver: publicDriver(d), already: true });
     db.prepare(`UPDATE drivers SET status='aprobado' WHERE id=?`).run(body.driver_id);
+    // Defensa: si hubiera otra fila pendiente con el mismo teléfono (registro
+    // duplicado con el número escrito distinto), también queda aprobada: es
+    // la misma persona y si no, su perfil seguiría diciendo "pendiente".
+    db.prepare(`UPDATE drivers SET status='aprobado' WHERE phone=? AND status='pendiente'`).run(d.phone);
     return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id)) });
   }
   if (pathname === '/api/reject-driver') {

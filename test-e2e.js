@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.6 en /api/health', h.ok && h.version === '1.4.6', JSON.stringify(h));
+  check('versión 1.4.7 en /api/health', h.ok && h.version === '1.4.7', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.6', h134.ok && h134.version === '1.4.6', JSON.stringify(h134));
+  check('versión 1.4.7', h134.ok && h134.version === '1.4.7', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -459,6 +459,32 @@ async function api(path, body) {
   check('taxímetro: giro y centrado en UN solo easeTo por lectura', html.includes('function taxiCenterOn(p, zoom, bearing)') && html.includes('taxiFollowCenter({ lat, lng }, newBearing)') && html.includes('if(!taxiFollowCenter({ lat, lng }, newBearing) && newBearing!=null)') && !html.includes('taxiMap.easeTo({ bearing: -taxiLastHeading'));
   check('viaje en vivo: giro y centrado en UN solo easeTo por tick', html.includes('function applyHeading(heading){') && html.includes('liveBearing = applyHeading(h)') && html.includes('opts.bearing = liveBearing') && !html.includes('map.easeTo({ bearing: -liveLastHeading'));
   check('etiqueta "Inicio del recorrido" desplazada 34 px abajo del punto', html.includes('offset: [0, 34]') && html.includes("el.className = 'taxi-start'"));
+  // Rediseño compacto del taxímetro corriendo (v1.4.7, igual que la app real):
+  // mototaxi grande vista desde arriba; Precio final en píldora compacta
+  // centrada; una sola tarjeta final con FINALIZAR a la derecha en la misma
+  // fila; sin píldora de plan ni brújula corriendo; el ícono angosto del
+  // viaje en vivo no se toca.
+  check('taxímetro corriendo: EL MISMO ícono de la app real (MototaxiTopIcon)', html.includes('viewBox="0 0 48 64"') && html.includes('fill="#7dd3fc"') && html.includes('r="5.2"') && html.includes("inner.appendChild(motoIconEl())") && !html.includes('taxiMotoIconEl'));
+  check('taxímetro corriendo: Precio final en píldora compacta centrada', html.includes('.taxidark.taxprice{display:flex;justify-content:center;align-items:center;gap:12px;width:max-content;max-width:75%'));
+  check('taxímetro corriendo: una sola tarjeta final con FINALIZAR a la derecha', html.includes('class="taxidark taxifinal"') && html.includes('.taxidark.taxifinal{display:flex;align-items:center;gap:12px}') && html.includes('.taxidark.taxifinal button{width:auto;margin-top:0;'));
+  check('taxímetro corriendo: sin píldora de plan ni brújula', !html.includes("top.innerHTML = taxiLimitHtml(true)\n      + '<div class=\"taxidark\">'") && html.includes("zoom.classList.add('hidden'); compass.classList.add('hidden'); // sin brújula corriendo"));
+  check('taxímetro corriendo: la píldora de plan se queda en el inicio', html.includes('top.innerHTML = taxiLimitHtml(true)') && html.includes('function taxiLimitHtml(dark)'));
+  // Giro sin depender de coords.speed/coords.heading (v1.4.7): en iOS llegan
+  // null andando y el rumbo nunca se calculaba (mapa siempre en norte-arriba).
+  // Ahora velocidad y rumbo salen del desplazamiento entre lecturas.
+  check('taxímetro: velocidad y rumbo del desplazamiento entre lecturas (sin coords.speed)', html.includes('let lastFix = null;') && html.includes('havKm(lastFix.lat, lastFix.lng, lat, lng)') && html.includes('speedKmh = (dt > 0 && dd >= 0.0025) ? (dd / (dt / 3600)) : 0') && html.includes('h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360') && html.includes('lastFix = { lat, lng, t: now };'));
+  // Etiqueta "Inicio del recorrido" nunca tapada por el círculo de velocidad.
+  check('taxímetro: la etiqueta de inicio se corre si el círculo la taparía', html.includes('function adjustTaxiStartOffset(){') && html.includes('taxiStartMarker.setOffset([offX, 34])') && html.includes("taxiMap.on('move', adjustTaxiStartOffset)") && html.includes('adjustTaxiStartOffset();'));
+  // Aprobación del chofer (v1.4.7): el inicio del chofer revisaba
+  // d.status === 'activo' (valor de NEGOCIOS), así que un chofer aprobado
+  // ('aprobado') siempre veía "pendiente" y el botón deshabilitado, aunque
+  // el admin ya lo hubiera aprobado y la lista de solicitudes estuviera
+  // vacía. Ahora revisa 'aprobado', el estado se refresca del servidor al
+  // abrir el inicio y al tocar "Ponerme en línea", y aprobar activa
+  // también cualquier fila pendiente con el mismo teléfono.
+  check('chofer: el inicio revisa status aprobado (no activo)', html.includes("const approved = d.status === 'aprobado';") && !html.includes("d.status === 'activo'"));
+  check('chofer: el estado se refresca del servidor al abrir el inicio y al ponerse en línea', html.includes('function refreshMyDriver(){') && html.includes("refreshMyDriver().then(d=>{ if(d && currentView==='chofer' && driverTabName==='inicio') renderDriverHome(); })") && html.includes('await refreshMyDriver();'));
+  check('chofer: aprobar activa también las filas pendientes del mismo teléfono', srv.includes("UPDATE drivers SET status='aprobado' WHERE phone=? AND status='pendiente'"));
 
   console.log('== Correcciones: acepta instantáneo, rejilla $5, límites, mandados, citas, anuncios, pago ==');
   // (2) Rejilla de $5 en aceptar_precio y en acepta.
