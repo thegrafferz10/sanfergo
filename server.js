@@ -2,11 +2,12 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.3.6: el admin entra DIRECTO a su panel al
+// Estado del spec: 2026-11-22 (v1.3.7: el admin entra DIRECTO a su panel al
 // iniciar sesión; chofer nuevo nace PENDIENTE hasta que el admin lo aprueba;
 // Negocios desbloqueado con modelo por tipo (entrega/catálogo/citas) y
 // paquete Premium $100/mes; anuncios de entrada flotantes, uno al azar por
-// entrada, precargados; cada opción del panel abre su propia pantalla).
+// entrada, precargados; cada opción del panel abre su propia pantalla;
+// sin tarjeta Cosas perdidas en el inicio, igual que la app real).
 // Tarifa: $10 de salida + $2.50 cada 300 m; espera $1.25/min (parado, < ~5 km/h);
 // mínimo por viaje $20; cada parada extra de mandado +$10.
 // Cuentas: nombre, usuario, número y/o correo, contraseña con hash scrypt.
@@ -498,7 +499,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.3.6' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.3.7' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
