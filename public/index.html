@@ -412,7 +412,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.7) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.8) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2713,14 +2713,13 @@ function startTaxiTick(){
 }
 function startTaxiWatch(){
   if(taxiWatchId!=null || !navigator.geolocation) return;
-  // Última lectura aceptada (posición + hora): en iOS coords.speed y
-  // coords.heading llegan null aunque la mototaxi vaya andando, y con
-  // speedKmh = 0 el rumbo nunca se calculaba y el mapa quedaba siempre en
-  // norte-arriba (la mototaxi iba de lado). Por eso la velocidad y el rumbo
-  // se calculan del desplazamiento entre lecturas cuando el GPS no los
-  // trae; coords.speed/coords.heading solo mandan si traen un valor
-  // válido. La tarifa y el conteo de km/espera NO cambian (el umbral de
-  // 4 m queda solo para cobrar).
+  // Última lectura aceptada (posición + hora): en iOS coords.speed llega
+  // null aunque la mototaxi vaya andando, y con speedKmh = 0 el rumbo nunca
+  // se calculaba y el mapa quedaba siempre en norte-arriba (la mototaxi iba
+  // de lado). Por eso la velocidad y el rumbo se calculan del desplazamiento
+  // entre lecturas cuando el GPS no los trae; coords.speed solo manda si
+  // trae un valor válido. La tarifa y el conteo de km/espera NO cambian (el
+  // umbral de 4 m queda solo para cobrar).
   let lastFix = null;
   taxiWatchId = navigator.geolocation.watchPosition(pos=>{
     const s = loadTaxi(); if(!s || !s.running) return;
@@ -2756,19 +2755,24 @@ function startTaxiWatch(){
         if(taxiMarker) taxiMarker.setLngLat([lng, lat]);
         else markTaxiHere({ lat, lng });
         // heading-up: la mototaxi apunta arriba y el mapa gira debajo.
-        // Rumbo del GPS si viene válido; si no, del desplazamiento entre
-        // lecturas (≥ 2 m), sin depender de coords.speed. bearing = -heading
-        // (rumbo horario desde el norte; el mapa gira al revés para dejarlo
-        // arriba).
+        // Rumbo SIEMPRE del desplazamiento entre lecturas (≥ 2 m), sin
+        // depender de la brújula del teléfono: es la dirección real del
+        // viaje. bearing = -heading (rumbo horario desde el norte; el mapa
+        // gira al revés para dejarlo arriba).
         // UN SOLO easeTo por lectura: el giro viaja dentro del centrado de
         // taxiFollowCenter; si no se recentra (seguimiento apagado o guarda
         // de 2 m), el giro va solo en su propio easeTo. Dos easeTo seguidos
         // se cancelan entre sí y el mapa quedaba siempre en norte-arriba.
         let newBearing = null;
         if(speedKmh >= 5){
+          // El rumbo es SIEMPRE el del desplazamiento entre lecturas: es la
+          // verdadera dirección del viaje. La brújula del teléfono (hacia
+          // dónde apunta el aparato) NO se usa nunca para el giro: en la
+          // mototaxi el teléfono va en el bolsillo o en el tablero mirando
+          // al chofer, así que apunta al revés del viaje y el mapa giraba
+          // 180° al revés (la moto parecía ir hacia abajo, captura 4:56).
           let h = null;
-          if(pos.coords.heading!=null && !isNaN(pos.coords.heading)) h = pos.coords.heading;
-          else if(lastFix && havKm(lastFix.lat, lastFix.lng, lat, lng) >= 0.002){
+          if(lastFix && havKm(lastFix.lat, lastFix.lng, lat, lng) >= 0.002){
             h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360;
           }
           if(h!=null){
