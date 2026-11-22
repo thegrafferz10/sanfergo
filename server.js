@@ -2,10 +2,12 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.1: taxímetro igual que la app real —
-// tarjetas oscuras, mototaxi con "Vas aquí"/"Estás aquí", círculo de
-// velocidad, zoom propio y barra inferior del modo chofer; la tarifa y la
-// lógica no cambian. Antes v1.4.0: revisión completa contra la app real v104)
+// Estado del spec: 2026-11-22 (v1.4.2: index.html y manifest sin caché —
+// los teléfonos siempre bajan la versión nueva tras cada despliegue.
+// Antes v1.4.1: taxímetro igual que la app real — tarjetas oscuras,
+// mototaxi con "Vas aquí"/"Estás aquí", círculo de velocidad, zoom propio
+// y barra inferior del modo chofer; la tarifa y la lógica no cambian.
+// Antes v1.4.0: revisión completa contra la app real v104)
 // v1.3.9: el admin entra DIRECTO a su panel al
 // iniciar sesión; chofer nuevo nace PENDIENTE hasta que el admin lo aprueba;
 // Negocios desbloqueado con modelo por tipo (entrega/catálogo/citas) y
@@ -563,7 +565,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.1' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.2' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -1586,7 +1588,12 @@ const server = http.createServer(async (req, res) => {
     if (!file.startsWith(PUBLIC_DIR) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('No encontrado');
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+    const headers = { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' };
+    // index.html y el manifest se sirven sin caché: así los teléfonos siempre
+    // bajan la versión nueva tras cada despliegue (antes el taxímetro viejo
+    // seguía apareciendo aunque /api/health ya devolvía la versión nueva).
+    if (pathname === '/index.html' || pathname === '/manifest.webmanifest') headers['Cache-Control'] = 'no-cache';
+    res.writeHead(200, headers);
     fs.createReadStream(file).pipe(res);
   } catch (e) {
     console.error(e);

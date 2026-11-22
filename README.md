@@ -1,9 +1,13 @@
-# SanFerGo — versión pública (v1.4.1)
+# SanFerGo — versión pública (v1.4.2)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.2 (2026-11-22) — index.html y manifest sin caché
+
+- `index.html` y `manifest.webmanifest` se sirven con `Cache-Control: no-cache`: el teléfono revalida siempre y baja la versión nueva tras cada despliegue. Antes los teléfonos seguían mostrando el index.html viejo (p. ej. el taxímetro viejo con tarjetas blancas y botón Volver) aunque `/api/health` ya devolvía la versión nueva. Los demás archivos estáticos siguen con caché normal. Sin cambios de diseño, lógica, tarifa ni rutas.
 
 ## v1.4.1 (2026-11-22) — taxímetro igual que la app real
 
