@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.0)
+# SanFerGo — versión pública (v1.4.1)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.1 (2026-11-22) — taxímetro igual que la app real
+
+- Inicio del taxímetro: píldora oscura del plan (gratis o Premium), mototaxi centrada en el mapa con la píldora verde "Estás aquí", controles de zoom (+/−/brújula) arriba a la derecha y tarjeta oscura con el texto del aproximado + botón ámbar "INICIAR" a la derecha. Sin línea de tarifa ni botón "Volver": la salida es la barra inferior Inicio / Taxímetro / Recibir Viajes.
+- Taxímetro corriendo: tarjeta oscura arriba con Tiempo (barra + "N seg"), Distancia (barra + "N m") y Espera ("Detenido HH:MM:SS · +$X.XX" o "En movimiento"); mototaxi en el centro del mapa con la píldora verde "Vas aquí" y la etiqueta "Inicio del recorrido" en el punto de partida; círculo negro con la velocidad ("17 Km/h"); tarjeta oscura de "Precio final $X.XX" exacto; tarjeta oscura abajo con "Tiempo de viaje HH:MM:SS", "Kilómetros" y botón ámbar "FINALIZAR". El mapa sigue a la mototaxi y gira con su rumbo (heading-up) como en la app real; al mover el mapa aparece el botón oscuro para volver a la vista de seguimiento. La píldora oscura del plan sigue visible mientras corre.
+- Sin cambios de lógica: la tarifa ($10 base + $2.50 cada 300 m, espera $1.25/min, mínimo $20), el conteo de distancia/tiempo/espera, la velocidad y el precio final se calculan exactamente como antes; solo cambia la presentación. Al volver a entrar al taxímetro con un recorrido en curso se restaura la etiqueta de inicio y la línea de ruta.
 
 ## v1.4.0 (2026-11-22) — revisión completa contra la app real (v104)
 
