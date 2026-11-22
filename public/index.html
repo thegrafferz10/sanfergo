@@ -203,8 +203,7 @@ input[type=file]{padding:8px}
     <div class="menu-grid">
       <button class="menu-item" onclick="go('viajes')"><span class="ic">🛺</span><span><span class="t">Viajes</span><br><span class="s">Mototaxi · tú pones tu precio</span></span></button>
       <button class="menu-item" style="background:#0b5fa5" onclick="go('mandados')"><span class="ic">📦</span><span><span class="t">Mandados</span><br><span class="s">Moto o mototaxi · lo que necesites</span></span></button>
-      <button class="menu-item" style="background:#7c3aed" onclick="openNegocios()"><span class="ic">🏪</span><span><span class="t">Negocios</span><br><span class="s">Tiendas y servicios de San Fernando</span></span></button>
-      <button class="menu-item" style="background:#b45309" onclick="go('perdidos')"><span class="ic">🔍</span><span><span class="t">Cosas perdidas</span><br><span class="s">¿Olvidaste algo en el viaje?</span></span></button>
+      <button class="menu-item" style="background:#7c3aed;grid-column:1/-1" onclick="openNegocios()"><span class="ic">🏪</span><span><span class="t">Negocios</span><br><span class="s">Tiendas y servicios de San Fernando</span></span></button>
     </div>
     <div id="home-driver-btn"></div>
     <div id="home-account-link" class="center" style="margin-top:14px"></div>
@@ -287,7 +286,7 @@ input[type=file]{padding:8px}
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.6) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.7) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.8709, lng: -93.2063 };
