@@ -1,9 +1,12 @@
-# SanFerGo — versión pública (v1.3.7)
+# SanFerGo — versión pública (v1.3.8)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.3.8 (2026-11-22) — paso de origen igual que la app real
+- El paso "¿De dónde sales?" ahora son dos tarjetas como en la app real: "Usar ubicación actual" destacada con borde verde e ícono de mira (abre el mapa con el pin en el GPS para confirmar o arrastrar) y "Ubicar un punto en el mapa" con ícono de pin (abre el mapa para tocar el punto). El flujo no cambia.
 
 ## v1.3.7 (2026-11-22) — inicio igual que la app real
 - Quitada la tarjeta "Cosas perdidas" del inicio: el inicio muestra solo Viajes, Mandados y Negocios (Negocios ocupa todo el ancho de la segunda fila). La sección de Cosas perdidas sigue existiendo en el servidor y sus endpoints, solo ya no se entra desde el inicio.
