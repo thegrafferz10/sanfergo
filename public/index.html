@@ -143,7 +143,7 @@ input[type=file]{padding:8px}
 .strip.bottom.paxbot .drivercard{background:rgba(255,255,255,.96);border-radius:14px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
 .strip.bottom.paxbot .drivercard .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
 .recenter{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);z-index:60;background:#16a34a;color:#fff;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.compassbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 170px);z-index:60;background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:50%;width:42px;height:42px;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.compassbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 170px);z-index:60;background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:50%;width:36px;height:36px;font-size:17px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 /* Diálogo (resumen / recibo) */
 .dialog{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
 .dialog .box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:88dvh;overflow:auto;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
@@ -199,18 +199,18 @@ input[type=file]{padding:8px}
 .taxidark.taxiidle{display:flex;align-items:center;gap:12px}
 .taxidark.taxiidle .td-disc{flex:1;font-size:13px;line-height:1.4;opacity:.95}
 .strip .taxidark.taxiidle button{width:auto;margin-top:0;padding:13px 22px;flex-shrink:0}
-.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:76px;height:76px;border-radius:50%;background:rgba(17,24,39,.9);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:61}
-.taxispeed b{font-size:26px;line-height:1}
-.taxispeed span{font-size:12px}
+.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:62px;height:62px;border-radius:50%;background:rgba(17,24,39,.9);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:61}
+.taxispeed b{font-size:21px;line-height:1}
+.taxispeed span{font-size:10px}
 .taxi-moto{pointer-events:none}
 .taxi-moto-inner{transform:translateY(-13px);display:flex;flex-direction:column;align-items:center}
-.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.4);margin-bottom:2px;white-space:nowrap}
-.taxi-start{background:#fff;color:#111827;font-weight:700;font-size:12px;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap}
+.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.4);margin-bottom:2px;white-space:nowrap}
+.taxi-start{background:#fff;color:#111827;font-weight:700;font-size:11px;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap}
 .taxizoom{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:60;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.taxizoom button{width:42px;height:42px;font-size:20px;font-weight:700;color:var(--dark)}
+.taxizoom button{width:36px;height:36px;font-size:17px;font-weight:700;color:var(--dark)}
 .taxizoom button+button{border-top:1px solid var(--line)}
-#taxi-compass{top:calc(env(safe-area-inset-top,0px) + 222px)}
-#taxi-recenter{top:calc(env(safe-area-inset-top,0px) + 274px);bottom:auto;background:rgba(17,24,39,.9);color:#fff}
+#taxi-compass{top:calc(env(safe-area-inset-top,0px) + 204px)}
+#taxi-recenter{top:calc(env(safe-area-inset-top,0px) + 256px);bottom:auto;background:rgba(17,24,39,.9);color:#fff}
 .pickrow{display:flex;gap:8px;align-items:center;min-width:0}
 .pickrow .backpill{flex-shrink:0}
 .pickrow .chip{flex:1;min-width:0}
@@ -403,7 +403,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.4) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.6) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -722,6 +722,26 @@ function makeMap(id, dark){
     moveTimer = setTimeout(()=>{ if(!m._fellBack && !m.areTilesLoaded()) fallBack(); }, 5000);
   });
   return m;
+}
+/* Mapas en vivo (taxímetro y viaje): que el mapa quede libre — se ocultan
+   las capas de símbolos de puntos de interés del estilo vectorial (los
+   nombres de negocios); se quedan los nombres de calles y las colonias.
+   Solo se tocan capas de símbolo con "poi" en el id; si el estilo no tiene
+   ninguna, no pasa nada. En el respaldo ráster OSM no hay capas vectoriales,
+   así que ahí tampoco pasa nada. Se re-aplica en cada style.load porque
+   setStyle resetea las capas. */
+function hidePoiLabels(map){
+  try {
+    const st = map.getStyle && map.getStyle();
+    (st && st.layers || []).forEach(l=>{
+      if(l.type === 'symbol' && /poi/i.test(l.id || '')) map.setLayoutProperty(l.id, 'visibility', 'none');
+    });
+  } catch(e){}
+}
+function declutterLiveMap(map){
+  if(!map) return;
+  try { if(map.isStyleLoaded && map.isStyleLoaded()) hidePoiLabels(map); } catch(e){}
+  map.on('style.load', ()=>hidePoiLabels(map));
 }
 function dotEl(color, size){
   const el = document.createElement('div');
@@ -2019,6 +2039,7 @@ async function openLiveTrip(requestId, asDriver){
   acquireWakeLock();
   if(!liveMap){
     liveMap = makeMap('live-map', true);
+    declutterLiveMap(liveMap);
     liveMap.on('dragstart', liveFollowOff);
     liveMap.on('zoomstart', liveFollowOff);
     liveMap.on('rotatestart', liveFollowOff);
@@ -2088,13 +2109,17 @@ function liveRecenter(){
   if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: 17, padding: liveFollowPadding(), duration: 500 });
 }
 function liveResetNorth(){ if(liveMap) liveMap.easeTo({ bearing: 0, duration: 400 }); }
-function applyHeading(map, heading){
-  if(heading==null) return;
+/* heading-up del viaje en vivo: solo calcula el rumbo suavizado y lo
+   devuelve; NO hace easeTo aquí: el giro viaja junto con el centrado en
+   UNA sola llamada del polling (dos easeTo seguidos se cancelan entre sí
+   en MapLibre y el mapa quedaba siempre en norte-arriba). */
+function applyHeading(heading){
+  if(heading==null) return null;
   if(liveLastHeading==null) liveLastHeading = heading;
   let d = heading - liveLastHeading;
   while(d > 180) d -= 360; while(d < -180) d += 360;
-  liveLastHeading += d * 0.5; // suavizado ~500 ms
-  map.easeTo({ bearing: -liveLastHeading, duration: 500 });
+  liveLastHeading += d * 0.7; // suavizado más reactivo, igual que el taxímetro
+  return -liveLastHeading;
 }
 function renderLiveStrips(){
   const r = liveReq; if(!r) return;
@@ -2283,12 +2308,21 @@ function startLivePolling(){
       if(r.driver_lat && liveDriverMarker){
         const ll = { lng: r.driver_lng, lat: r.driver_lat };
         liveDriverMarker.setLngLat([ll.lng, ll.lat]);
-        // heading-up: rumbo desde el movimiento
+        // heading-up: rumbo desde el movimiento; UN SOLO easeTo por tick
+        // (centro + giro juntos en liveFollow, giro solo si no hay
+        // seguimiento): el giro separado lo cancelaba el centrado.
+        let liveBearing = null;
         if(prevLat!=null && (Math.abs(r.driver_lat-prevLat)>0.00002 || Math.abs(r.driver_lng-prevLng)>0.00002)){
           const h = (Math.atan2(r.driver_lng-prevLng, r.driver_lat-prevLat) * 180/Math.PI + 360) % 360;
-          applyHeading(liveMap, h);
+          liveBearing = applyHeading(h);
         }
-        if(liveFollow) liveMap.easeTo({ center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 });
+        if(liveFollow){
+          const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
+          if(liveBearing!=null) opts.bearing = liveBearing;
+          liveMap.easeTo(opts);
+        } else if(liveBearing!=null){
+          liveMap.easeTo({ bearing: liveBearing, duration: 300 });
+        }
         if(liveRouteCoords && liveRouteCoords.length){
           // tramo recorrido en azul claro
           let best=0, bd=1e9;
@@ -2320,7 +2354,7 @@ function startDriverGpsWatch(){
 /* ===== TAXÍMETRO — motor con reloj de pared (sobrevive cambios de pestaña) ===== */
 const TAXI_KEY = 'sanfergo_taximeter_v1';
 const TAXI_HIST_KEY = 'sanfergo_taximeter_history_v1';
-let taxiMap = null, taxiFromDriver = false, taxiMarker = null, taxiFollow = false, taxiLastHeading = null;
+let taxiMap = null, taxiFromDriver = false, taxiMarker = null, taxiFollow = false, taxiLastHeading = null, taxiCenterLat = null, taxiCenterLng = null;
 let taxiWatchId = null, taxiTick = null;
 function loadTaxi(){
   try { return JSON.parse(localStorage.getItem(TAXI_KEY) || 'null'); } catch(e){ return null; }
@@ -2394,9 +2428,27 @@ function followPadding(topId, botId, defTop, defBot){
 }
 function taxiFollowPadding(){ return followPadding('taxi-top', 'taxi-bottom', 170, 280); }
 function liveFollowPadding(){ return followPadding('live-top', 'live-bottom', 170, 280); }
-function taxiCenterOn(p, zoom){
+/* UN SOLO easeTo por actualización: en MapLibre cada easeTo cancela la
+   animación anterior, así que si el giro y el centrado van en dos llamadas
+   seguidas el segundo mata al primero y el mapa nunca gira (quedaba siempre
+   en norte-arriba y la mototaxi iba de lado). Por eso el centrado acepta el
+   bearing y viajan juntos; si no se recentra, el giro va solo. */
+function taxiCenterOn(p, zoom, bearing){
   if(!taxiMap) return;
-  taxiMap.easeTo({ center: [p.lng, p.lat], zoom: zoom || 17, padding: taxiFollowPadding(), duration: 600 });
+  const opts = { center: [p.lng, p.lat], zoom: zoom || 17, padding: taxiFollowPadding(), duration: 600 };
+  if(bearing!=null) opts.bearing = bearing;
+  taxiMap.easeTo(opts);
+}
+/* Centrado en seguimiento con guarda de 2 m: el mapa sigue cada lectura,
+   pero no se recentra por el temblor del GPS parado (si no, el mapa
+   "respira" solo). Al arrancar o al tocar "Centrar", la guarda se resetea
+   para que el primer centrado sea inmediato. Devuelve true si recentró
+   (para que quien llama sepa si el giro ya viajó dentro de ese easeTo). */
+function taxiFollowCenter(p, bearing){
+  if(!taxiFollow || !taxiMap) return false;
+  if(taxiCenterLat!=null && havKm(taxiCenterLat, taxiCenterLng, p.lat, p.lng) < 0.002) return false;
+  taxiCenterOn(p, undefined, bearing); taxiCenterLat = p.lat; taxiCenterLng = p.lng;
+  return true;
 }
 function openTaximeter(fromDriver){
   taxiFromDriver = !!fromDriver;
@@ -2408,6 +2460,7 @@ function openTaximeter(fromDriver){
   if(s && s.running) acquireWakeLock();
   if(!taxiMap){
     taxiMap = makeMap('taxi-map', true);
+    declutterLiveMap(taxiMap);
     taxiMap.on('dragstart', taxiFollowOff);
     taxiMap.on('zoomstart', taxiFollowOff);
     taxiMap.on('rotatestart', taxiFollowOff);
@@ -2467,7 +2520,10 @@ function markTaxiStart(p){
   if(taxiStartMarker) taxiStartMarker.remove();
   const el = document.createElement('div');
   el.className = 'taxi-start'; el.textContent = 'Inicio del recorrido';
-  taxiStartMarker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(taxiMap);
+  // Al inicio la mototaxi está sobre este mismo punto y su píldora
+  // "Vas aquí" + ícono se extienden hacia arriba desde el punto: la
+  // etiqueta va 34 px hacia abajo para no taparla nunca.
+  taxiStartMarker = new maplibregl.Marker({ element: el, offset: [0, 34] }).setLngLat([p.lng, p.lat]).addTo(taxiMap);
 }
 function clearTaxiStart(){ if(taxiStartMarker){ taxiStartMarker.remove(); taxiStartMarker = null; } }
 function markTaxiHere(p){
@@ -2536,8 +2592,8 @@ function taxiReset(){
 function taxiRecenter(){
   taxiFollow = true; $('#taxi-recenter').classList.add('hidden');
   const s = loadTaxi();
-  if(taxiMap && s && s.lastLat!=null) taxiCenterOn({ lat: s.lastLat, lng: s.lastLng });
-  else if(taxiMap) myLocation().then(p=>taxiCenterOn(p)).catch(()=>{});
+  if(taxiMap && s && s.lastLat!=null){ taxiCenterOn({ lat: s.lastLat, lng: s.lastLng }); taxiCenterLat = s.lastLat; taxiCenterLng = s.lastLng; }
+  else if(taxiMap) myLocation().then(p=>{ taxiCenterOn(p); taxiCenterLat = p.lat; taxiCenterLng = p.lng; }).catch(()=>{});
 }
 function taxiResetNorth(){ if(taxiMap) taxiMap.easeTo({ bearing: 0, duration: 400 }); }
 function taxiZoom(d){ if(taxiMap) taxiMap.easeTo({ zoom: Math.min(20, Math.max(10, (taxiMap.getZoom()||15) + d)), duration: 300 }); }
@@ -2548,10 +2604,13 @@ function startTaxi(){
   saveTaxi(s);
   acquireWakeLock();
   taxiFollow = true; $('#taxi-recenter').classList.add('hidden');
+  taxiCenterLat = null; taxiCenterLng = null; // primer centrado inmediato
+  taxiLastHeading = null; // el rumbo no se hereda del recorrido anterior
   if(taxiMap){
     removeRouteLine(taxiMap, 'taxiroute');
     myLocation().then(p=>{
       taxiCenterOn(p);
+      taxiCenterLat = p.lat; taxiCenterLng = p.lng;
       markTaxiHere(p);
       markTaxiStart(p);
     }).catch(()=>{});
@@ -2602,33 +2661,52 @@ function startTaxiWatch(){
     s.lastCountAt = Date.now();
     if(s.lastLat!=null){
       const d = havKm(s.lastLat, s.lastLng, lat, lng);
-      if(d >= 0.004){ // los pasos cuentan desde 4 m
+      // El umbral de 4 m es SOLO para cobrar la distancia: a 12 km/h
+      // (~3.3 m/s) casi todos los pasos quedan por debajo y el mapa antes
+      // solo se movía en los saltos — por eso el camino se veía de lado.
+      if(d >= 0.004){ // los pasos cuentan desde 4 m SOLO para la tarifa
         s.km = (s.km||0) + d;
         s.lastLat = lat; s.lastLng = lng;
         s.points = s.points || [];
         s.points.push([lng, lat]);
-        if(taxiMap){
-          setRouteLine(taxiMap, 'taxiroute', smoothTrack(s.points), '#2b7de9', 5);
-          if(taxiMarker) taxiMarker.setLngLat([lng, lat]);
-          else markTaxiHere({ lat, lng });
-          // heading-up: la mototaxi apunta arriba y el mapa gira debajo
-          const prev = s.points.length>1 ? s.points[s.points.length-2] : null;
-          if(prev){
-            const h = (Math.atan2(lng-prev[0], lat-prev[1]) * 180/Math.PI + 360) % 360;
-            if(speedKmh >= 5){
-              if(taxiLastHeading==null) taxiLastHeading = h;
-              let dd = h - taxiLastHeading; while(dd>180) dd-=360; while(dd<-180) dd+=360;
-              taxiLastHeading += dd * 0.5;
-              taxiMap.easeTo({ bearing: -taxiLastHeading, duration: 500 });
-            }
+        if(taxiMap) setRouteLine(taxiMap, 'taxiroute', smoothTrack(s.points), '#2b7de9', 5);
+      }
+      // El movimiento del mapa va en CADA lectura aceptada, aunque el paso
+      // sea menor de 4 m: marcador, centrado y giro heading-up.
+      if(taxiMap){
+        if(taxiMarker) taxiMarker.setLngLat([lng, lat]);
+        else markTaxiHere({ lat, lng });
+        // heading-up: la mototaxi apunta arriba y el mapa gira debajo.
+        // Rumbo del GPS si viene (iOS lo da andando); si no, de los puntos
+        // con ≥ 2 m de desplazamiento. bearing = -heading (rumbo horario
+        // desde el norte; el mapa gira al revés para dejarlo arriba).
+        // UN SOLO easeTo por lectura: el giro viaja dentro del centrado de
+        // taxiFollowCenter; si no se recentra (seguimiento apagado o guarda
+        // de 2 m), el giro va solo en su propio easeTo. Dos easeTo seguidos
+        // se cancelan entre sí y el mapa quedaba siempre en norte-arriba.
+        let newBearing = null;
+        if(speedKmh >= 5){
+          let h = null;
+          if(pos.coords.heading!=null && !isNaN(pos.coords.heading)) h = pos.coords.heading;
+          else {
+            const pts = s.points || [];
+            let prev = null;
+            for(let i=pts.length-1;i>=0;i--){ if(havKm(pts[i][1], pts[i][0], lat, lng) >= 0.002){ prev = pts[i]; break; } }
+            if(prev) h = (Math.atan2(lng-prev[0], lat-prev[1]) * 180/Math.PI + 360) % 360;
           }
-          if(taxiFollow) taxiCenterOn({ lat, lng });
+          if(h!=null){
+            if(taxiLastHeading==null) taxiLastHeading = h;
+            let dd = h - taxiLastHeading; while(dd>180) dd-=360; while(dd<-180) dd+=360;
+            taxiLastHeading += dd * 0.7;
+            newBearing = -taxiLastHeading;
+          }
         }
+        if(!taxiFollowCenter({ lat, lng }, newBearing) && newBearing!=null) taxiMap.easeTo({ bearing: newBearing, duration: 300 });
       }
     } else {
       s.lastLat = lat; s.lastLng = lng;
       s.points = [[lng, lat]];
-      if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); if(taxiFollow) taxiCenterOn({ lat, lng }); }
+      if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); taxiFollowCenter({ lat, lng }); }
     }
     saveTaxi(s);
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 2000 });
