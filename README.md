@@ -1,9 +1,21 @@
-# SanFerGo — versión pública (v1.4.4)
+# SanFerGo — versión pública (v1.4.6)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.6 (2026-11-22) — el giro del taxímetro ya gira de verdad (un solo easeTo)
+
+- Causa raíz del video del usuario (45 s andando, 0 a 19 km/h, el mapa no giró nunca y la calle quedó diagonal): en `startTaxiWatch()` había DOS `easeTo` seguidos en el mismo callback — primero el del giro (`bearing: -taxiLastHeading, duration: 300`) y enseguida el del centrado (`taxiFollowCenter` → `taxiCenterOn`, `duration: 600`). En MapLibre cada `easeTo` cancela la animación anterior, así que el giro se cancelaba antes de pintar un cuadro y el mapa quedaba siempre en norte-arriba. El mismo patrón existía en el viaje en vivo (`applyHeading` + el centrado del polling cada 5 s). Ahora NUNCA hay dos `easeTo` seguidos para el mismo mapa en el mismo tick: en el taxímetro `taxiFollowCenter()` acepta el bearing y hace UN SOLO `easeTo` con centro + giro + padding (si no se recentra — seguimiento apagado o guarda de 2 m — el giro va solo en su propio `easeTo`); en el viaje en vivo `applyHeading()` ya no anima, solo devuelve el rumbo suavizado, y el polling hace UNA sola llamada con centro + bearing + padding. La guarda de 2 m, `coords.heading`, el suavizado 0.7 y el umbral de 4 m solo-para-tarifa de v1.4.5 se quedan como están.
+- Dato del video: al inicio del recorrido las píldoras "Vas aquí" (verde) e "Inicio del recorrido" (blanca) se encimaban porque el punto de inicio y la mototaxi están casi en el mismo lugar. La etiqueta "Inicio del recorrido" ahora va 34 px hacia abajo del punto (offset del marcador) para no tapar nunca la píldora de la mototaxi.
+- Sin cambios de tarifa, conteo, límites (50), diseño de tarjetas ni etiquetas del mapa. El giro con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo andando en la mototaxi.
+
+## v1.4.5 (2026-11-22) — el taxímetro gira derecho y el mapa queda libre
+
+- Causa: todo el movimiento del mapa (marcador, centrado y giro heading-up) estaba dentro del `if(d >= 0.004)` de la tarifa. A 12 km/h (~3.3 m/s) casi todos los pasos GPS quedan por debajo de 4 m y se rechazaban, así que el mapa solo se movía en los saltos ocasionales, con rumbo de puntos saltados y ruidosos — por eso el camino se veía de lado en vez de recto hacia arriba. Ahora el marcador, el centrado y el giro se actualizan en CADA lectura GPS aceptada (accuracy ≤ 150 m); el umbral de 4 m queda solo para sumar km a la tarifa y agregar puntos a la ruta. Sin cambios de tarifa ni de conteo de km/espera.
+- Rumbo más reactivo: se usa `pos.coords.heading` del GPS cuando viene (iOS lo da andando) y velocidad ≥ 5 km/h; si no viene, se calcula de los puntos con ≥ 2 m de desplazamiento. Suavizado de 0.5 a 0.7 y duración del giro de 500 a 300 ms, para que el camino quede recto hacia arriba. El signo del bearing se verificó: bearing = -heading. Lo mismo (0.7 / 300 ms) en el giro del viaje en vivo (`applyHeading`).
+- Mapa despejado: en el taxímetro y en el viaje en vivo se ocultan las capas de símbolos de puntos de interés del estilo vectorial (los nombres de negocios); se quedan los nombres de calles. Además se achicaron los controles: círculo de velocidad 76→62 px, botones de zoom/brújula 42→36 px, píldoras "Vas aquí" e "Inicio del recorrido" de 12 a 11 px. Las tarjetas (Tiempo/Distancia/Espera, Precio final, Tiempo/Kilómetros + FINALIZAR) no se tocaron. El giro con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo andando en la mototaxi.
 
 ## v1.4.4 (2026-11-22) — seguimiento del taxímetro: la mototaxi ya no se pierde
 

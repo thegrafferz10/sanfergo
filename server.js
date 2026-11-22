@@ -2,13 +2,25 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.4: seguimiento del taxímetro — el giro
-// heading-up ya no apaga el seguimiento (los handlers solo reaccionan a
-// gestos reales con e.originalEvent) y la mototaxi queda centrada en la
-// franja libre entre las tarjetas, con padding medido desde el DOM; lo
-// mismo en el viaje en vivo. Antes v1.4.3: botón para borrar el historial del
-// taxímetro — el conteo diario se reinicia al borrarlo, solo local en el
-// teléfono — y límites gratis a 50/día PARA PRUEBAS: taxímetro y servicios
+// Estado del spec: 2026-11-22 (v1.4.6: giro y centrado del taxímetro y del
+// viaje en vivo en UN SOLO easeTo por actualización — en MapLibre cada
+// easeTo cancela la animación anterior, así que el giro separado lo mataba
+// el centrado y el mapa quedaba siempre en norte-arriba (mototaxi de lado);
+// la etiqueta "Inicio del recorrido" va 34 px abajo del punto para no
+// tapar la píldora de la mototaxi. Antes v1.4.5: el taxímetro gira derecho
+// — el movimiento del mapa (marcador, centrado y giro heading-up) ya no
+// depende del umbral de 4 m de la tarifa, que queda solo para cobrar;
+// rumbo del GPS (coords.heading) o de puntos con ≥ 2 m, suavizado 0.7 y
+// giro en 300 ms; en taxímetro y viaje en vivo se ocultan los rótulos de
+// negocios del estilo vectorial y se achicaron brújula, círculo de
+// velocidad y píldoras.
+// Antes v1.4.4: seguimiento del taxímetro — el giro heading-up ya no apaga
+// el seguimiento (los handlers solo reaccionan a gestos reales con
+// e.originalEvent) y la mototaxi queda centrada en la franja libre entre
+// las tarjetas, con padding medido desde el DOM; lo mismo en el viaje en
+// vivo. Antes v1.4.3: botón para borrar el historial del taxímetro — el
+// conteo diario se reinicia al borrarlo, solo local en el teléfono, y
+// límites gratis a 50/día PARA PRUEBAS: taxímetro y servicios
 // (viajes/mandados). Antes v1.4.2: index.html y manifest sin caché —
 // los teléfonos siempre bajan la versión nueva tras cada despliegue.
 // Antes v1.4.1: taxímetro igual que la app real — tarjetas oscuras,
@@ -572,7 +584,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.4' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.6' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {

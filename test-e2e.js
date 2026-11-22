@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.4 en /api/health', h.ok && h.version === '1.4.4', JSON.stringify(h));
+  check('versión 1.4.6 en /api/health', h.ok && h.version === '1.4.6', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.4', h134.ok && h134.version === '1.4.4', JSON.stringify(h134));
+  check('versión 1.4.6', h134.ok && h134.version === '1.4.6', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -439,9 +439,26 @@ async function api(path, body) {
   // apagan el seguimiento con gesto real (e.originalEvent), si no el propio
   // giro lo mataba al primer cambio de rumbo.
   check('handlers de seguimiento solo reaccionan a gestos reales (originalEvent)', html.includes('function taxiFollowOff(e){ if(e && !e.originalEvent) return;') && html.includes('function liveFollowOff(e){ if(e && !e.originalEvent) return;') && html.includes("taxiMap.on('rotatestart', taxiFollowOff)") && html.includes("liveMap.on('rotatestart', liveFollowOff)"));
-  check('centrado del taxímetro con padding medido desde el DOM (franja libre)', html.includes('function taxiFollowPadding()') && html.includes('function taxiCenterOn(p, zoom)') && html.includes('padding: taxiFollowPadding()') && html.includes('taxiCenterOn({ lat, lng })'));
+  check('centrado del taxímetro con padding medido desde el DOM (franja libre)', html.includes('function taxiFollowPadding()') && html.includes('function taxiCenterOn(p, zoom, bearing)') && html.includes('padding: taxiFollowPadding()') && html.includes('taxiFollowCenter({ lat, lng })'));
   check('al reabrir el taxímetro con recorrido en curso el seguimiento se reanuda', html.includes('if(s2.running){ taxiFollow = true;'));
   check('centrado del viaje en vivo con padding de la franja libre', html.includes('function liveFollowPadding()') && html.includes('padding: liveFollowPadding()'));
+  // Giro derecho del taxímetro y mapa despejado (v1.4.5): el movimiento del
+  // mapa ya no depende del umbral de 4 m de la tarifa; rumbo del GPS o de
+  // puntos con ≥ 2 m; suavizado 0.7 y giro en 300 ms; se ocultan los
+  // rótulos de negocios en taxímetro y viaje en vivo; controles más chicos.
+  check('el taxímetro mueve marcador/giro/centro en cada lectura, el 4 m es solo tarifa', html.includes('if(d >= 0.004){ // los pasos cuentan desde 4 m SOLO para la tarifa') && html.includes('taxiFollowCenter({ lat, lng })') && html.includes('pos.coords.heading!=null && !isNaN(pos.coords.heading)'));
+  check('rumbo reactivo: suavizado 0.7 en taxímetro y viaje en vivo', html.includes('taxiLastHeading += dd * 0.7') && html.includes('liveLastHeading += d * 0.7') && html.includes('newBearing = -taxiLastHeading') && html.includes('return -liveLastHeading;'));
+  check('se ocultan los rótulos de negocios en los mapas en vivo (taxímetro y viaje)', html.includes('function hidePoiLabels(map)') && html.includes('function declutterLiveMap(map)') && html.includes('declutterLiveMap(taxiMap)') && html.includes('declutterLiveMap(liveMap)'));
+  check('controles del taxímetro más chicos (velocidad, zoom/brújula, píldoras)', html.includes('.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:62px;height:62px') && html.includes('.taxizoom button{width:36px;height:36px;font-size:17px') && html.includes('.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:11px'));
+  // Un solo easeTo por actualización (v1.4.6): en MapLibre cada easeTo
+  // cancela la animación anterior; el giro y el centrado iban en dos
+  // llamadas seguidas y el mapa nunca giraba (siempre norte-arriba, la
+  // mototaxi iba de lado). Ahora centro + giro van juntos en una sola
+  // llamada; si no se recentra, el giro va solo. La etiqueta de inicio
+  // va 34 px abajo para no tapar la píldora de la mototaxi.
+  check('taxímetro: giro y centrado en UN solo easeTo por lectura', html.includes('function taxiCenterOn(p, zoom, bearing)') && html.includes('taxiFollowCenter({ lat, lng }, newBearing)') && html.includes('if(!taxiFollowCenter({ lat, lng }, newBearing) && newBearing!=null)') && !html.includes('taxiMap.easeTo({ bearing: -taxiLastHeading'));
+  check('viaje en vivo: giro y centrado en UN solo easeTo por tick', html.includes('function applyHeading(heading){') && html.includes('liveBearing = applyHeading(h)') && html.includes('opts.bearing = liveBearing') && !html.includes('map.easeTo({ bearing: -liveLastHeading'));
+  check('etiqueta "Inicio del recorrido" desplazada 34 px abajo del punto', html.includes('offset: [0, 34]') && html.includes("el.className = 'taxi-start'"));
 
   console.log('== Correcciones: acepta instantáneo, rejilla $5, límites, mandados, citas, anuncios, pago ==');
   // (2) Rejilla de $5 en aceptar_precio y en acepta.
