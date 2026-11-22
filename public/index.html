@@ -403,7 +403,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.3) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.4) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2019,9 +2019,9 @@ async function openLiveTrip(requestId, asDriver){
   acquireWakeLock();
   if(!liveMap){
     liveMap = makeMap('live-map', true);
-    liveMap.on('dragstart', ()=>{ liveFollow = false; showLiveRecenter(); });
-    liveMap.on('zoomstart', ()=>{ liveFollow = false; showLiveRecenter(); });
-    liveMap.on('rotatestart', ()=>{ liveFollow = false; showLiveRecenter(); });
+    liveMap.on('dragstart', liveFollowOff);
+    liveMap.on('zoomstart', liveFollowOff);
+    liveMap.on('rotatestart', liveFollowOff);
   }
   liveMap.resize();
   await renderLiveMap();
@@ -2085,7 +2085,7 @@ function liveRecenter(){
   const c = liveAsDriver
     ? (liveDriverMarker ? liveDriverMarker.getLngLat() : null)
     : (liveReq.driver_lat ? { lng: liveReq.driver_lng, lat: liveReq.driver_lat } : { lng: liveReq.origin_lng, lat: liveReq.origin_lat });
-  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: 17, duration: 500 });
+  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: 17, padding: liveFollowPadding(), duration: 500 });
 }
 function liveResetNorth(){ if(liveMap) liveMap.easeTo({ bearing: 0, duration: 400 }); }
 function applyHeading(map, heading){
@@ -2288,7 +2288,7 @@ function startLivePolling(){
           const h = (Math.atan2(r.driver_lng-prevLng, r.driver_lat-prevLat) * 180/Math.PI + 360) % 360;
           applyHeading(liveMap, h);
         }
-        if(liveFollow) liveMap.easeTo({ center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), duration: 600 });
+        if(liveFollow) liveMap.easeTo({ center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 });
         if(liveRouteCoords && liveRouteCoords.length){
           // tramo recorrido en azul claro
           let best=0, bd=1e9;
@@ -2372,6 +2372,32 @@ function taxiFlush(){
     saveTaxi(s);
   }
 }
+/* Seguimiento (taxímetro y viaje en vivo): en MapLibre los eventos de cámara
+   por gestos del usuario traen e.originalEvent y los programáticos no. El giro
+   heading-up, el zoom +/- y la brújula son easeTo programáticos: sin este
+   filtro disparaban rotatestart/zoomstart y el propio giro apagaba el
+   seguimiento al primer cambio de rumbo. Solo un gesto real lo apaga. */
+function taxiFollowOff(e){ if(e && !e.originalEvent) return; taxiFollow = false; $('#taxi-recenter').classList.remove('hidden'); }
+function liveFollowOff(e){ if(e && !e.originalEvent) return; liveFollow = false; showLiveRecenter(); }
+/* Padding del seguimiento: la mototaxi queda centrada en la franja libre
+   entre las tarjetas de arriba y las de abajo (el centro geográfico queda
+   tapado por Precio final / Tiempo / FINALIZAR). Se mide desde el DOM para
+   adaptarse a cada teléfono y estado (inicio/corriendo). */
+function followPadding(topId, botId, defTop, defBot){
+  const top = document.getElementById(topId), bot = document.getElementById(botId);
+  const mapEl = top ? top.closest('.fullmap') : null;
+  const h = (mapEl && mapEl.clientHeight) || 800;
+  let t = defTop, b = defBot;
+  if(top && top.offsetHeight) t = Math.min(top.offsetTop + top.offsetHeight + 16, Math.floor(h*0.45));
+  if(bot && bot.offsetHeight) b = Math.max(h - bot.offsetTop + 16, 60);
+  return { top: t, bottom: b, left: 16, right: 16 };
+}
+function taxiFollowPadding(){ return followPadding('taxi-top', 'taxi-bottom', 170, 280); }
+function liveFollowPadding(){ return followPadding('live-top', 'live-bottom', 170, 280); }
+function taxiCenterOn(p, zoom){
+  if(!taxiMap) return;
+  taxiMap.easeTo({ center: [p.lng, p.lat], zoom: zoom || 17, padding: taxiFollowPadding(), duration: 600 });
+}
 function openTaximeter(fromDriver){
   taxiFromDriver = !!fromDriver;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -2382,25 +2408,27 @@ function openTaximeter(fromDriver){
   if(s && s.running) acquireWakeLock();
   if(!taxiMap){
     taxiMap = makeMap('taxi-map', true);
-    taxiMap.on('dragstart', ()=>{ taxiFollow = false; $('#taxi-recenter').classList.remove('hidden'); });
-    taxiMap.on('zoomstart', ()=>{ taxiFollow = false; $('#taxi-recenter').classList.remove('hidden'); });
-    taxiMap.on('rotatestart', ()=>{ taxiFollow = false; $('#taxi-recenter').classList.remove('hidden'); });
+    taxiMap.on('dragstart', taxiFollowOff);
+    taxiMap.on('zoomstart', taxiFollowOff);
+    taxiMap.on('rotatestart', taxiFollowOff);
     setTimeout(async ()=>{
       taxiMap.resize();
-      try { const p = await myLocation(); taxiMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 }); markTaxiHere(p); }
+      try { const p = await myLocation(); taxiCenterOn(p, 16); markTaxiHere(p); }
       catch(e){}
     }, 120);
   } else {
     // El mapa ya existe: volver a centrar en la mototaxi y reponer su ícono
-    // (antes quedaba el marcador viejo en el punto anterior).
+    // (antes quedaba el marcador viejo en el punto anterior). Si el recorrido
+    // sigue en curso, el seguimiento se reanuda solo (antes quedaba apagado).
     setTimeout(async ()=>{
       taxiMap.resize();
       const s2 = loadTaxi();
       if(s2 && (s2.running || s2.done) && s2.lastLat!=null){
-        taxiMap.easeTo({ center: [s2.lastLng, s2.lastLat], zoom: 17, duration: 600 });
+        if(s2.running){ taxiFollow = true; $('#taxi-recenter').classList.add('hidden'); }
+        taxiCenterOn({ lat: s2.lastLat, lng: s2.lastLng });
         markTaxiHere({ lat: s2.lastLat, lng: s2.lastLng });
       } else {
-        try { const p = await myLocation(); taxiMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 }); markTaxiHere(p); }
+        try { const p = await myLocation(); taxiCenterOn(p, 16); markTaxiHere(p); }
         catch(e){}
       }
     }, 60);
@@ -2508,8 +2536,8 @@ function taxiReset(){
 function taxiRecenter(){
   taxiFollow = true; $('#taxi-recenter').classList.add('hidden');
   const s = loadTaxi();
-  if(taxiMap && s && s.lastLat!=null) taxiMap.easeTo({ center: [s.lastLng, s.lastLat], zoom: 17, duration: 500 });
-  else if(taxiMap) myLocation().then(p=>taxiMap.easeTo({ center:[p.lng,p.lat], zoom:17, duration:500 })).catch(()=>{});
+  if(taxiMap && s && s.lastLat!=null) taxiCenterOn({ lat: s.lastLat, lng: s.lastLng });
+  else if(taxiMap) myLocation().then(p=>taxiCenterOn(p)).catch(()=>{});
 }
 function taxiResetNorth(){ if(taxiMap) taxiMap.easeTo({ bearing: 0, duration: 400 }); }
 function taxiZoom(d){ if(taxiMap) taxiMap.easeTo({ zoom: Math.min(20, Math.max(10, (taxiMap.getZoom()||15) + d)), duration: 300 }); }
@@ -2523,7 +2551,7 @@ function startTaxi(){
   if(taxiMap){
     removeRouteLine(taxiMap, 'taxiroute');
     myLocation().then(p=>{
-      taxiMap.easeTo({ center: [p.lng, p.lat], zoom: 17, duration: 600 });
+      taxiCenterOn(p);
       markTaxiHere(p);
       markTaxiStart(p);
     }).catch(()=>{});
@@ -2594,13 +2622,13 @@ function startTaxiWatch(){
               taxiMap.easeTo({ bearing: -taxiLastHeading, duration: 500 });
             }
           }
-          if(taxiFollow) taxiMap.easeTo({ center: [lng, lat], zoom: 17, duration: 600 });
+          if(taxiFollow) taxiCenterOn({ lat, lng });
         }
       }
     } else {
       s.lastLat = lat; s.lastLng = lng;
       s.points = [[lng, lat]];
-      if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); if(taxiFollow) taxiMap.easeTo({ center:[lng,lat], zoom:17, duration:600 }); }
+      if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); if(taxiFollow) taxiCenterOn({ lat, lng }); }
     }
     saveTaxi(s);
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 2000 });
