@@ -2,10 +2,14 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.7: rediseño compacto del taxímetro
+// Estado del spec: 2026-11-22 (v1.4.8: el giro del taxímetro ya no usa
+// nunca la brújula del teléfono — el rumbo es siempre el del
+// desplazamiento entre lecturas; la brújula apuntaba al revés del viaje
+// y el mapa giraba 180° al revés, la moto parecía ir hacia abajo.
+// Antes v1.4.7: rediseño compacto del taxímetro
 // corriendo igual que la app real con EL MISMO ícono (MototaxiTopIcon),
 // giro calculado del desplazamiento entre lecturas cuando iOS no trae
-// coords.speed/coords.heading, etiqueta de inicio que nunca tapa el
+// coords.speed, etiqueta de inicio que nunca tapa el
 // círculo de velocidad, y arreglo del chofer que no podía ponerse en
 // línea (el cliente revisaba status 'activo' en vez de 'aprobado').
 // Antes v1.4.6: giro y centrado del taxímetro y del
@@ -590,7 +594,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.7' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.8' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {

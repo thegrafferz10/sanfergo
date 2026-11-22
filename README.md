@@ -1,9 +1,13 @@
-# SanFerGo — versión pública (v1.4.7)
+# SanFerGo — versión pública (v1.4.8)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.8 (2026-11-22) — el giro ya no usa la brújula del teléfono: la moto iba hacia abajo
+
+- El giro estaba al revés 180° (captura del usuario 4:56: la línea azul del recorrido venía desde arriba hasta la mototaxi, o sea que viajaba hacia abajo en la pantalla, mientras el ícono apunta hacia arriba; "Debería ser al revés"). Causa raíz: el rumbo prefería la brújula del teléfono cuando traía un valor válido, pero ese dato es hacia dónde apunta el aparato, NO la dirección del viaje — en la mototaxi el teléfono va en el bolsillo o en el tablero mirando al chofer, así que apunta al revés del viaje. Arreglo: el rumbo del taxímetro es SIEMPRE el del desplazamiento entre lecturas consecutivas (≥ 2 m), que es la verdadera dirección del viaje; la brújula del teléfono no se lee nunca para el giro (no queda ninguna referencia a ella en el cliente). `coords.speed` se sigue usando para la velocidad mostrada, con el respaldo por desplazamiento que ya existía. Sin cambios de tarifa, conteo, umbral de 4 m, diseño compacto de v1.4.7, ícono ni viaje en vivo (su `applyHeading` ya usaba desplazamiento). El giro con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo andando en la mototaxi.
 
 ## v1.4.7 (2026-11-22) — taxímetro compacto, mismo ícono, giro que sí gira y chofer que sí entra en línea
 

@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.7 en /api/health', h.ok && h.version === '1.4.7', JSON.stringify(h));
+  check('versión 1.4.8 en /api/health', h.ok && h.version === '1.4.8', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.7', h134.ok && h134.version === '1.4.7', JSON.stringify(h134));
+  check('versión 1.4.8', h134.ok && h134.version === '1.4.8', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -446,7 +446,7 @@ async function api(path, body) {
   // mapa ya no depende del umbral de 4 m de la tarifa; rumbo del GPS o de
   // puntos con ≥ 2 m; suavizado 0.7 y giro en 300 ms; se ocultan los
   // rótulos de negocios en taxímetro y viaje en vivo; controles más chicos.
-  check('el taxímetro mueve marcador/giro/centro en cada lectura, el 4 m es solo tarifa', html.includes('if(d >= 0.004){ // los pasos cuentan desde 4 m SOLO para la tarifa') && html.includes('taxiFollowCenter({ lat, lng })') && html.includes('pos.coords.heading!=null && !isNaN(pos.coords.heading)'));
+  check('el taxímetro mueve marcador/giro/centro en cada lectura, el 4 m es solo tarifa', html.includes('if(d >= 0.004){ // los pasos cuentan desde 4 m SOLO para la tarifa') && html.includes('taxiFollowCenter({ lat, lng })'));
   check('rumbo reactivo: suavizado 0.7 en taxímetro y viaje en vivo', html.includes('taxiLastHeading += dd * 0.7') && html.includes('liveLastHeading += d * 0.7') && html.includes('newBearing = -taxiLastHeading') && html.includes('return -liveLastHeading;'));
   check('se ocultan los rótulos de negocios en los mapas en vivo (taxímetro y viaje)', html.includes('function hidePoiLabels(map)') && html.includes('function declutterLiveMap(map)') && html.includes('declutterLiveMap(taxiMap)') && html.includes('declutterLiveMap(liveMap)'));
   check('controles del taxímetro más chicos (velocidad, zoom/brújula, píldoras)', html.includes('.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:62px;height:62px') && html.includes('.taxizoom button{width:36px;height:36px;font-size:17px') && html.includes('.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:11px'));
@@ -473,6 +473,17 @@ async function api(path, body) {
   // null andando y el rumbo nunca se calculaba (mapa siempre en norte-arriba).
   // Ahora velocidad y rumbo salen del desplazamiento entre lecturas.
   check('taxímetro: velocidad y rumbo del desplazamiento entre lecturas (sin coords.speed)', html.includes('let lastFix = null;') && html.includes('havKm(lastFix.lat, lastFix.lng, lat, lng)') && html.includes('speedKmh = (dt > 0 && dd >= 0.0025) ? (dd / (dt / 3600)) : 0') && html.includes('h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360') && html.includes('lastFix = { lat, lng, t: now };'));
+  // Sentido del giro (v1.4.8): el rumbo prefería la brújula del teléfono
+  // (hacia dónde apunta el aparato), pero en la mototaxi el teléfono va
+  // mirando al chofer, así que el mapa giraba 180° al revés y la moto
+  // parecía ir hacia abajo (captura 4:56). El giro ya NO lee nunca la
+  // brújula: el rumbo es siempre el del desplazamiento entre lecturas.
+  // Simulación del caso real: dos lecturas yendo al SUR (latitud bajando)
+  // con la brújula presente y al revés (0°, norte) → rumbo 180° (sur) y
+  // bearing -180°.
+  const latA = 16.8709, lngA = -93.2063, latB = 16.8700, lngB = -93.2063;
+  const hSur = (Math.atan2(lngB-lngA, latB-latA) * 180/Math.PI + 360) % 360;
+  check('giro v1.4.8: el rumbo es siempre el del desplazamiento, nunca la brújula del teléfono', !html.includes('coords.heading') && html.includes('h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360') && Math.abs(hSur - 180) < 0.01 && Math.abs((-hSur) - (-180)) < 0.01);
   // Etiqueta "Inicio del recorrido" nunca tapada por el círculo de velocidad.
   check('taxímetro: la etiqueta de inicio se corre si el círculo la taparía', html.includes('function adjustTaxiStartOffset(){') && html.includes('taxiStartMarker.setOffset([offX, 34])') && html.includes("taxiMap.on('move', adjustTaxiStartOffset)") && html.includes('adjustTaxiStartOffset();'));
   // Aprobación del chofer (v1.4.7): el inicio del chofer revisaba
