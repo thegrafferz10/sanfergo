@@ -2,7 +2,10 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.2: index.html y manifest sin caché —
+// Estado del spec: 2026-11-22 (v1.4.3: botón para borrar el historial del
+// taxímetro — el conteo diario se reinicia al borrarlo, solo local en el
+// teléfono — y límites gratis a 50/día PARA PRUEBAS: taxímetro y servicios
+// (viajes/mandados). Antes v1.4.2: index.html y manifest sin caché —
 // los teléfonos siempre bajan la versión nueva tras cada despliegue.
 // Antes v1.4.1: taxímetro igual que la app real — tarjetas oscuras,
 // mototaxi con "Vas aquí"/"Estás aquí", círculo de velocidad, zoom propio
@@ -355,7 +358,7 @@ const LANDMARKS = [
 // recoge un poco más arriba. NO cambiar la tarifa sin su orden.
 const BASE_FARE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
 const MANDADO_EXTRA_STOP = 10;
-const FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
+const FREE_DAILY_LIMIT = 50, PREMIUM_MIN_PRICE = 80;
 // Suscripción en tres planes (v1.3.0):
 // semanal $50/7 días, mensual $150/30 días, anual $500/365 días.
 // Los días se SUMAN a una suscripción activa.
@@ -565,7 +568,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.2' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.3' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {

@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.2)
+# SanFerGo — versión pública (v1.4.3)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.3 (2026-11-22) — borrar historial del taxímetro y límites gratis a 50 para pruebas
+
+- En "Historial del taxímetro" hay un botón "Borrar todo el historial" con confirmación en dos pasos en línea (primer toque: "¿Seguro? Toca de nuevo para borrar"; segundo toque: borra). El historial vive solo en el teléfono (localStorage), así que al borrarlo el conteo diario de hoy vuelve a 0 y el chofer puede iniciar recorridos de nuevo sin esperar al día siguiente. Nada del servidor se toca.
+- En la tarjeta de límite del taxímetro ("Has completado tus recorridos gratis") hay un enlace "Borrar mi historial del taxímetro" que abre el historial para llegar al botón sin buscarlo.
+- Límites gratis a 50 por día PARA PRUEBAS: taxímetro (50 recorridos/día, antes 5) y servicios (50 viajes/mandados al día, antes 5). La constante `FREE_DAILY_LIMIT` es 50 en servidor y cliente; todos los textos ("de 50 recorridos", "de 50 servicios hoy") usan la constante. Sin cambios de tarifa ni de la lógica de conteo.
 
 ## v1.4.2 (2026-11-22) — index.html y manifest sin caché
 
