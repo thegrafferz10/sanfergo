@@ -494,14 +494,19 @@ function drawPlaceLabels(map){
 }
 
 /* ===== Mapas (MapLibre GL, teselas sin llave) ===== */
-const LIGHT_TILES = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+// OJO: CartoDB Positron (basemaps.cartocdn.com) ya NO sirve sin llave: devuelve
+// teselas "API KEY REQUIRED" con HTTP 200, así que el respaldo nunca se disparaba
+// (las teselas "cargaban" bien, pero eran el letrero). Por eso el mapa principal
+// ahora es OSM, que sí es sin llave, y el respaldo es Esri (también sin llave).
+const LIGHT_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 function rasterStyle(tiles){
   return { version: 8, sources: { base: { type: 'raster', tiles: [tiles], tileSize: 256, attribution: '' } },
     layers: [{ id: 'base', type: 'raster', source: 'base' }] };
 }
 function makeMap(id, dark){
-  // Mapa claro fijo estilo Apple Maps (CartoDB Positron) en toda la app.
+  // Mapa claro fijo estilo Apple Maps en toda la app (OSM, sin llave).
   // Sin opciones de híbrido/satélite. El parámetro dark se ignora.
   const m = new maplibregl.Map({
     container: id, style: rasterStyle(LIGHT_TILES),
@@ -510,7 +515,7 @@ function makeMap(id, dark){
     attributionControl: false, maxZoom: 19
   });
   m.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'bottom-right');
-  // Respaldo: si las teselas claras fallan o tardan demasiado, cambiar a OSM (también claro).
+  // Respaldo: si las teselas fallan o tardan demasiado, cambiar a Esri (también claro y sin llave).
   m._routes = {};
   m._fellBack = false;
   let tileErrs = 0;
@@ -518,7 +523,7 @@ function makeMap(id, dark){
     if(m._fellBack) return;
     m._fellBack = true;
     const routes = m._routes || {};
-    m.setStyle(rasterStyle(OSM_TILES));
+    m.setStyle(rasterStyle(ESRI_TILES));
     m.once('style.load', ()=>{
       for(const rid in routes){ const r = routes[rid]; setRouteLine(m, rid, r.coords, r.color, r.width); }
     });
