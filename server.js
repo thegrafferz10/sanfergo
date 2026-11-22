@@ -2,13 +2,20 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.3.8: el admin entra DIRECTO a su panel al
+// Estado del spec: 2026-11-22 (v1.4.0: revisión completa contra la app real
+// v104: login, inicio, viajes, mandados, negocios, chofer, admin y mapa con el
+// estilo vectorial de Meta (canterbury_1_0) en el cliente; coordenadas de zonas
+// y rótulos portados de la app real; etapas de mandado como la real.
+// v1.3.9: el admin entra DIRECTO a su panel al
 // iniciar sesión; chofer nuevo nace PENDIENTE hasta que el admin lo aprueba;
 // Negocios desbloqueado con modelo por tipo (entrega/catálogo/citas) y
 // paquete Premium $100/mes; anuncios de entrada flotantes, uno al azar por
 // entrada, precargados; cada opción del panel abre su propia pantalla;
 // sin tarjeta Cosas perdidas en el inicio, igual que la app real; paso de
-// origen "¿De dónde sales?" con dos tarjetas como en la app real).
+// origen "¿De dónde sales?" con dos tarjetas como en la app real;
+// confirmación del pin tras "Usar ubicación actual" igual que la app real
+// (instrucciones, sin buscador, píldoras "Tu punto de salida" y "Estás aquí",
+// "Punto marcado · cerca de <zona>").
 // Tarifa: $10 de salida + $2.50 cada 300 m; espera $1.25/min (parado, < ~5 km/h);
 // mínimo por viaje $20; cada parada extra de mandado +$10.
 // Cuentas: nombre, usuario, número y/o correo, contraseña con hash scrypt.
@@ -116,18 +123,20 @@ CREATE TABLE IF NOT EXISTS businesses (
   owner_account_id INTEGER NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL,
   description TEXT, whatsapp TEXT, photo TEXT,
   status TEXT DEFAULT 'pendiente', open INTEGER DEFAULT 1,
+  category TEXT, colony TEXT, schedule TEXT, delivery_fee REAL DEFAULT 20,
+  views INTEGER DEFAULT 0,
   premium_until TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS business_products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  business_id INTEGER NOT NULL, name TEXT NOT NULL, price REAL NOT NULL, image TEXT,
+  business_id INTEGER NOT NULL, name TEXT NOT NULL, price REAL NOT NULL, image TEXT, available INTEGER DEFAULT 1, description TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS business_services (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   business_id INTEGER NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
-  duration_minutes INTEGER, image TEXT,
+  duration_minutes INTEGER, image TEXT, available INTEGER DEFAULT 1, description TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS business_orders (
@@ -135,6 +144,7 @@ CREATE TABLE IF NOT EXISTS business_orders (
   business_id INTEGER NOT NULL, account_id INTEGER, passenger_name TEXT, passenger_phone TEXT,
   items_json TEXT NOT NULL, products_total REAL NOT NULL, delivery_fee REAL NOT NULL,
   total REAL NOT NULL, status TEXT DEFAULT 'pendiente', detail TEXT,
+  delivery_zone TEXT, delivery_address TEXT, payment_method TEXT, note TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS business_appointments (
@@ -169,6 +179,19 @@ addCol('requests', 'finished_at', 'TEXT');
 // Duración de la cita en minutos (copia de la duración del servicio al
 // reservar; las citas viejas sin este campo usan la del servicio o 60).
 addCol('business_appointments', 'duration_minutes', 'INTEGER');
+addCol('businesses', 'category', 'TEXT');
+addCol('businesses', 'colony', 'TEXT');
+addCol('businesses', 'schedule', 'TEXT');
+addCol('businesses', 'delivery_fee', 'REAL DEFAULT 20');
+addCol('businesses', 'views', 'INTEGER DEFAULT 0');
+addCol('business_products', 'available', 'INTEGER DEFAULT 1');
+addCol('business_products', 'description', 'TEXT');
+addCol('business_services', 'available', 'INTEGER DEFAULT 1');
+addCol('business_services', 'description', 'TEXT');
+addCol('business_orders', 'delivery_zone', 'TEXT');
+addCol('business_orders', 'delivery_address', 'TEXT');
+addCol('business_orders', 'payment_method', 'TEXT');
+addCol('business_orders', 'note', 'TEXT');
 
 // ---- Cuentas e inicio de sesión (desde v1.2.0) ----
 // Contraseñas con scrypt (nunca en texto plano). La sesión es un token
@@ -238,48 +261,88 @@ function newSession(accountId) {
 // se corrige en este archivo (PLACES). Guerrero, Copalar y Terrero Copalar
 // son tres lugares DIFERENTES.
 const PLACES = [
-  { name: 'Centro', lat: 16.8709, lng: -93.2063 },
+  { name: 'Centro', lat: 16.87137, lng: -93.20652 },
   { name: 'Parque', lat: 16.87137, lng: -93.20652 },
   { name: 'Mercado', lat: 16.87018, lng: -93.20777 },
-  { name: 'Arco', lat: 16.8605, lng: -93.2059 },
-  { name: 'Madero', lat: 16.8704, lng: -93.2188 },
-  { name: 'Copalar', lat: 16.8550, lng: -93.1980 },
-  { name: 'Terrero Copalar', lat: 16.8580, lng: -93.2020 },
-  { name: 'Guerrero', lat: 16.87793, lng: -93.20806 },
-  { name: 'La Esperanza', lat: 16.8730, lng: -93.2140 },
-  { name: 'La Gloria', lat: 16.8660, lng: -93.1990 },
-  { name: 'Progreso Centro', lat: 16.8840, lng: -93.1960 },
-  { name: 'Progreso Buenos Aires', lat: 16.8860, lng: -93.1930 },
-  { name: 'Progreso Loma Bonita', lat: 16.8820, lng: -93.1990 },
-  { name: 'Clínica', lat: 16.87226, lng: -93.20509 },
-  { name: 'Barrio de Guadalupe', lat: 16.8785, lng: -93.2070 },
-  { name: 'Las Isabeles', lat: 16.8653, lng: -93.2036 },
+  { name: 'Arco', lat: 16.86361, lng: -93.20406 },
+  { name: 'Madero', lat: 16.87291, lng: -93.21374 },
+  { name: 'Copalar', lat: 16.87814, lng: -93.21507 },
+  { name: 'Terrero Copalar', lat: 16.88198, lng: -93.21669 },
+  { name: 'Guerrero', lat: 16.85186, lng: -93.21825 },
+  { name: 'La Esperanza', lat: 16.99724, lng: -93.25035 },
+  { name: 'La Gloria', lat: 16.87676, lng: -93.224 },
+  { name: 'Progreso Centro', lat: 16.87737, lng: -93.22214 },
+  { name: 'Progreso Buenos Aires', lat: 16.87597, lng: -93.2241 },
+  { name: 'Progreso Loma Bonita', lat: 16.87737, lng: -93.22214 },
+  { name: 'Clínica', lat: 16.87544, lng: -93.20871 },
+  { name: 'Barrio de Guadalupe', lat: 16.87838, lng: -93.20799 },
+  { name: 'Las Isabeles', lat: 16.86538, lng: -93.20338 },
+  { name: 'El Progreso', lat: 16.87737, lng: -93.22214 },
+  { name: 'Valle Bonito', lat: 16.83113, lng: -93.18749 },
+  { name: 'Benito Juárez', lat: 16.88306, lng: -93.18842 },
+  { name: 'Miguel Hidalgo', lat: 16.86515, lng: -93.23672 },
+  { name: 'Vicente Guerrero', lat: 16.85186, lng: -93.21825 },
 ];
 
 // ---- Negocios y lugares con nombre (rótulos del mapa al marcar punto) ----
 // Nombres y coordenadas reales del registro de lugares de Meta (búsquedas
 // local-search 2026-11-21, solo negocios activos): farmacias, carnicerías,
 // Centro de Salud, Parque Central, Mercado Municipal y Arco de bienvenida.
-// 'lugar' = referencia grande (siempre se pinta); 'negocio' = tienda
-// (se pintan las más cercanas al centro del mapa, máx. 8 en pantalla).
-// La gasolinera y los abarrotes NO se incluyeron: no se encontró ninguna
-// con coordenadas verificadas y aquí no se inventan coordenadas.
+// Registro completo portado de la app real (v1.4.0, data.ts
+// MAP_REFERENCE_POINTS): 12 lugares + 30 negocios con nombre y coordenadas
+// del registro de lugares de Meta, más 6 extras que solo tenía la web.
+// 'lugar' = referencia grande; 'negocio' = tienda. Las zonas (colonias)
+// NO van aquí: salen de PLACES como rótulos de zona.
 const LANDMARKS = [
-  { name: 'Clínica · Centro de Salud', lat: 16.874689, lng: -93.208188, kind: 'lugar' },
   { name: 'Parque Central', lat: 16.87137, lng: -93.20652, kind: 'lugar' },
-  { name: 'Mercado Municipal', lat: 16.87018, lng: -93.20777, kind: 'lugar' },
-  { name: 'Arco de bienvenida', lat: 16.8605, lng: -93.2059, kind: 'lugar' },
-  { name: 'Farmacias Similares', lat: 16.870257, lng: -93.207105, kind: 'negocio' },
+  { name: 'Mercado Municipal', lat: 16.86945, lng: -93.20768, kind: 'lugar' },
+  { name: 'Presidencia Municipal', lat: 16.87173, lng: -93.20635, kind: 'lugar' },
+  { name: 'Parroquia de San Fernando', lat: 16.87162, lng: -93.20606, kind: 'lugar' },
+  { name: 'Biblioteca Municipal', lat: 16.87222, lng: -93.20605, kind: 'lugar' },
+  { name: 'Clínica · Centro de Salud', lat: 16.87544, lng: -93.20871, kind: 'lugar' },
+  { name: 'Arco de bienvenida', lat: 16.86361, lng: -93.20406, kind: 'lugar' },
+  { name: 'Gasolinera Pemex', lat: 16.86342, lng: -93.20379, kind: 'lugar' },
+  { name: 'Escuela Primaria Niños Héroes', lat: 16.87944, lng: -93.21611, kind: 'lugar' },
+  { name: 'Escuela Primaria Miguel Hidalgo', lat: 16.87501, lng: -93.20585, kind: 'lugar' },
+  { name: 'Iglesia Nacional Presbiteriana', lat: 16.87187, lng: -93.20534, kind: 'lugar' },
+  { name: 'Iglesia Bethel', lat: 16.88163, lng: -93.18854, kind: 'lugar' },
+  { name: 'Farmacias Similares', lat: 16.87026, lng: -93.20711, kind: 'negocio' },
+  { name: 'Farmacia Sagrado Corazón', lat: 16.87046, lng: -93.20676, kind: 'negocio' },
+  { name: 'Farmacia Santa Cecilia', lat: 16.87113, lng: -93.20687, kind: 'negocio' },
+  { name: 'Farmacia HC', lat: 16.87701, lng: -93.21426, kind: 'negocio' },
+  { name: 'Abarrotes Castillejos', lat: 16.87025, lng: -93.20678, kind: 'negocio' },
+  { name: 'Abarrotes Carolina', lat: 16.86906, lng: -93.20691, kind: 'negocio' },
+  { name: 'Abarrotes La Pasadita', lat: 16.86977, lng: -93.20385, kind: 'negocio' },
+  { name: 'Abarrotes Gaelito', lat: 16.86718, lng: -93.20367, kind: 'negocio' },
+  { name: 'Abarrotes Ariadnita', lat: 16.87192, lng: -93.20362, kind: 'negocio' },
+  { name: 'Tiendas Wallis Hogar', lat: 16.8707, lng: -93.20777, kind: 'negocio' },
+  { name: 'Tienda Doña Isabel', lat: 16.88203, lng: -93.18776, kind: 'negocio' },
+  { name: 'Frutas y Verduras El Huerto', lat: 16.87068, lng: -93.20658, kind: 'negocio' },
+  { name: 'Panificadora La Hojaldra', lat: 16.8709, lng: -93.20736, kind: 'negocio' },
+  { name: 'Panadería El Hornito', lat: 16.87832, lng: -93.21532, kind: 'negocio' },
+  { name: "Pastelería D'lilis", lat: 16.87436, lng: -93.20814, kind: 'negocio' },
+  { name: 'Repostería Mi Esperanza', lat: 16.87094, lng: -93.20803, kind: 'negocio' },
+  { name: 'Carnicería Progreso', lat: 16.87705, lng: -93.22162, kind: 'negocio' },
+  { name: 'Carnicería La Central', lat: 16.86983, lng: -93.20729, kind: 'negocio' },
+  { name: 'Carnicería San Fernando', lat: 16.87037, lng: -93.20785, kind: 'negocio' },
+  { name: 'Pakjo Matza Pizzas y Café', lat: 16.87121, lng: -93.20699, kind: 'negocio' },
+  { name: 'Restaurante Costa Azul', lat: 16.85707, lng: -93.20278, kind: 'negocio' },
+  { name: 'Las Kekas Sanfer', lat: 16.85595, lng: -93.20157, kind: 'negocio' },
+  { name: 'Motorepuestos San Fernando', lat: 16.87135, lng: -93.20809, kind: 'negocio' },
+  { name: 'Refaccionaria Castañón', lat: 16.87069, lng: -93.20644, kind: 'negocio' },
+  { name: 'Tienda Naturista Yerbabuena', lat: 16.8704, lng: -93.20736, kind: 'negocio' },
+  { name: 'Laboratorio Kapa', lat: 16.87056, lng: -93.20597, kind: 'negocio' },
+  { name: 'Consultorio Médico Paniagua', lat: 16.87075, lng: -93.20865, kind: 'negocio' },
+  { name: 'Hotel-Posada Gran Rally', lat: 16.87066, lng: -93.20544, kind: 'negocio' },
+  { name: 'Chiapas Hotel Express', lat: 16.86465, lng: -93.20389, kind: 'negocio' },
+  { name: 'Flowers SF', lat: 16.87292, lng: -93.2119, kind: 'negocio' },
+  // Extras que solo tenía la web (se conservan).
   { name: 'Farmacia del Super Descuento', lat: 16.870909, lng: -93.207935, kind: 'negocio' },
   { name: 'Farmacia San Agustín', lat: 16.8711, lng: -93.207283, kind: 'negocio' },
-  { name: 'Farmacia Sagrado Corazón de Jesús', lat: 16.870465, lng: -93.206757, kind: 'negocio' },
-  { name: 'Carnicería San Diego', lat: 16.871694, lng: -93.209058, kind: 'negocio' },
-  { name: 'Carnicería La Central', lat: 16.869832, lng: -93.20729, kind: 'negocio' },
   { name: 'Carnicería Esperanzita', lat: 16.87026, lng: -93.207966, kind: 'negocio' },
   { name: 'Carnicería Gutiérrez', lat: 16.869432, lng: -93.207686, kind: 'negocio' },
   { name: 'Carnicería Pochi', lat: 16.870711, lng: -93.206417, kind: 'negocio' },
-  { name: 'Carnicería San Fernando', lat: 16.870372, lng: -93.207847, kind: 'negocio' },
-  { name: 'Carnicería Progreso', lat: 16.877048, lng: -93.221616, kind: 'negocio' },
+  { name: 'Carnicería San Diego', lat: 16.871694, lng: -93.209058, kind: 'negocio' },
 ];
 
 // ---- Tarifa oficial (2026-11-20, validada en viajes reales del usuario) ----
@@ -316,7 +379,7 @@ const BIZ_DELIVERY_FEE = 20;
 const BIZ_TYPES = ['entrega', 'catalogo', 'citas'];
 const AD_ENTRIES = ['viajes', 'negocios', 'mandados'];
 const TRIP_STAGES = ['confirmado', 'en_camino', 'llego', 'en_viaje', 'finalizado'];
-const MANDADO_STAGES = ['confirmado', 'a_recoger', 'llego', 'recogido', 'en_camino', 'entregado'];
+const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'en_viaje', 'entregado']; // como la app real (v1.4.0): sin 'a_recoger'
 
 function haversineKm(a, b, c, d) {
   const R = 6371, rad = x => x * Math.PI / 180;
@@ -500,7 +563,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.3.8' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.0' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -511,6 +574,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/register-driver') {
     const { name, phone, vehicle, unit, selfie, vehicle_photo } = body;
     if (!name || !phone || !vehicle) return send(res, 400, { ok: false, error: 'Faltan datos del conductor.' });
+    if (!String(unit || '').trim()) return send(res, 400, { ok: false, error: 'Pon tu número de unidad o placas: es obligatorio.' });
     if (vehicle !== 'mototaxi' && vehicle !== 'moto') return send(res, 400, { ok: false, error: 'Vehículo no válido.' });
     const cleanPhone = phone.trim();
     const existing = db.prepare('SELECT * FROM drivers WHERE phone=?').get(cleanPhone);
@@ -811,7 +875,8 @@ async function api(req, res, pathname) {
   if (pathname === '/api/business') {
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('id'));
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
-    return send(res, 200, { ok: true, business: publicBusiness(b) });
+    try { db.prepare('UPDATE businesses SET views = COALESCE(views,0)+1 WHERE id=?').run(b.id); } catch (e) {}
+    return send(res, 200, { ok: true, business: publicBusiness(db.prepare('SELECT * FROM businesses WHERE id=?').get(b.id)) });
   }
   // Crear un negocio = mandar solicitud: al crear se pregunta de qué tipo
   // es (entrega, catalogo o citas). Gratis: SOLO un negocio por cuenta.
@@ -827,8 +892,14 @@ async function api(req, res, pathname) {
     if (!businessIsPremium({ premium_until: (db.prepare('SELECT premium_until FROM businesses WHERE owner_account_id=? AND premium_until IS NOT NULL ORDER BY premium_until DESC LIMIT 1').get(a.id) || {}).premium_until }) && ownerBusinessCount(a.id) >= FREE_BIZ_LIMIT) {
       return send(res, 400, { ok: false, error: 'La versión gratis permite crear solo un negocio por cuenta. Activa el paquete Premium ($100 al mes) para crear más negocios.' });
     }
-    const r = db.prepare(`INSERT INTO businesses (owner_account_id, name, type, description, whatsapp, photo, status, open)
-      VALUES (?,?,?,?,?,?, 'pendiente', 1)`).run(a.id, name, type, String(body.description || '').trim() || null, whatsapp, body.photo || null);
+    const category = String(body.category || '').trim().slice(0, 60) || null;
+    const colony = String(body.colony || '').trim().slice(0, 60) || null;
+    const schedule = String(body.schedule || '').trim().slice(0, 120) || null;
+    let deliveryFee = Number(body.delivery_fee);
+    if (!Number.isFinite(deliveryFee)) deliveryFee = BIZ_DELIVERY_FEE;
+    deliveryFee = Math.max(20, Math.round(deliveryFee / 5) * 5); // de $20 en adelante, de cinco en cinco
+    const r = db.prepare(`INSERT INTO businesses (owner_account_id, name, type, description, whatsapp, photo, status, open, category, colony, schedule, delivery_fee)
+      VALUES (?,?,?,?,?,?, 'pendiente', 1, ?,?,?,?)`).run(a.id, name, type, String(body.description || '').trim() || null, whatsapp, body.photo || null, category, colony, schedule, deliveryFee);
     return send(res, 200, { ok: true, pending: true, message: 'Tu solicitud se mandó al administrador. Cuando la active, tu negocio aparecerá en Negocios.', business: publicBusiness(db.prepare('SELECT * FROM businesses WHERE id=?').get(r.lastInsertRowid)) });
   }
   if (pathname === '/api/my-businesses') {
@@ -874,11 +945,17 @@ async function api(req, res, pathname) {
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden editarlo.' });
-    db.prepare(`UPDATE businesses SET name=?, description=?, whatsapp=?, photo=?, open=? WHERE id=?`).run(
+    let fee = b.delivery_fee != null ? b.delivery_fee : BIZ_DELIVERY_FEE;
+    if (body.delivery_fee != null && Number.isFinite(Number(body.delivery_fee))) fee = Math.max(20, Math.round(Number(body.delivery_fee) / 5) * 5);
+    db.prepare(`UPDATE businesses SET name=?, description=?, whatsapp=?, photo=?, open=?, category=?, colony=?, schedule=?, delivery_fee=? WHERE id=?`).run(
       String(body.name || b.name).trim(), body.description != null ? String(body.description).trim() : b.description,
       body.whatsapp != null ? String(body.whatsapp).trim() : b.whatsapp,
       body.photo != null ? body.photo : b.photo,
-      body.open != null ? (body.open ? 1 : 0) : b.open, body.business_id);
+      body.open != null ? (body.open ? 1 : 0) : b.open,
+      body.category != null ? String(body.category).trim() : b.category,
+      body.colony != null ? String(body.colony).trim() : b.colony,
+      body.schedule != null ? String(body.schedule).trim() : b.schedule,
+      fee, body.business_id);
     return send(res, 200, { ok: true, business: publicBusiness(db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id)) });
   }
   // Productos y servicios (dueña o admin). Topes gratis: 10 productos y
@@ -894,8 +971,28 @@ async function api(req, res, pathname) {
     const name = String(body.name || '').trim();
     const price = Number(body.price);
     if (!name || !Number.isFinite(price) || price <= 0) return send(res, 400, { ok: false, error: 'Pon el nombre y el precio del producto.' });
-    const r = db.prepare('INSERT INTO business_products (business_id, name, price, image) VALUES (?,?,?,?)').run(b.id, name, price, body.image || null);
+    const r = db.prepare('INSERT INTO business_products (business_id, name, price, image, available, description) VALUES (?,?,?,?,?,?)').run(b.id, name, price, body.image || null, body.available === 0 ? 0 : 1, String(body.description || '').trim() || null);
     return send(res, 200, { ok: true, product: db.prepare('SELECT * FROM business_products WHERE id=?').get(r.lastInsertRowid) });
+  }
+  if (pathname === '/api/set-product-available') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const pr = db.prepare('SELECT * FROM business_products WHERE id=?').get(body.product_id);
+    if (!pr) return send(res, 404, { ok: false, error: 'Producto no encontrado.' });
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(pr.business_id);
+    if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden cambiarlo.' });
+    db.prepare('UPDATE business_products SET available=? WHERE id=?').run(body.available ? 1 : 0, body.product_id);
+    return send(res, 200, { ok: true });
+  }
+  if (pathname === '/api/set-service-available') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const sv = db.prepare('SELECT * FROM business_services WHERE id=?').get(body.service_id);
+    if (!sv) return send(res, 404, { ok: false, error: 'Servicio no encontrado.' });
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(sv.business_id);
+    if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden cambiarlo.' });
+    db.prepare('UPDATE business_services SET available=? WHERE id=?').run(body.available ? 1 : 0, body.service_id);
+    return send(res, 200, { ok: true });
   }
   if (pathname === '/api/delete-product') {
     const a = accountFromToken(body.token);
@@ -918,8 +1015,8 @@ async function api(req, res, pathname) {
     const name = String(body.name || '').trim();
     const price = Number(body.price);
     if (!name || !Number.isFinite(price) || price <= 0) return send(res, 400, { ok: false, error: 'Pon el nombre y el precio del servicio.' });
-    const r = db.prepare('INSERT INTO business_services (business_id, name, price, duration_minutes, image) VALUES (?,?,?,?,?)')
-      .run(b.id, name, price, body.duration_minutes != null ? parseInt(body.duration_minutes, 10) : null, body.image || null);
+    const r = db.prepare('INSERT INTO business_services (business_id, name, price, duration_minutes, image, available, description) VALUES (?,?,?,?,?,?,?)')
+      .run(b.id, name, price, body.duration_minutes != null ? parseInt(body.duration_minutes, 10) : null, body.image || null, body.available === 0 ? 0 : 1, String(body.description || '').trim() || null);
     return send(res, 200, { ok: true, service: db.prepare('SELECT * FROM business_services WHERE id=?').get(r.lastInsertRowid) });
   }
   if (pathname === '/api/delete-service') {
@@ -937,7 +1034,7 @@ async function api(req, res, pathname) {
   // Tope gratis: 30 pedidos/citas al mes por negocio; con Premium, ilimitados.
   if (pathname === '/api/create-order') {
     const a = accountFromToken(body.token);
-    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!a && !String(body.customer_phone || '').trim()) return send(res, 401, { ok: false, error: 'Inicia sesión primero o escribe tu número de teléfono.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado o no activo.' });
     if (b.type !== 'entrega') return send(res, 400, { ok: false, error: 'Este negocio no vende por entrega.' });
@@ -955,10 +1052,37 @@ async function api(req, res, pathname) {
       cleanItems.push({ product_id: pr.id, name: pr.name, price: pr.price, qty });
     }
     productsTotal = Math.round(productsTotal * 100) / 100;
-    const deliveryFee = BIZ_DELIVERY_FEE;
-    const r = db.prepare(`INSERT INTO business_orders (business_id, account_id, passenger_name, passenger_phone, items_json, products_total, delivery_fee, total, status, detail)
-      VALUES (?,?,?,?,?,?,?,?, 'pendiente', ?)`).run(b.id, a.id, a.name, a.phone || '', JSON.stringify(cleanItems), productsTotal, deliveryFee, productsTotal + deliveryFee, String(body.detail || '').trim() || null);
+    // El envío es EL COSTO CONFIGURADO DEL NEGOCIO (v1.4.0), no $20 fijo.
+    const deliveryFee = (b.delivery_fee != null && Number.isFinite(Number(b.delivery_fee))) ? Number(b.delivery_fee) : BIZ_DELIVERY_FEE;
+    const payMethod = body.payment_method === 'transferencia' ? 'transferencia' : 'efectivo';
+    const custName = String(body.customer_name || a.name || '').trim();
+    const custPhone = String(body.customer_phone || a.phone || '').trim();
+    const r = db.prepare(`INSERT INTO business_orders (business_id, account_id, passenger_name, passenger_phone, items_json, products_total, delivery_fee, total, status, detail, delivery_zone, delivery_address, payment_method, note)
+      VALUES (?,?,?,?,?,?,?,?, 'pendiente', ?, ?, ?, ?, ?)`).run(b.id, a ? a.id : null, custName, custPhone, JSON.stringify(cleanItems), productsTotal, deliveryFee, productsTotal + deliveryFee,
+      String(body.detail || body.delivery_address || '').trim() || null,
+      String(body.delivery_zone || '').trim() || null,
+      String(body.delivery_address || body.detail || '').trim() || null,
+      payMethod, String(body.note || '').trim() || null);
     return send(res, 200, { ok: true, order: db.prepare('SELECT * FROM business_orders WHERE id=?').get(r.lastInsertRowid) });
+  }
+  // Pedidos por teléfono, SIN exigir sesión (v1.4.0: "Ver mi pedido").
+  if (pathname === '/api/orders-by-phone') {
+    const ph = cleanPhone(q.get('phone') || body.phone);
+    if (ph.length !== 10) return send(res, 400, { ok: false, error: 'Escribe tu número de 10 dígitos.' });
+    const list = db.prepare(`SELECT o.*, b.name AS business_name FROM business_orders o JOIN businesses b ON b.id=o.business_id
+      WHERE o.passenger_phone=? ORDER BY o.id DESC LIMIT 50`).all(ph);
+    return send(res, 200, { ok: true, orders: list });
+  }
+  if (pathname === '/api/cancel-order') {
+    const ph = cleanPhone(body.phone || '');
+    const o = db.prepare('SELECT * FROM business_orders WHERE id=?').get(body.order_id);
+    if (!o) return send(res, 404, { ok: false, error: 'Pedido no encontrado.' });
+    const a = accountFromToken(body.token);
+    const mine = (a && o.account_id === a.id) || (ph.length === 10 && cleanPhone(o.passenger_phone) === ph);
+    if (!mine) return send(res, 403, { ok: false, error: 'Solo quien hizo el pedido puede cancelarlo.' });
+    if (o.status !== 'pendiente') return send(res, 400, { ok: false, error: 'Este pedido ya fue aceptado por el negocio y no se puede cancelar.' });
+    db.prepare(`UPDATE business_orders SET status='cancelado' WHERE id=?`).run(body.order_id);
+    return send(res, 200, { ok: true });
   }
   if (pathname === '/api/my-orders') {
     const a = accountFromToken(body.token || q.get('token'));
@@ -983,14 +1107,14 @@ async function api(req, res, pathname) {
     if (!o) return send(res, 404, { ok: false, error: 'Pedido no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(o.business_id);
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden cambiar el pedido.' });
-    if (!['pendiente', 'preparando', 'en_camino', 'entregado', 'cancelado'].includes(String(body.status))) return send(res, 400, { ok: false, error: 'Estado no válido.' });
+    if (!['pendiente', 'aceptado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado', 'rechazado'].includes(String(body.status))) return send(res, 400, { ok: false, error: 'Estado no válido.' });
     db.prepare('UPDATE business_orders SET status=? WHERE id=?').run(body.status, body.order_id);
     return send(res, 200, { ok: true });
   }
   // Cita (solo tipo 'citas'): reserva por día y hora, sin encimes.
   if (pathname === '/api/create-appointment') {
     const a = accountFromToken(body.token);
-    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!a && !String(body.client_phone || '').trim()) return send(res, 401, { ok: false, error: 'Inicia sesión primero o escribe tu número de WhatsApp.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado o no activo.' });
     if (b.type !== 'citas') return send(res, 400, { ok: false, error: 'Este negocio no agenda citas.' });
@@ -1014,8 +1138,17 @@ async function api(req, res, pathname) {
     });
     if (clash) return send(res, 400, { ok: false, error: 'Esa hora se cruza con otra cita de este negocio. Elige otra hora.' });
     const r = db.prepare(`INSERT INTO business_appointments (business_id, service_id, account_id, client_name, client_phone, date, time, duration_minutes, status)
-      VALUES (?,?,?,?,?,?,?,?, 'reservada')`).run(b.id, sv.id, a.id, a.name, a.phone || '', date, time, newDur);
+      VALUES (?,?,?,?,?,?,?,?, 'reservada')`).run(b.id, sv.id, a ? a.id : null, String(body.client_name || (a && a.name) || '').trim(), String(body.client_phone || (a && a.phone) || '').trim(), date, time, newDur);
     return send(res, 200, { ok: true, appointment: db.prepare('SELECT * FROM business_appointments WHERE id=?').get(r.lastInsertRowid) });
+  }
+  // Citas por teléfono, SIN exigir sesión (v1.4.0: "Ver mi cita").
+  if (pathname === '/api/appointments-by-phone') {
+    const ph = cleanPhone(q.get('phone') || body.phone);
+    if (ph.length !== 10) return send(res, 400, { ok: false, error: 'Escribe tu número de 10 dígitos.' });
+    const list = db.prepare(`SELECT ap.*, b.name AS business_name, s.name AS service_name FROM business_appointments ap
+      JOIN businesses b ON b.id=ap.business_id LEFT JOIN business_services s ON s.id=ap.service_id
+      WHERE ap.client_phone=? ORDER BY ap.date DESC, ap.time DESC LIMIT 50`).all(ph);
+    return send(res, 200, { ok: true, appointments: list });
   }
   if (pathname === '/api/my-appointments') {
     const a = accountFromToken(body.token || q.get('token'));
@@ -1037,11 +1170,12 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/cancel-appointment') {
     const a = accountFromToken(body.token);
-    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
     const ap = db.prepare('SELECT * FROM business_appointments WHERE id=?').get(body.appointment_id);
     if (!ap) return send(res, 404, { ok: false, error: 'Cita no encontrada.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(ap.business_id);
-    if (ap.account_id !== a.id && !canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo quien reservó o el negocio pueden cancelar la cita.' });
+    const ph = cleanPhone(body.phone || '');
+    const mine = (a && ap.account_id === a.id) || (ph.length === 10 && cleanPhone(ap.client_phone) === ph);
+    if (!mine && !canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo quien reservó o el negocio pueden cancelar la cita.' });
     db.prepare(`UPDATE business_appointments SET status='cancelada' WHERE id=?`).run(body.appointment_id);
     return send(res, 200, { ok: true });
   }
@@ -1071,7 +1205,11 @@ async function api(req, res, pathname) {
     if (!businessIsPremium(b)) return send(res, 403, { ok: false, error: 'Las estadísticas son del paquete Premium ($100 al mes).' });
     const orders = db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(total),0) t FROM business_orders WHERE business_id=?`).get(b.id);
     const appts = db.prepare(`SELECT COUNT(*) c FROM business_appointments WHERE business_id=?`).get(b.id);
-    return send(res, 200, { ok: true, stats: { orders_total: orders.c, orders_amount: Math.round(orders.t * 100) / 100, appointments_total: appts.c, month_count: businessMonthCount(b.id), products: businessProducts(b.id).length, services: businessServices(b.id).length } });
+    const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0);
+    const iso = since.toISOString().slice(0, 10);
+    const om = db.prepare(`SELECT COUNT(*) c FROM business_orders WHERE business_id=? AND substr(created_at,1,10)>=?`).get(b.id, iso);
+    const am = db.prepare(`SELECT COUNT(*) c FROM business_appointments WHERE business_id=? AND substr(created_at,1,10)>=?`).get(b.id, iso);
+    return send(res, 200, { ok: true, stats: { views: b.views || 0, orders_total: orders.c, orders_amount: Math.round(orders.t * 100) / 100, appointments_total: appts.c, month_count: businessMonthCount(b.id), orders_month: om ? om.c : 0, appointments_month: am ? am.c : 0, products: businessProducts(b.id).length, services: businessServices(b.id).length } });
   }
   // ---- Listas de administrador (cuentas y pasajeros) ----
   if (pathname === '/api/admin-accounts') {
@@ -1346,7 +1484,7 @@ async function api(req, res, pathname) {
     // chofer tocó "Iniciar viaje" (en_viaje) o ya recogió el mandado
     // (recogido en adelante) ya no se puede cancelar.
     const started = (r.kind === 'viaje' && r.trip_stage === 'en_viaje') ||
-      (r.kind === 'mandado' && ['recogido', 'en_camino', 'entregado'].includes(r.trip_stage || ''));
+      (r.kind === 'mandado' && ['recogido', 'en_viaje', 'entregado'].includes(r.trip_stage || ''));
     if (r.status === 'aceptado' && started) {
       return send(res, 400, { ok: false, error: 'El servicio ya empezó y no se puede cancelar.' });
     }
@@ -1370,7 +1508,7 @@ async function api(req, res, pathname) {
     const isFinal = stage === 'finalizado' || stage === 'entregado';
     const status = isFinal ? 'finalizado' : r.status;
     // Marcar inicio real del recorrido (para el recibo: duración real).
-    const startStage = r.kind === 'viaje' ? 'en_viaje' : 'en_camino';
+    const startStage = 'en_viaje'; // el recorrido real empieza al salir hacia el destino
     const stampStart = stage === startStage && !r.trip_started_at;
     db.prepare(`UPDATE requests SET trip_stage=?, trip_stage_at=datetime('now'), status=?
       ${stampStart ? ', trip_started_at=datetime(\'now\')' : ''}
@@ -1403,11 +1541,15 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-payment-method') {
     const { request_id, method } = body;
     if (method !== 'efectivo' && method !== 'transferencia') return send(res, 400, { ok: false, error: 'Método no válido.' });
-    // El pago se elige ANTES de publicar y es el final del servicio: solo
-    // se puede cambiar mientras la solicitud sigue buscando conductor.
+    // El pago se elige ANTES de publicar y es el final del servicio: se
+    // puede cambiar mientras sigue buscando o mientras el viaje está
+    // confirmado (antes de que el chofer salga: en_camino en adelante ya
+    // quedó fijada, v1.4.0: la tarjeta del chofer en el viaje en vivo
+    // ofrece "Cambiar" mientras no haya salido).
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
-    if (r.status !== 'buscando') return send(res, 400, { ok: false, error: 'La forma de pago ya quedó fijada al publicar el servicio.' });
+    if (r.status === 'aceptado' && r.trip_stage !== 'confirmado') return send(res, 400, { ok: false, error: 'La forma de pago ya quedó fijada al publicar el servicio.' });
+    if (r.status !== 'buscando' && r.status !== 'aceptado') return send(res, 400, { ok: false, error: 'La forma de pago ya quedó fijada al publicar el servicio.' });
     db.prepare('UPDATE requests SET payment_method=? WHERE id=?').run(method, request_id);
     return send(res, 200, { ok: true });
   }

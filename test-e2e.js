@@ -65,7 +65,7 @@ async function api(path, body) {
   check('chofer contraoferta mandado $35', moff.ok && moff.offer.kind === 'contraoferta');
   const macc = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: man.request.id, offer_id: moff.offer.id, action: 'acepta' });
   check('pasajera acepta contraoferta del mandado', macc.ok && macc.request.status === 'aceptado' && macc.request.final_price === 35);
-  for (const st of ['a_recoger', 'llego', 'recogido', 'en_camino', 'entregado']) {
+  for (const st of ['en_camino', 'llego', 'recogido', 'en_viaje', 'entregado']) {
     const a = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man.request.id, stage: st });
     check('mandado avanza a ' + st, a.ok && a.request.trip_stage === st, JSON.stringify(a));
   }
@@ -165,7 +165,7 @@ async function api(path, body) {
   check("'acepta' del mandado confirma al instante", m2off.ok && m2off.request.status === 'aceptado' && m2off.request.final_price === 40, JSON.stringify(m2off));
   const upd = await api('/api/update-delivery-point', { driver_id: drv3.driver.id, request_id: m2.request.id, lat: 16.87786, lng: -93.20794, detail: 'casa de la esquina' });
   check('chofer actualiza el punto de entrega con ubicación pegada', upd.ok && /Ubicación de WhatsApp/.test(upd.request.dest_detail) && /casa de la esquina/.test(upd.request.dest_detail), JSON.stringify(upd.request.dest_detail));
-  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: m2.request.id, stage: 'a_recoger' });
+  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: m2.request.id, stage: 'en_camino' });
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: m2.request.id, stage: 'llego' });
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: m2.request.id, stage: 'recogido' });
   const cM = await api('/api/cancel-request', { request_id: m2.request.id });
@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.3.8 en /api/health', h.ok && h.version === '1.3.8', JSON.stringify(h));
+  check('versión 1.4.0 en /api/health', h.ok && h.version === '1.4.0', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.3.8', h134.ok && h134.version === '1.3.8', JSON.stringify(h134));
+  check('versión 1.4.0', h134.ok && h134.version === '1.4.0', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -512,7 +512,10 @@ async function api(path, body) {
   const rqP2 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
   await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqP2.request.id, kind: 'acepta', price: 25 });
   const payNo = await api('/api/set-payment-method', { request_id: rqP2.request.id, method: 'transferencia' });
-  check('cambiar pago con viaje aceptado rechazado (ya quedó fijada)', !payNo.ok && /fijada/.test(payNo.error || ''), JSON.stringify(payNo));
+  check('cambiar pago con viaje aceptado SÍ se puede mientras sigue confirmado (antes de salir, v1.4.0)', payNo.ok, JSON.stringify(payNo));
+  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rqP2.request.id, stage: 'en_camino' });
+  const payNo2 = await api('/api/set-payment-method', { request_id: rqP2.request.id, method: 'efectivo' });
+  check('cambiar pago ya en camino rechazado (quedó fijada)', !payNo2.ok && /fijada/.test(payNo2.error || ''), JSON.stringify(payNo2));
   const pay404 = await api('/api/set-payment-method', { request_id: 999999, method: 'transferencia' });
   check('cambiar pago de solicitud inexistente: 404', !pay404.ok, JSON.stringify(pay404));
   // (7) Citas sin encimes: solape real por duración del servicio (60 min).
@@ -541,6 +544,74 @@ async function api(path, body) {
     if (e.ok && e.ad) seen.add(e.ad.id);
   }
   check('entry-ad con historial devuelve AMBOS anuncios en 40 sorteos (al azar, no solo el del historial)', seen.has(adA.ad.id) && seen.has(adB.ad.id), 'vistos: ' + [...seen].join(','));
+
+  console.log('== v1.4.0: revisión completa (zonas, negocios, pedidos, citas, Premium) ==');
+  // (a) Unidad obligatoria al registrar chofer.
+  const noUnit = await api('/api/register-driver', { name: 'Sin Unidad', phone: '9610000099', vehicle: 'mototaxi', unit: '' });
+  check('registrar chofer sin unidad rechazado (v1.4.0: unidad obligatoria)', !noUnit.ok && /unidad/i.test(noUnit.error || ''), JSON.stringify(noUnit));
+  // (b) 21 zonas con las coordenadas reales (Copalar corregida).
+  const pl140 = await api('/api/places');
+  const cop = (pl140.places || []).find(p => p.name === 'Copalar');
+  check('21 zonas con coordenadas reales de la app (Copalar 16.87814,-93.21507)', pl140.ok && pl140.places.length === 21 && cop && Math.abs(cop.lat - 16.87814) < 0.0001 && Math.abs(cop.lng + 93.21507) < 0.0001, JSON.stringify(cop));
+  const lm = (pl140.landmarks || []).find(p => p.name === 'Farmacia Sagrado Corazón');
+  check('registro de lugares con el nombre corregido (Farmacia Sagrado Corazón)', !!lm, JSON.stringify((pl140.landmarks || []).length));
+  // (c) Negocio con ficha completa (categoría, colonia, horario, envío $25).
+  // Cuenta nueva: Ana (li1) ya tiene su negocio de citas y el plan gratis
+  // permite solo uno por cuenta.
+  const accBea = await api('/api/register-account', { name: 'Bea Negocio', username: 'bea_' + RUN, phone: '961400' + RUN.slice(0, 4), password: 'secreta123' });
+  check('cuenta nueva para el segundo negocio', accBea.ok && !!accBea.token, JSON.stringify(accBea));
+  const biz2 = await api('/api/request-business', { token: accBea.token, name: 'Pizzería Prueba ' + RUN, type: 'entrega', whatsapp: '9610000012', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 25, description: 'Pizzas y pan' });
+  check('negocio creado con categoría, colonia, horario y envío $25', biz2.ok && biz2.business.category === 'Comida' && biz2.business.colony === 'Centro' && biz2.business.schedule === 'Lunes a sábado, 9 AM a 7 PM' && biz2.business.delivery_fee === 25, JSON.stringify(biz2.business));
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz2.business.id });
+  const v1 = await api('/api/business?id=' + biz2.business.id);
+  const v2 = await api('/api/business?id=' + biz2.business.id);
+  check('abrir la ficha suma vistas (estadísticas Premium)', v2.ok && v2.business.views >= (v1.business.views || 0) + 1, JSON.stringify([v1.business.views, v2.business.views]));
+  const pr2 = await api('/api/add-product', { token: accBea.token, business_id: biz2.business.id, name: 'Pizza pepperoni', price: 120, description: 'Con queso y pepperoni' });
+  check('producto con descripción', pr2.ok && pr2.product.description === 'Con queso y pepperoni', JSON.stringify(pr2));
+  const av0 = await api('/api/set-product-available', { token: accBea.token, product_id: pr2.product.id, available: 0 });
+  const pr2Off = await api('/api/business?id=' + biz2.business.id);
+  check('producto marcado no disponible hoy', av0.ok && (pr2Off.business.products || []).find(p => p.id === pr2.product.id).available === 0, JSON.stringify(pr2Off.business.products));
+  await api('/api/set-product-available', { token: accBea.token, product_id: pr2.product.id, available: 1 });
+  // Los servicios solo van en negocios de citas (el de entrega vende
+  // productos): se prueba con el salón de citas de Ana.
+  const sv2 = await api('/api/add-service', { token: li1.token, business_id: biz.business.id, name: 'Tinte', price: 200, description: 'Tinte completo', duration_minutes: 90 });
+  check('servicio con descripción y duración', sv2.ok && sv2.service.duration_minutes === 90, JSON.stringify(sv2));
+  const avS = await api('/api/set-service-available', { token: li1.token, service_id: sv2.service.id, available: 0 });
+  const sv2Off = await api('/api/business?id=' + biz.business.id);
+  check('servicio marcado no disponible', avS.ok && (sv2Off.business.services || []).find(x => x.id === sv2.service.id).available === 0, JSON.stringify(sv2Off.business.services));
+  // (d) Pedido con el envío CONFIGURADO del negocio ($25, no $20 fijo).
+  const ord = await api('/api/create-order', { token: accBea.token, business_id: biz2.business.id, items: [{ product_id: pr2.product.id, qty: 2 }], customer_name: 'Ana Cuenta', customer_phone: accPhone, delivery_zone: 'Centro', delivery_address: 'Casa verde junto a la tienda', payment_method: 'efectivo', note: 'Sin cebolla' });
+  check('pedido usa el envío del negocio ($25): 2×$120 + $25 = $265', ord.ok && ord.order.delivery_fee === 25 && ord.order.products_total === 240 && ord.order.total === 265 && ord.order.delivery_zone === 'Centro' && ord.order.payment_method === 'efectivo', JSON.stringify(ord.order));
+  const byPhone = await api('/api/orders-by-phone?phone=' + accPhone);
+  check('pedidos por teléfono (sin sesión)', byPhone.ok && byPhone.orders.some(o => o.id === ord.order.id), JSON.stringify(byPhone.orders && byPhone.orders.length));
+  const ordSt = await api('/api/set-order-status', { token: accBea.token, order_id: ord.order.id, status: 'aceptado' });
+  check('dueño acepta el pedido', ordSt.ok, JSON.stringify(ordSt));
+  const ordCancel = await api('/api/cancel-order', { phone: accPhone, order_id: ord.order.id });
+  check('pedido aceptado ya no se cancela', !ordCancel.ok, JSON.stringify(ordCancel));
+  for (const st of ['preparando', 'listo', 'en_camino', 'entregado']) {
+    const a = await api('/api/set-order-status', { token: accBea.token, order_id: ord.order.id, status: st });
+    check('pedido avanza a ' + st, a.ok, JSON.stringify(a));
+  }
+  const ord2 = await api('/api/create-order', { token: accBea.token, business_id: biz2.business.id, items: [{ product_id: pr2.product.id, qty: 1 }], customer_name: 'Ana Cuenta', customer_phone: accPhone, delivery_zone: 'Centro', delivery_address: 'Casa verde', payment_method: 'transferencia' });
+  const ord2Cancel = await api('/api/cancel-order', { phone: accPhone, order_id: ord2.order.id });
+  check('pedido recibido (pendiente) sí se cancela por teléfono', ord2Cancel.ok, JSON.stringify(ord2Cancel));
+  // (e) Cita sin sesión (solo con el teléfono) + búsqueda y cancelación por teléfono.
+  const apNoSess = await api('/api/create-appointment', { business_id: biz.business.id, service_id: svc.service.id, date: '2026-12-02', time: '12:00', client_name: 'Sin Sesión', client_phone: '9613333333' });
+  check('cita sin sesión, solo con WhatsApp', apNoSess.ok && apNoSess.appointment.client_phone === '9613333333', JSON.stringify(apNoSess));
+  const apByPhone = await api('/api/appointments-by-phone?phone=9613333333');
+  check('citas por teléfono (sin sesión)', apByPhone.ok && apByPhone.appointments.some(a => a.id === apNoSess.appointment.id), JSON.stringify(apByPhone.appointments && apByPhone.appointments.length));
+  const apCancel = await api('/api/cancel-appointment', { phone: '9613333333', appointment_id: apNoSess.appointment.id });
+  check('cita cancelada por teléfono', apCancel.ok, JSON.stringify(apCancel));
+  // (f) Premium de negocios: estadísticas con los campos nuevos.
+  const subBiz = await api('/api/subscribe-business', { token: accBea.token, business_id: biz2.business.id });
+  check('Premium del negocio activado 30 días ($100)', subBiz.ok && subBiz.days === 30 && subBiz.price === 100, JSON.stringify(subBiz));
+  const stats = await api('/api/business-stats?business_id=' + biz2.business.id + '&token=' + accBea.token);
+  check('estadísticas Premium: views, pedidos y citas del mes', stats.ok && typeof stats.stats.views === 'number' && typeof stats.stats.orders_month === 'number' && typeof stats.stats.appointments_month === 'number' && stats.stats.orders_total >= 2, JSON.stringify(stats.stats));
+  // (g) Mandado tipo "enviar" con vehículo: la moto no lo toma si es mototaxi.
+  const manEnv = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Llevar un paquete', vehicle: 'mototaxi', recipient_phone: '9614444444' });
+  check('mandado "enviar" guarda vehicle=mototaxi y WhatsApp de quien recibe', manEnv.ok && manEnv.request.vehicle === 'mototaxi' && manEnv.request.recipient_phone === '9614444444', JSON.stringify(manEnv.request));
+  const envNo = await api('/api/driver-respond', { driver_id: drvM.driver.id, request_id: manEnv.request.id, kind: 'acepta', price: 30 });
+  check('moto no toma mandado "enviar" en mototaxi', !envNo.ok, JSON.stringify(envNo));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
