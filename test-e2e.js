@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.3 en /api/health', h.ok && h.version === '1.4.3', JSON.stringify(h));
+  check('versión 1.4.4 en /api/health', h.ok && h.version === '1.4.4', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.3', h134.ok && h134.version === '1.4.3', JSON.stringify(h134));
+  check('versión 1.4.4', h134.ok && h134.version === '1.4.4', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -434,6 +434,14 @@ async function api(path, body) {
   const bi = html.indexOf('bot.innerHTML = (canCancel');
   check('Cancelar, aviso verde y tarjeta del chofer van en la columna de abajo, en ese orden', bi > 0 && html.indexOf('+ arriveHtml', bi) > bi && html.indexOf('drivercard', bi) > html.indexOf('+ arriveHtml', bi));
   check('encuadre del viaje activo deja más aire abajo que arriba', html.includes('bottom: botPad') && html.includes('offset: [0, -60]'));
+  // Seguimiento del taxímetro y del viaje en vivo (v1.4.4): el giro heading-up
+  // es un easeTo programático que dispara rotatestart; los handlers solo
+  // apagan el seguimiento con gesto real (e.originalEvent), si no el propio
+  // giro lo mataba al primer cambio de rumbo.
+  check('handlers de seguimiento solo reaccionan a gestos reales (originalEvent)', html.includes('function taxiFollowOff(e){ if(e && !e.originalEvent) return;') && html.includes('function liveFollowOff(e){ if(e && !e.originalEvent) return;') && html.includes("taxiMap.on('rotatestart', taxiFollowOff)") && html.includes("liveMap.on('rotatestart', liveFollowOff)"));
+  check('centrado del taxímetro con padding medido desde el DOM (franja libre)', html.includes('function taxiFollowPadding()') && html.includes('function taxiCenterOn(p, zoom)') && html.includes('padding: taxiFollowPadding()') && html.includes('taxiCenterOn({ lat, lng })'));
+  check('al reabrir el taxímetro con recorrido en curso el seguimiento se reanuda', html.includes('if(s2.running){ taxiFollow = true;'));
+  check('centrado del viaje en vivo con padding de la franja libre', html.includes('function liveFollowPadding()') && html.includes('padding: liveFollowPadding()'));
 
   console.log('== Correcciones: acepta instantáneo, rejilla $5, límites, mandados, citas, anuncios, pago ==');
   // (2) Rejilla de $5 en aceptar_precio y en acepta.

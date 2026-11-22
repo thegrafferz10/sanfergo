@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.3)
+# SanFerGo — versión pública (v1.4.4)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.4 (2026-11-22) — seguimiento del taxímetro: la mototaxi ya no se pierde
+
+- Causa: los handlers de `dragstart`/`zoomstart`/`rotatestart` apagaban el seguimiento con cualquier evento, y el propio giro heading-up (`easeTo` con bearing) dispara `rotatestart` aunque sea programático: al primer cambio de rumbo el seguimiento se apagaba solo y aparecía "Centrar en mi ubicación". Ahora los handlers solo apagan el seguimiento cuando el evento trae `e.originalEvent` (gesto real del usuario); el giro, el zoom +/- y la brújula ya no lo apagan. Lo mismo se corrigió en el mapa del viaje en vivo.
+- La mototaxi ya no queda en el centro geográfico del mapa (tapada por Precio final / Tiempo / FINALIZAR): el centrado en seguimiento usa `padding` medido desde el DOM (alturas reales de las tarjetas de arriba y de abajo), así la mototaxi queda en la franja libre entre ellas. El giro heading-up no cambia.
+- Al reabrir el taxímetro con un recorrido en curso, el seguimiento se reanuda solo (`taxiFollow = true`).
+- Sin cambios de tarifa, conteo de km/espera, límites (50) ni diseño de tarjetas. El seguimiento con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo en el teléfono del usuario.
 
 ## v1.4.3 (2026-11-22) — borrar historial del taxímetro y límites gratis a 50 para pruebas
 
