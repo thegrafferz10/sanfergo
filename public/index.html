@@ -43,7 +43,7 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .muted{color:var(--muted);font-size:14px;line-height:1.45}
 .big{font-size:34px;font-weight:800}
 .price{font-size:30px;font-weight:800;color:var(--green)}
-.chip{display:inline-block;background:#e8f5ee;color:var(--green);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.chip{display:inline-block;background:#e8f5ee;color:var(--green);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip.amber{background:#fef3c7;color:#92400e}
 .chip.blue{background:#dbeafe;color:#1d4ed8}
 .chip.red{background:#fee2e2;color:#991b1b}
@@ -165,7 +165,9 @@ input[type=file]{padding:8px}
 .plan-opt b{display:block;font-size:17px}
 .plan-opt .price{display:block;margin-top:4px}
 .taxipill{background:#e8f5ee;color:var(--green);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;text-align:center;margin-bottom:8px}
-.pickrow{display:flex;gap:8px;align-items:center}
+.pickrow{display:flex;gap:8px;align-items:center;min-width:0}
+.pickrow .backpill{flex-shrink:0}
+.pickrow .chip{flex:1;min-width:0}
 .pickres{display:block;width:100%;text-align:left;padding:11px 12px;background:#fff;border-top:1px solid var(--line);font-size:15px}
 #pick-search{margin-top:8px}
 #pick-results{max-height:170px;overflow:auto;border-radius:12px;margin-top:6px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
@@ -206,11 +208,6 @@ input[type=file]{padding:8px}
     </div>
     <div id="home-driver-btn"></div>
     <div id="home-account-link" class="center" style="margin-top:14px"></div>
-    <div class="card">
-      <h3>¿Cómo funciona?</h3>
-      <p class="muted mt">Pides tu viaje, pones tu precio y los choferes te responden: aceptan o te contraofertan. Pagas directo al chofer, en efectivo o transferencia.</p>
-      <p class="muted mt">Tarifa sugerida: <b>$10 de salida + $2.50 cada 300 m</b> · mínimo <b>$20</b> por viaje. Si el mototaxi espera parado, se suma <b>$1.25 por minuto</b>.</p>
-    </div>
     <div class="watermark">SanFerGo · San Fernando, Chiapas</div>
   </div>
 </div>
@@ -290,7 +287,7 @@ input[type=file]{padding:8px}
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.5) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.6) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.8709, lng: -93.2063 };
@@ -499,7 +496,6 @@ function drawPlaceLabels(map){
 // (las teselas "cargaban" bien, pero eran el letrero). Por eso el mapa principal
 // ahora es OSM, que sí es sin llave, y el respaldo es Esri (también sin llave).
 const LIGHT_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 function rasterStyle(tiles){
   return { version: 8, sources: { base: { type: 'raster', tiles: [tiles], tileSize: 256, attribution: '' } },
@@ -533,12 +529,12 @@ function makeMap(id, dark){
     tileErrs++;
     if(tileErrs >= 4) fallBack();
   });
-  // Las teselas lentas no dan error: si a los 8 s (y de nuevo a los 15 s) no cargaron, cambiar a OSM.
+  // Las teselas lentas no dan error: si a los 8 s (y de nuevo a los 15 s) no cargaron, cambiar a Esri.
   m.on('load', ()=>{
     setTimeout(()=>{ if(!m._fellBack && !m.areTilesLoaded()) fallBack(); }, 8000);
     setTimeout(()=>{ if(!m._fellBack && !m.areTilesLoaded()) fallBack(); }, 15000);
   });
-  // Al hacer zoom o mover el mapa llegan teselas nuevas: si a los 5 s no cargaron, cambiar a OSM.
+  // Al hacer zoom o mover el mapa llegan teselas nuevas: si a los 5 s no cargaron, cambiar a Esri.
   let moveTimer = null;
   m.on('moveend', ()=>{
     if(m._fellBack) return;
@@ -651,6 +647,9 @@ function go(view){
   if(view==='picker') setTimeout(()=>{ if(pickMap) pickMap.resize(); }, 60);
 }
 function backPill(label, fn){ return '<button class="backpill" onclick="'+fn+'">‹ '+esc(label)+'</button>'; }
+/* Pantallas de pasos cortos sin scroll: solo se aplica donde el contenido
+   cabe en una vista (botones y tarjetas cortas, sin listas largas). */
+function setPageNoScroll(pageId, on){ const el = document.getElementById(pageId); if(el) el.classList.toggle('noscroll', !!on); }
 
 /* ===== Fotos ===== */
 function fileToPhoto(input, cb){
@@ -679,10 +678,7 @@ function renderHome(){
     : '<a href="#" onclick="openLogin();return false" style="color:var(--green);font-weight:700;font-size:14px">Iniciar sesión</a>';
   const hp = $('#home-profile');
   if (myPassenger) {
-    hp.innerHTML = '<div class="card white"><div class="flex">'
-      + (myPassenger.face_photo ? '<img class="avatar" src="'+myPassenger.face_photo+'">' : '<div class="avatar"></div>')
-      + '<div class="flex1"><b>'+esc(myPassenger.name)+'</b><div class="muted">'+esc(myPassenger.phone)+'</div></div>'
-      + '<button class="btn ghost small" style="width:auto;margin:0" onclick="openRegistro(\'pasajero\')">Editar</button></div></div>';
+    hp.innerHTML = '';
   } else {
     hp.innerHTML = '<div class="card"><b>¿Primera vez?</b><p class="muted mt">Regístrate como pasajero con tu foto de cara para pedir viajes y mandados.</p>'
       + '<button class="btn" onclick="openRegistro(\'pasajero\')">Registrarme como pasajero</button></div>';
@@ -708,6 +704,9 @@ function loadHomeAds(){ /* v1.3.5: el Inicio NO muestra anuncios. Los anuncios
 // dispositivo cuando la persona entra a una sección, así sale al instante.
 // Después de mostrar uno, se precarga el siguiente para la próxima entrada.
 let entryAdCache = {};
+// Al volver del selector de punto no se vuelve a mostrar el anuncio flotante
+// de entrada (una sola vez); al entrar desde el inicio o desde otra sección sí.
+let suppressEntryAdOnce = false;
 async function preloadEntryAds(){
   for(const e of ['viajes','negocios','mandados']){
     try {
@@ -717,6 +716,7 @@ async function preloadEntryAds(){
   }
 }
 async function showEntryAd(entry){
+  if(suppressEntryAdOnce){ suppressEntryAdOnce = false; return; }
   closeEntryAd();
   let ad = entryAdCache[entry] || null;
   if(ad){ delete entryAdCache[entry]; renderEntryAd(ad); }
@@ -1020,12 +1020,14 @@ function whoStrip(){
 async function renderViajes(){
   const page = $('#viajes-page');
   if(!wiz) wiz = newWizard();
+  setPageNoScroll('viajes-page', false);
   if(wiz.step===0){
     const active = await myActiveRequest('viaje');
     if(active){
       if(active.status==='aceptado'){ goLive(active.id, false); return; }
       wiz.requestId = active.id; wiz.step = 5;
-      page.innerHTML = backPill('Regresar al inicio', "go('home')") + '<div id="searching"></div>'
+      setPageNoScroll('viajes-page', true);
+      page.innerHTML = '<div id="searching"></div>'
         + '<button class="btn danger" onclick="cancelMyRequest()">Cancelar viaje</button>';
       renderSearching();
       return;
@@ -1042,6 +1044,7 @@ async function renderViajes(){
     return;
   }
   if(wiz.step===1){
+    setPageNoScroll('viajes-page', true);
     page.innerHTML = backPill('Regresar', "wiz.step=0;renderViajes()")
       + '<h2>¿De dónde sales?</h2>'
       + '<p class="muted mt">Tu punto de partida es tu ubicación actual.</p>'
@@ -1083,8 +1086,8 @@ async function renderViajes(){
     return;
   }
   // paso 5: buscando / ofertas
-  page.innerHTML = backPill('Regresar al inicio', "go('home')")
-    + '<div id="searching"></div>'
+  setPageNoScroll('viajes-page', true);
+  page.innerHTML = '<div id="searching"></div>'
     + '<button class="btn danger" onclick="cancelMyRequest()">Cancelar viaje</button>';
   renderSearching();
 }
@@ -1115,9 +1118,23 @@ async function renderFinishedCard(){
       + '<button class="btn small" onclick="repeatLastTrip()">🔁 Repetir último viaje</button></div>';
   } catch(e){}
 }
-/* Repetir último viaje: pre-llena la solicitud con LOS MISMOS puntos de salida
-   y destino del viaje más reciente del pasajero (API; si falla, el último
-   guardado en el dispositivo) y lleva directo al paso de detalles/precio. */
+/* Repetir un viaje: pre-llena la solicitud con LOS MISMOS puntos de salida
+   y destino del viaje dado (API; si falla, el último guardado en el
+   dispositivo) y lleva directo al paso de detalles/precio. */
+async function repeatTripFrom(last){
+  wiz = newWizard();
+  wiz.origin = { lat:last.origin_lat, lng:last.origin_lng, label:last.origin_detail||last.origin_zone||'Punto de salida', zone:last.origin_zone||'Punto de salida' };
+  wiz.dest = { lat:last.dest_lat, lng:last.dest_lng, label:last.dest_detail||last.dest_zone||'Destino', zone:last.dest_zone||'Destino' };
+  wiz.payment = last.payment_method || 'efectivo';
+  await computeTrip();
+  renderViajes();
+  toast('Repetimos tu último viaje: '+wiz.origin.label+' → '+wiz.dest.label);
+}
+async function repeatTrip(id){
+  const last = (histReqs||[]).find(r=>r.id===id);
+  if(!last || last.origin_lat==null || last.dest_lat==null){ toast('No se encontró ese viaje para repetirlo.'); return; }
+  await repeatTripFrom(last);
+}
 async function repeatLastTrip(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','viajes'); return; }
   let last = null;
@@ -1127,19 +1144,14 @@ async function repeatLastTrip(){
   } catch(e){}
   if(!last){ try { last = JSON.parse(localStorage.getItem('sfg_last_trip')||'null'); } catch(e){} }
   if(!last){ toast('Aún no tienes un viaje anterior para repetir.'); return; }
-  wiz = newWizard();
-  wiz.origin = { lat:last.origin_lat, lng:last.origin_lng, label:last.origin_detail||last.origin_zone||'Punto de salida', zone:last.origin_zone||'Punto de salida' };
-  wiz.dest = { lat:last.dest_lat, lng:last.dest_lng, label:last.dest_detail||last.dest_zone||'Destino', zone:last.dest_zone||'Destino' };
-  wiz.payment = last.payment_method || 'efectivo';
-  await computeTrip();
-  renderViajes();
-  toast('Repetimos tu último viaje: '+wiz.origin.label+' → '+wiz.dest.label);
+  await repeatTripFrom(last);
 }
 async function useMyLocation(){
   try {
     const p = await myLocation();
-    wiz.origin = { lat: p.lat, lng: p.lng, label:'Mi ubicación actual', zone:'Mi ubicación' };
-    wiz.step = 2; renderViajes();
+    // Abre el mapa con el pin ya puesto en el GPS: el usuario confirma o
+    // arrastra el pin (p. ej. a la entrada si vive en un callejón) antes de seguir.
+    openPick('origin', 'viajes', { lat: p.lat, lng: p.lng });
   } catch(e){ toast('No se pudo obtener tu ubicación. Usa el mapa.'); }
 }
 async function computeTrip(){
@@ -1156,12 +1168,16 @@ let pickMap = null, pickMarker = null, pickWhich = 'origin', pickPos = null, pic
 function pickTopLabel(){
   return { origin:'Sales de', dest:'Vas a', mdest:'Entrega en', morigin:'Recogida en' }[pickWhich] || 'Marca el punto';
 }
-function openPick(which, ret){
+function updatePickChip(){
+  const chip = document.getElementById('pick-chip');
+  if(chip) chip.textContent = pickTopLabel() + (pickLabel ? ': ' + pickLabel : '');
+}
+function openPick(which, ret, startPos){
   pickWhich = which; pickReturn = ret || 'viajes'; pickLabel = null; pickSearchQ = ''; pickList = [];
-  pickPos = { lat: SF.lat, lng: SF.lng };
+  pickPos = startPos ? { lat: startPos.lat, lng: startPos.lng } : { lat: SF.lat, lng: SF.lng };
   go('picker');
   const top = $('#pick-top'), bot = $('#pick-bottom');
-  top.innerHTML = '<div class="pickrow"><button class="backpill" style="margin:0" onclick="closePick()">‹ Regresar</button><span class="chip" style="font-size:13px">'+pickTopLabel()+'</span></div>'
+  top.innerHTML = '<div class="pickrow"><button class="backpill" style="margin:0" onclick="closePick()">‹ Regresar</button><span class="chip" id="pick-chip" style="font-size:13px">'+pickTopLabel()+'</span></div>'
     + '<input id="pick-search" placeholder="Buscar lugar: Centro, Progreso, Madero, Juárez…" autocomplete="off" oninput="pickSearchQ=this.value;renderPickResults()">'
     + '<div id="pick-results"></div>';
   bot.innerHTML = '<button onclick="confirmPick()">Usar este punto</button>';
@@ -1170,17 +1186,25 @@ function openPick(which, ret){
     if(pickMap){ pickMap.remove(); pickMap = null; }
     pickMap = makeMap('pick-map', false);
     pickMap.on('load', async ()=>{
-      try {
-        const p = await myLocation();
-        pickPos = { lat: p.lat, lng: p.lng };
-        pickMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 });
-        new maplibregl.Marker({ element: dotEl('#2b7de9', 14) }).setLngLat([p.lng, p.lat])
+      if(startPos){
+        // El pin ya viene puesto en la posición dada (p. ej. el GPS de
+        // "Usar ubicación actual"): solo se centra ahí para confirmarlo o arrastrarlo.
+        pickMap.easeTo({ center: [startPos.lng, startPos.lat], zoom: 16, duration: 600 });
+        new maplibregl.Marker({ element: dotEl('#2b7de9', 14) }).setLngLat([startPos.lng, startPos.lat])
           .setPopup(new maplibregl.Popup({ closeButton:false }).setText('Estás aquí')).addTo(pickMap).togglePopup();
-      } catch(e){ pickMap.easeTo({ center: [SF.lng, SF.lat], zoom: 16 }); }
+      } else {
+        try {
+          const p = await myLocation();
+          pickPos = { lat: p.lat, lng: p.lng };
+          pickMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 });
+          new maplibregl.Marker({ element: dotEl('#2b7de9', 14) }).setLngLat([p.lng, p.lat])
+            .setPopup(new maplibregl.Popup({ closeButton:false }).setText('Estás aquí')).addTo(pickMap).togglePopup();
+        } catch(e){ pickMap.easeTo({ center: [SF.lng, SF.lat], zoom: 16 }); }
+      }
       placePickMarker();
       drawPlaceLabels(pickMap);
     });
-    pickMap.on('click', e=>{ pickPos = { lat: e.lngLat.lat, lng: e.lngLat.lng }; pickLabel = null; placePickMarker(); });
+    pickMap.on('click', e=>{ pickPos = { lat: e.lngLat.lat, lng: e.lngLat.lng }; pickLabel = null; placePickMarker(); updatePickChip(); });
     pickMap.on('moveend', ()=>drawPlaceLabels(pickMap));
     pickMap.on('zoomend', ()=>drawPlaceLabels(pickMap));
     setTimeout(()=>pickMap.resize(), 120);
@@ -1188,6 +1212,8 @@ function openPick(which, ret){
 }
 function renderPickResults(){
   const box = $('#pick-results'); if(!box) return;
+  // Sin escribir nada no se muestran lugares: las coincidencias aparecen al escribir.
+  if(!normStr(pickSearchQ)){ pickList = []; box.innerHTML = '<div class="muted" style="padding:10px 12px">Escribe el lugar para buscar.</div>'; return; }
   pickList = searchPlaces(pickSearchQ).slice(0, 8);
   box.innerHTML = pickList.map((p,i)=>'<button class="pickres" onclick="choosePickPlace('+i+')">'+esc(p.name)+'</button>').join('');
 }
@@ -1198,6 +1224,7 @@ function choosePickPlace(i){
   const box = $('#pick-results'); if(box) box.innerHTML = '';
   if(pickMap) pickMap.easeTo({ center: [p.lng, p.lat], zoom: 17, duration: 600 });
   placePickMarker();
+  updatePickChip();
 }
 function placePickMarker(){
   if(!pickMap) return;
@@ -1207,11 +1234,12 @@ function placePickMarker(){
     .setLngLat([pickPos.lng, pickPos.lat]).addTo(pickMap);
   pickMarker.on('dragend', ()=>{ const ll = pickMarker.getLngLat(); pickPos = { lat: ll.lat, lng: ll.lng }; });
 }
-function closePick(){ if(pickMap){ pickMap.remove(); pickMap = null; } if(pickWhich==='dest'){ wiz.step=1; go('viajes'); } else go(pickReturn); }
+function closePick(){ if(pickMap){ pickMap.remove(); pickMap = null; } suppressEntryAdOnce = true; if(pickWhich==='dest'){ wiz.step=1; go('viajes'); } else go(pickReturn); }
 async function confirmPick(){
   const label = pickLabel || 'Punto en el mapa ('+pickPos.lat.toFixed(5)+', '+pickPos.lng.toFixed(5)+')';
   const zone = pickLabel || 'Punto en el mapa';
   if(pickMap){ pickMap.remove(); pickMap = null; }
+  suppressEntryAdOnce = true;
   if(pickWhich==='origin'){ wiz.origin = { lat:pickPos.lat, lng:pickPos.lng, label, zone }; wiz.step=2; go('viajes'); }
   else if(pickWhich==='mdest' || pickWhich==='morigin'){ mandadoPickDone(pickWhich, pickPos, label); }
   else { wiz.dest = { lat:pickPos.lat, lng:pickPos.lng, label, zone }; await computeTrip(); go('viajes'); }
@@ -1361,7 +1389,8 @@ async function renderHistoria(){
       + '<div class="muted">'+fmtDateTime(r.created_at)+' · '+fmt$(r.final_price||r.price)+' · '+(r.kind==='mandado'?'Mandado':'Viaje')+'</div>'
       + (r.driver_name?'<div class="muted">'+esc(r.driver_name)+' · Unidad '+esc(r.driver_unit||'—')+'</div>':'')
       + '</div><span class="chip '+(r.status==='finalizado'?'':'red')+'">'+(r.status==='finalizado'?'Finalizado':'Cancelado')+'</span></div>'
-      + (r.status==='finalizado' ? '<button class="btn small" onclick="showReceipt('+r.id+')">Ver recibo del viaje</button>' : '')
+      + (r.status==='finalizado' ? '<div class="btnrow"><button class="btn small" onclick="showReceipt('+r.id+')">Ver recibo del viaje</button>'
+      + (r.kind!=='mandado' ? '<button class="btn amber small" onclick="repeatTrip('+r.id+')">🔁 Repetir este viaje</button>' : '') + '</div>' : '')
       + '</div>').join('')
       : '<p class="muted center mt">Aún no tienes viajes terminados.</p>';
   } catch(e){ $('#hist-list').innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
@@ -1523,7 +1552,7 @@ function renderLiveStrips(){
     bot.innerHTML = '<div class="row"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
       + (r.trip_stage==='llego' ? '<a class="telbtn" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+' · '+esc(r.passenger_phone||'')+'</a>' : '')
       + (r.kind==='mandado' ? '<button class="ghostb" onclick="driverPasteLocation('+r.id+')">📍 Pegar ubicación de WhatsApp para la entrega</button>' : '')
-      + '<div class="row" style="margin-top:8px"><span>Precio final</span><b class="big2">'+fmt$(r.final_price||r.price)+'</b></div>'
+      + '<div style="margin-top:8px;background:var(--amber);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
       + (nxt ? '<button onclick="advanceLive(\''+nxt+'\')">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
   } else {
     const dKm = (r.driver_lat && r.origin_lat) ? havKm(r.driver_lat, r.driver_lng, r.origin_lat, r.origin_lng) : null;
@@ -1977,14 +2006,16 @@ function showTaxiRun(idx){
 
 /* ===== MANDADOS — rediseño completo ===== */
 let md = null; // estado del flujo de mandado
-function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'Centro', detail:'', lat:null, lng:null}], dest:null, destZone:'Centro', recipient:'', description:'', km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
+function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', lat:null, lng:null}], dest:null, destZone:'', vehicle:'mototaxi', recipient:'', description:'', km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
 async function renderMandados(){
   const page = $('#mandados-page');
   if(!md) md = newMandado();
+  setPageNoScroll('mandados-page', false);
   const active = await myActiveRequest('mandado');
   if(active){
     if(active.status==='aceptado'){ goLive(active.id, false); return; }
     md.requestId = active.id;
+    setPageNoScroll('mandados-page', true);
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
       + '<h2>Tu mandado</h2><div id="md-searching"></div>'
       + '<button class="btn danger" onclick="cancelMandado()">Cancelar mandado</button>';
@@ -1992,6 +2023,7 @@ async function renderMandados(){
     return;
   }
   if(md.step===0){
+    setPageNoScroll('mandados-page', true);
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
       + '<h2>¿Qué quieres hacer?</h2>'
       + '<button class="bigopt" onclick="md.kind=\'quiero\';md.step=1;renderMandados()"><b>Quiero un mandado</b><div class="muted">Que me traigan algo a mí: lo recogen en otro lugar y me lo entregan donde estoy.</div></button>'
@@ -2011,41 +2043,38 @@ function renderMandadoQuiero(){
   if(md.step===1){
     page.innerHTML = backPill('Regresar', "mdBack(0)")
       + '<h2>¿Qué quieres que te traigan?</h2><p class="muted mt">Una cosa por renglón: la mototaxi compra y te trae todo a tu ubicación.</p>'
+      + '<label class="mt">¿En qué vehículo?</label>'
+      + '<div class="btnrow"><button class="btn '+((md.vehicle||'mototaxi')==='mototaxi'?'':'ghost')+'" style="margin-top:8px" onclick="md.vehicle=\'mototaxi\';renderMandados()">🛺 Mototaxi</button>'
+      + '<button class="btn '+((md.vehicle||'mototaxi')==='moto'?'':'ghost')+'" style="margin-top:8px" onclick="md.vehicle=\'moto\';renderMandados()">🏍️ Moto</button></div>'
       + mdItemsHtml()
       + '<button class="btn" onclick="if(!md.items.some(i=>i.trim()))return toast(\'Escribe al menos una cosa.\');mdBack(2)">Continuar</button>';
   } else if(md.step===2){
     page.innerHTML = backPill('Regresar', "mdBack(1)")
       + '<h2>¿De dónde son las compras?</h2>'
       + '<button class="listbtn '+(md.singlePlace?'sel':'')+'" onclick="md.singlePlace=true;md.stops=md.stops.slice(0,1);renderMandados()">Un solo lugar</button>'
-      + '<button class="listbtn '+(!md.singlePlace?'sel':'')+'" onclick="md.singlePlace=false;if(md.stops.length<2)md.stops.push({zone:\'Centro\',detail:\'\',lat:null,lng:null});renderMandados()">Varios lados</button>'
+      + '<button class="listbtn '+(!md.singlePlace?'sel':'')+'" onclick="md.singlePlace=false;if(md.stops.length<2)md.stops.push({zone:\'\',detail:\'\',lat:null,lng:null});renderMandados()">Varios lados</button>'
       + '<div id="md-stops">' + md.stops.map((s,i)=>mdStopEditor(i)).join('') + '</div>'
-      + (md.singlePlace ? '' : (md.stops.length<5 ? '<button class="btn ghost" onclick="md.stops.push({zone:\'Centro\',detail:\'\',lat:null,lng:null});renderMandados()">+ Agregar otro lugar (+$10)</button>' : '<p class="muted center mt">Máximo 5 paradas.</p>'))
+      + (md.singlePlace ? '' : (md.stops.length<5 ? '<button class="btn ghost" onclick="md.stops.push({zone:\'\',detail:\'\',lat:null,lng:null});renderMandados()">+ Agregar otro lugar (+$10)</button>' : '<p class="muted center mt">Máximo 5 paradas.</p>'))
       + '<button class="btn" onclick="mdBack(3)">Continuar</button>';
   } else if(md.step===3){
     page.innerHTML = backPill('Regresar', "mdBack(2)")
-      + '<h2>¿Dónde se recoge?</h2><p class="muted mt">La entrega siempre es donde estás tú (tu ubicación actual).</p>'
+      + '<h2>¿Dónde se recoge?</h2><p class="muted mt">En el siguiente paso marcas el punto exacto de entrega.</p>'
       + '<div id="md-pickups">' + md.stops.map((s,i)=>'<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b><div class="muted mt">Lugar: <b>'+esc(s.zone)+'</b>'+(s.lat!=null?' · 📍 punto marcado':'')+'</div>'
         + '<button class="btn ghost small" onclick="openPick(\'morigin\',\'mandados\');mdPickStop='+i+'">🔍 Buscar lugar / marcar punto en el mapa</button>'
         + '<label class="mt">O pega la ubicación de WhatsApp</label><input id="md-wa-'+i+'" placeholder="Enlace de Google Maps o coordenadas" value="'+esc(s.detail||'')+'"><button class="btn ghost small" onclick="mdResolveWa('+i+')">Usar esta ubicación</button>'
         + (s.lat!=null ? '<p class="muted mt">📍 Punto marcado: '+s.lat.toFixed(5)+', '+s.lng.toFixed(5)+'</p>' : '')
         + '</div>').join('') + '</div>'
-      + '<button class="btn" onclick="mdComputePrice()">Continuar</button>';
+      + '<button class="btn" onclick="mdBack(4)">Continuar</button>';
   } else if(md.step===4){
+    setPageNoScroll('mandados-page', true);
     page.innerHTML = backPill('Regresar', "mdBack(3)")
-      + '<h2>Entrega: donde estás tú</h2>'
-      + '<div id="md-delivery"><p class="muted">Obteniendo tu ubicación actual…</p></div>'
-      + '<button class="btn" id="md-delivery-btn" disabled onclick="mdBack(5)">Continuar</button>';
-    myLocation().then(p=>{
-      md.myLoc = p;
-      const d = $('#md-delivery');
-      if(d) d.innerHTML = '<div class="card white"><b>📍 Tu ubicación actual</b><div class="muted mt">'+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</div></div>';
-      const b = $('#md-delivery-btn'); if(b) b.disabled = false;
-    }).catch(()=>{
-      const d = $('#md-delivery');
-      if(d) d.innerHTML = '<div class="card warn"><b>No se pudo obtener tu ubicación (GPS).</b><p class="muted mt">Activa el GPS para que la mototaxi te entregue donde estás.</p></div>';
-      const b = $('#md-delivery-btn'); if(b) b.disabled = false;
-    });
+      + '<h2>Entrega: marca tu punto</h2>'
+      + '<p class="muted mt">Marca en el mapa el punto exacto donde te entregan el mandado.</p>'
+      + (md.dest ? '<div class="card white"><b>📍 Punto de entrega marcado</b><div class="muted mt">'+esc(md.dest.label||'')+' · '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+'</div></div>' : '')
+      + '<button class="btn" onclick="openPick(\'mdest\',\'mandados\')">📍 Marcar mi punto</button>'
+      + '<button class="btn" onclick="mdComputePrice()">Continuar</button>';
   } else if(md.step===5){
+    setPageNoScroll('mandados-page', true);
     page.innerHTML = backPill('Regresar', "mdBack(4)")
       + '<h2>Tu precio</h2>'
       + '<div class="card white"><div class="kv"><span>Distancia aprox.</span><b>'+md.km.toFixed(1)+' km</b></div>'
@@ -2076,20 +2105,26 @@ async function mdResolveWa(i){
 }
 async function mdComputePrice(){
   const first = md.stops[0];
-  if(first.lat==null){ const p = placeByName(first.zone); first.lat = p.lat; first.lng = p.lng; }
-  const dest = md.myLoc || await myLocation().catch(()=>null);
-  if(!dest){ toast('No se pudo obtener tu ubicación para la entrega.'); return; }
-  md.myLoc = dest;
+  if(first.lat==null){
+    const p = first.zone ? placeByName(first.zone) : null;
+    if(!p){ toast('Marca el punto de recogida de la primera parada.'); return; }
+    first.lat = p.lat; first.lng = p.lng;
+  }
+  // La entrega es el punto confirmado en el mapa, nunca el GPS ni Centro.
+  const dest = md.dest;
+  if(!dest || dest.lat==null){ toast('Marca tu punto de entrega en el mapa.'); return; }
   const est = await estimateKm(first, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
   const extra = (md.stops.length-1) * MANDADO_EXTRA_STOP;
   md.suggested = Math.max(MIN_TRIP, suggestedPrice(md.km) + extra);
   md.price = md.suggested;
-  mdBack(4);
+  mdBack(5);
 }
 function renderMandadoEnviar(){
   const page = $('#mandados-page');
+  // Todos los pasos de "Enviar" son cortos (una tarjeta o un campo): sin scroll.
+  setPageNoScroll('mandados-page', true);
   if(md.step===1){
     page.innerHTML = backPill('Regresar', "mdBack(0)")
       + '<h2>Recogida: donde estás tú</h2>'
@@ -2108,10 +2143,10 @@ function renderMandadoEnviar(){
   } else if(md.step===2){
     page.innerHTML = backPill('Regresar', "mdBack(1)")
       + '<h2>¿Dónde se entrega?</h2>'
-      + '<div class="muted mt">Lugar de entrega: <b>'+esc(md.dest?md.dest.label||md.destZone:md.destZone)+'</b></div>'
+      + '<div class="muted mt">Lugar de entrega: <b>'+(md.dest?esc(md.dest.label||md.destZone||'Punto marcado'):'Aún no marcado')+'</b></div>'
       + '<button class="btn ghost" onclick="openPick(\'mdest\',\'mandados\')">🔍 Buscar lugar / marcar punto exacto en el mapa</button>'
       + (md.dest ? '<p class="muted mt">📍 Punto marcado: '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+'</p>' : '')
-      + '<button class="btn" onclick="mdBack(3)">Continuar</button>';
+      + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null)return toast(\'Marca el punto de entrega en el mapa.\');mdBack(3)">Continuar</button>';
   } else if(md.step===3){
     page.innerHTML = backPill('Regresar', "mdBack(2)")
       + '<h2>¿Quién lo recibe?</h2>'
@@ -2158,7 +2193,7 @@ async function mdComputeEnviarPrice(){
   if(!origin){ toast('No se pudo obtener tu ubicación.'); return; }
   md.myLoc = origin;
   let dest = md.dest;
-  if(!dest){ const p = placeByName(md.destZone); dest = { lat:p.lat, lng:p.lng, label:p.name, zone:p.name }; md.dest = dest; }
+  if(!dest || dest.lat==null){ toast('Marca el punto de entrega en el mapa.'); return; }
   const est = await estimateKm(origin, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
@@ -2178,6 +2213,8 @@ function mandadoPickDone(which, pos, label){
 }
 async function publishMandado(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','mandados'); return; }
+  // Sin punto de entrega marcado no se publica nada (nunca se inventa Centro).
+  if(!md.dest || md.dest.lat==null){ toast('Marca el punto de entrega en el mapa.'); return; }
   const price = parseFloat($('#md-price').value);
   if(!price || price < MIN_TRIP || price > 1000 || price % 5 !== 0){ $('#md-price-err').classList.remove('hidden'); return; }
   const pay = $('#md-pay').value;
@@ -2187,8 +2224,9 @@ async function publishMandado(){
       const first = md.stops[0];
       body = { passenger_id: myPassenger.id, kind:'mandado',
         origin_zone: first.zone, origin_detail: first.detail||first.zone, origin_lat: first.lat, origin_lng: first.lng,
-        dest_zone:'Mi ubicación', dest_detail:'Entrega en mi ubicación', dest_lat: md.myLoc.lat, dest_lng: md.myLoc.lng,
+        dest_zone: md.dest.zone||'Punto de entrega', dest_detail: md.dest.label||'Entrega en mi punto', dest_lat: md.dest.lat, dest_lng: md.dest.lng,
         distance_km: md.km, eta_minutes: md.eta, price, payment_method: pay, paymentMethod: pay,
+        vehicle: md.vehicle||'mototaxi',
         description: md.items.filter(i=>i.trim()).join(' · '),
         items: md.items.filter(i=>i.trim()),
         stops: md.stops.map(s=>({ zone:s.zone, lat:s.lat, lng:s.lng, detail:s.detail||'' })),
@@ -2397,7 +2435,12 @@ function updateDriverBadge(n){
   b.textContent = n; b.classList.toggle('hidden', !n);
 }
 async function driverRespond(rid, kind, price){
-  try { await api('/api/driver-respond', { driver_id: myDriver.id, request_id: rid, kind, price }); toast(kind==='acepta'?'Oferta enviada. Esperando al pasajero.':'Contraoferta enviada.'); renderDriverInbox(); }
+  try {
+    const j = await api('/api/driver-respond', { driver_id: myDriver.id, request_id: rid, kind, price });
+    // Aceptar ya confirma al instante: el servidor devuelve el viaje aceptado.
+    if(kind==='acepta' && j && j.request && j.request.status==='aceptado'){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
+    toast(kind==='acepta'?'Oferta enviada. Esperando al pasajero.':'Contraoferta enviada.'); renderDriverInbox();
+  }
   catch(e){ toast(e.message); }
 }
 function driverCounterPrompt(rid, price){
@@ -2467,9 +2510,11 @@ async function loadAdminOverview(){
     setCnt('cnt-sol-negocios', j.pending_businesses);
     const grid = document.querySelector('#admin-page .admingrid');
     if(grid){
+      // La marca verde señala la sección ABIERTA, no las que tienen pendientes
+      // (los conteos ámbar ya marcan los pendientes).
+      const sections = ['sol-choferes','sol-negocios','choferes','pasajeros','cuentas','anuncios','tiendas'];
       const btns = grid.querySelectorAll('button');
-      if(btns[0]) btns[0].classList.toggle('open', j.pending_drivers > 0);
-      if(btns[1]) btns[1].classList.toggle('open', j.pending_businesses > 0);
+      btns.forEach((b,i)=>b.classList.toggle('open', adminScreen===sections[i]));
     }
     box.innerHTML = n
       ? '<div class="card warn"><b>Tienes '+n+' solicitud'+(n>1?'es':'')+' nueva'+(n>1?'s':'')+' por revisar</b>'
