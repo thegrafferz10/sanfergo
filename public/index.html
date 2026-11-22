@@ -153,6 +153,10 @@ input[type=file]{padding:8px}
 .bigopt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-top:10px}
 .bigopt b{font-size:18px}
 .bigopt .muted{margin-top:4px}
+.bigopt.hot{border-color:var(--green);background:#e8f5ee}
+.bigopt .row{display:flex;gap:12px;align-items:flex-start}
+.bigopt .row svg{flex-shrink:0;margin-top:2px}
+.bigopt .row .tx{min-width:0}
 .tabrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .tabrow button{flex:1;min-width:100px;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:15px}
 .tabrow button.on{background:var(--green);color:#fff;border-color:var(--green)}
@@ -286,7 +290,7 @@ input[type=file]{padding:8px}
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.7) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.3.8) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.8709, lng: -93.2063 };
@@ -1044,11 +1048,15 @@ async function renderViajes(){
   }
   if(wiz.step===1){
     setPageNoScroll('viajes-page', true);
+    // Paso de origen con dos tarjetas, como en la app real: "Usar ubicación
+    // actual" destacada con borde verde y "Ubicar un punto en el mapa".
+    // El comportamiento no cambia: la primera abre el mapa con el pin en el
+    // GPS para confirmar o arrastrar; la segunda abre el mapa para tocar el punto.
     page.innerHTML = backPill('Regresar', "wiz.step=0;renderViajes()")
       + '<h2>¿De dónde sales?</h2>'
-      + '<p class="muted mt">Tu punto de partida es tu ubicación actual.</p>'
-      + '<button class="btn" onclick="useMyLocation()">📍 Usar ubicación actual</button>'
-      + '<button class="btn ghost" onclick="openPick(\'origin\')">🗺️ Ubicar un punto en el mapa</button>';
+      + '<p class="muted mt">Elige cómo marcar tu punto de partida.</p>'
+      + '<button class="bigopt hot" onclick="useMyLocation()"><span class="row"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0f7a3d" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2" fill="#0f7a3d" stroke="none"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg><span class="tx"><b>Usar ubicación actual</b><div class="muted">Toma el GPS de tu teléfono y enseguida fijas el punto exacto en el mapa</div></span></span></button>'
+      + '<button class="bigopt" onclick="openPick(\'origin\')"><span class="row"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0f7a3d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.3-7-11a7 7 0 1 1 14 0c0 5.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="tx"><b>Ubicar un punto en el mapa</b><div class="muted">Abre el mapa y toca el punto exacto de salida</div></span></span></button>';
     return;
   }
   if(wiz.step===2){
