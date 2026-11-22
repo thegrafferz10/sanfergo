@@ -244,15 +244,18 @@ input[type=file]{padding:8px}
 .map-pill.green{background:#166534}
 .map-pill.blue{background:#2563eb}
 .pickpin-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
-/* Anuncio flotante de entrada (v1.3.5): un solo anuncio al entrar a Viajes,
-   Negocios o Mandados. Va un poco más arriba en la pantalla, se cierra AL
-   INSTANTE con la X grande de arriba (sin contador ni espera) y no lleva
-   'Cerrar y seguir'. La imagen se muestra completa, sin recortar. */
+/* Anuncio flotante de entrada (v1.3.5, imagen a sangre v1.4.10 igual que la
+   app real): un solo anuncio al entrar a Viajes, Negocios o Mandados. Va un
+   poco más arriba en la pantalla, se cierra AL INSTANTE con la X grande de
+   arriba (sin contador ni espera) y no lleva 'Cerrar y seguir'. La imagen
+   se muestra completa, sin recortar, A SANGRE (pegada a los bordes de la
+   tarjeta, sin padding ni radio propio: las esquinas las recorta la
+   tarjeta); solo el pie de abajo lleva padding. */
 #entry-ad-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}
-#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);background:#fff;border:2px solid #f59e0b;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:12px}
-#entry-ad-overlay .adfloat img{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;background:#f3f4f6;display:block;cursor:pointer}
-#entry-ad-overlay .adx{position:absolute;top:10px;right:10px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
-#entry-ad-overlay .adfoot{margin-top:8px}
+#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:2px solid #f59e0b;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#entry-ad-overlay .adfloat img{width:100%;max-height:62dvh;object-fit:contain;background:rgba(0,0,0,.05);display:block;cursor:pointer}
+#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
+#entry-ad-overlay .adfoot{padding:16px}
 #entry-ad-overlay .adfoot .pub{font-size:11px;color:#b45309;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
 #entry-ad-overlay .adfoot h2{font-size:22px;margin-top:2px}
 #entry-ad-overlay .adfoot .btn{background:#14532d;margin-top:10px}
@@ -412,7 +415,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.8) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.10) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -427,6 +430,18 @@ function suggestedPrice(km){ return roundUp5(fare(km)); }
 function havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180;
   const x=r(c-a), y=r(d-b);
   return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }
+/* Rumbo de avance entre dos posiciones, en grados con 0 = norte y girando
+   en sentido horario (como una brújula): ES LA MISMA fórmula de círculo
+   máximo que `bearingDeg` de la app real (MapView.tsx): y = sin(dLng) *
+   cos(la2); x = cos(la1)*sin(la2) - sin(la1)*cos(la2)*cos(dLng);
+   atan2(y, x) en grados. Se usa con una referencia estable (ver
+   startTaxiWatch), no entre lecturas seguidas. */
+function taxiBearingDeg(a, b){
+  const dLng = (b.lng - a.lng) * Math.PI/180, la1 = a.lat * Math.PI/180, la2 = b.lat * Math.PI/180;
+  const y = Math.sin(dLng) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * 180/Math.PI + 360) % 360;
+}
 function etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), ss=s%60; return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
@@ -2716,11 +2731,18 @@ function startTaxiWatch(){
   // Última lectura aceptada (posición + hora): en iOS coords.speed llega
   // null aunque la mototaxi vaya andando, y con speedKmh = 0 el rumbo nunca
   // se calculaba y el mapa quedaba siempre en norte-arriba (la mototaxi iba
-  // de lado). Por eso la velocidad y el rumbo se calculan del desplazamiento
-  // entre lecturas cuando el GPS no los trae; coords.speed solo manda si
-  // trae un valor válido. La tarifa y el conteo de km/espera NO cambian (el
-  // umbral de 4 m queda solo para cobrar).
-  let lastFix = null;
+  // de lado). Por eso la velocidad se calcula del desplazamiento entre
+  // lecturas cuando el GPS no la trae; coords.speed solo manda si trae un
+  // valor válido. El RUMBO no sale de lastFix: usa su propia referencia
+  // estable (taxiHeadingRef, ver abajo), como la app real. La tarifa y el
+  // conteo de km/espera NO cambian (el umbral de 4 m queda solo para cobrar).
+  // Referencia ESTABLE del rumbo (como `lastVehiclePosRef` de la app real,
+  // MapView followVehicle): la última posición usada para calcular el rumbo.
+  // Solo avanza cuando la mototaxi se movió MÁS DE 4 m desde ella; el rumbo
+  // es `taxiBearingDeg` (círculo máximo) desde esa referencia hasta la
+  // lectura actual. `lastFix` (abajo) sí se mueve en cada lectura y es solo
+  // para la velocidad. La brújula del teléfono sigue prohibida (v1.4.8).
+  let lastFix = null, taxiHeadingRef = null;
   taxiWatchId = navigator.geolocation.watchPosition(pos=>{
     const s = loadTaxi(); if(!s || !s.running) return;
     if(pos.coords.accuracy != null && pos.coords.accuracy > 150) return; // filtro GPS: hasta 150 m de error
@@ -2755,38 +2777,40 @@ function startTaxiWatch(){
         if(taxiMarker) taxiMarker.setLngLat([lng, lat]);
         else markTaxiHere({ lat, lng });
         // heading-up: la mototaxi apunta arriba y el mapa gira debajo.
-        // Rumbo SIEMPRE del desplazamiento entre lecturas (≥ 2 m), sin
-        // depender de la brújula del teléfono: es la dirección real del
-        // viaje. bearing = -heading (rumbo horario desde el norte; el mapa
-        // gira al revés para dejarlo arriba).
+        // Rumbo como en la app real (MapView, followVehicle): referencia
+        // ESTABLE (`taxiHeadingRef`) que solo avanza cuando la mototaxi se
+        // movió más de 4 m desde ella, y rumbo `taxiBearingDeg` (círculo
+        // máximo) desde esa referencia. Antes la referencia se movía en
+        // CADA lectura (~1 Hz): con ruido de GPS de varios metros el rumbo
+        // salía de dos puntos de ~5 m y saltaba, así que el mapa nunca
+        // quedaba derecho y la línea azul quedaba AL LADO de la mototaxi
+        // (capturas 5:17/5:18), aunque el ícono apuntara arriba. Sin puerta
+        // de velocidad: la app real tampoco la tiene; la referencia de >4 m
+        // ya filtra el temblor parado. bearing = -heading (rumbo horario
+        // desde el norte; el mapa gira al revés para dejarlo arriba).
         // UN SOLO easeTo por lectura: el giro viaja dentro del centrado de
         // taxiFollowCenter; si no se recentra (seguimiento apagado o guarda
         // de 2 m), el giro va solo en su propio easeTo. Dos easeTo seguidos
         // se cancelan entre sí y el mapa quedaba siempre en norte-arriba.
         let newBearing = null;
-        if(speedKmh >= 5){
-          // El rumbo es SIEMPRE el del desplazamiento entre lecturas: es la
-          // verdadera dirección del viaje. La brújula del teléfono (hacia
-          // dónde apunta el aparato) NO se usa nunca para el giro: en la
-          // mototaxi el teléfono va en el bolsillo o en el tablero mirando
-          // al chofer, así que apunta al revés del viaje y el mapa giraba
-          // 180° al revés (la moto parecía ir hacia abajo, captura 4:56).
-          let h = null;
-          if(lastFix && havKm(lastFix.lat, lastFix.lng, lat, lng) >= 0.002){
-            h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360;
-          }
-          if(h!=null){
+        if(taxiHeadingRef){
+          if(havKm(taxiHeadingRef.lat, taxiHeadingRef.lng, lat, lng) > 0.004){
+            const h = taxiBearingDeg(taxiHeadingRef, { lat, lng });
+            taxiHeadingRef = { lat, lng };
             if(taxiLastHeading==null) taxiLastHeading = h;
             let dd = h - taxiLastHeading; while(dd>180) dd-=360; while(dd<-180) dd+=360;
             taxiLastHeading += dd * 0.7;
             newBearing = -taxiLastHeading;
           }
+        } else {
+          taxiHeadingRef = { lat, lng };
         }
         if(!taxiFollowCenter({ lat, lng }, newBearing) && newBearing!=null) taxiMap.easeTo({ bearing: newBearing, duration: 300 });
         adjustTaxiStartOffset();
       }
     } else {
       s.lastLat = lat; s.lastLng = lng;
+      taxiHeadingRef = { lat, lng }; // primera lectura del recorrido: la referencia del rumbo nace aquí (no se hereda del recorrido anterior, igual que taxiLastHeading)
       s.points = [[lng, lat]];
       if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); taxiFollowCenter({ lat, lng }); }
     }
