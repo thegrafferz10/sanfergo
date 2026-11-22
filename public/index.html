@@ -403,13 +403,13 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.2) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.3) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
 /* Tarifa oficial 2026-11-20: $10 base + $2.50 cada 300 m; espera $1.25/min parado; mínimo $20 */
 const BASE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
-const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
+const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 50, PREMIUM_MIN_PRICE = 80;
 const SUB_PLANS = [{key:'weekly',days:7,price:50,label:'Semanal',desc:'$50 por semana · 7 días'},{key:'monthly',days:30,price:150,label:'Mensual',desc:'$150 por mes · 30 días'},{key:'yearly',days:365,price:500,label:'Anual',desc:'$500 por año · 365 días'}];
 const fmt$ = n => '$' + Math.round(n);
 function fare(km){ return BASE + (km / 0.3) * PER_300M; }
@@ -2333,7 +2333,7 @@ function taxiLoadHist(){
   try { return JSON.parse(localStorage.getItem(TAXI_HIST_KEY) || '[]'); } catch(e){ return []; }
 }
 function taxiSaveHist(list){ localStorage.setItem(TAXI_HIST_KEY, JSON.stringify(list.slice(0, 60))); }
-/* Límite del taxímetro en plan gratis: 5 recorridos por día, contados desde el
+/* Límite del taxímetro en plan gratis: 50 recorridos por día (para pruebas), contados desde el
    historial del teléfono en hora de America/Mexico_City, SEPARADO del contador
    de viajes/mandados. Premium (suscripción vigente) = ilimitado. */
 function taxiIsPremium(){ return !!(myDriver && myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date()); }
@@ -2345,7 +2345,7 @@ function taxiRunsToday(){
 function taxiLimitHtml(dark){
   const n = taxiRunsToday();
   if(taxiIsPremium()) return '<div class="taxipill'+(dark?' dark':'')+'">Premium · recorridos ilimitados · '+n+' hoy</div>';
-  return '<div class="taxipill'+(dark?' dark':'')+'">Plan gratis · '+n+' de 5 recorridos del taxímetro hoy</div>';
+  return '<div class="taxipill'+(dark?' dark':'')+'">Plan gratis · '+n+' de '+FREE_DAILY_LIMIT+' recorridos del taxímetro hoy</div>';
 }
 let taxiLimitShown = false;
 function taxiLimitReached(){
@@ -2353,9 +2353,10 @@ function taxiLimitReached(){
   taxiLimitShown = true;
   const top = document.getElementById('taxi-top');
   if(top) top.innerHTML = taxiLimitHtml(true)
-    + '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:10px"><b>Has completado tus cinco viajes gratis</b>'
-    + '<p style="opacity:.92;margin-top:6px">Ya hiciste tus 5 recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p>'
+    + '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:10px"><b>Has completado tus '+FREE_DAILY_LIMIT+' recorridos gratis</b>'
+    + '<p style="opacity:.92;margin-top:6px">Ya hiciste tus '+FREE_DAILY_LIMIT+' recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p>'
     + '<p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p>'
+    + '<p style="margin-top:10px"><a href="#" style="color:#fff;text-decoration:underline;font-size:14px" onclick="taxiLimitShown=false;go(\'taxihist\');return false">Borrar mi historial del taxímetro</a></p>'
     + '<div class="btnrow"><button class="btn amber" onclick="go(\'chofer\');driverHomeExpanded=\'plan\';renderDriverHome()">Ver mi plan y suscripción</button>'
     + '<button class="btn ghost" style="color:#fff;border-color:#fff" onclick="taxiLimitShown=false;renderTaxiStrips()">Entendido</button></div></div>';
 }
@@ -2460,7 +2461,7 @@ function renderTaxiStrips(){
     const taxiBlocked = !taxiIsPremium() && taxiRunsToday() >= FREE_DAILY_LIMIT;
     top.classList.add('taxitop'); bot.classList.add('taxibot');
     top.innerHTML = taxiLimitHtml(true)
-      + (taxiLimitShown ? '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:2px"><b>Has completado tus cinco viajes gratis</b><p style="opacity:.92;margin-top:6px">Ya hiciste tus 5 recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p><p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p><div class="btnrow"><button class="btn amber" onclick="go(\'chofer\');driverHomeExpanded=\'plan\';renderDriverHome()">Ver mi plan y suscripción</button><button class="btn ghost" style="color:#fff;border-color:#fff" onclick="taxiLimitShown=false;renderTaxiStrips()">Entendido</button></div></div>' : '');
+      + (taxiLimitShown ? '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:2px"><b>Has completado tus '+FREE_DAILY_LIMIT+' recorridos gratis</b><p style="opacity:.92;margin-top:6px">Ya hiciste tus '+FREE_DAILY_LIMIT+' recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p><p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p><p style="margin-top:10px"><a href="#" style="color:#fff;text-decoration:underline;font-size:14px" onclick="taxiLimitShown=false;go(\'taxihist\');return false">Borrar mi historial del taxímetro</a></p><div class="btnrow"><button class="btn amber" onclick="go(\'chofer\');driverHomeExpanded=\'plan\';renderDriverHome()">Ver mi plan y suscripción</button><button class="btn ghost" style="color:#fff;border-color:#fff" onclick="taxiLimitShown=false;renderTaxiStrips()">Entendido</button></div></div>' : '');
     bot.innerHTML = '<div class="taxidark taxiidle"><span class="td-disc">Esta aplicación es independiente de los sistemas de transporte, las tarifas que se muestran son un aproximado.</span>'
       + '<button class="amber" onclick="'+(taxiBlocked?'taxiLimitReached()':'startTaxi()')+'">INICIAR</button></div>';
     zoom.classList.remove('hidden'); compass.classList.add('hidden');
@@ -2611,7 +2612,9 @@ window.addEventListener('pageshow', ()=>taxiFlush());
 
 /* ===== Historial del taxímetro ===== */
 let taxiHistPage = 0;
+let taxiClearArmed = false;
 function renderTaxiHist(){
+  taxiClearArmed = false; // si se salió sin confirmar, el botón vuelve a su estado normal
   const page = $('#taxihist-page');
   const hist = taxiLoadHist();
   const per = 4, pages = Math.max(1, Math.ceil(hist.length / per));
@@ -2619,6 +2622,7 @@ function renderTaxiHist(){
   const slice = hist.slice(taxiHistPage*per, taxiHistPage*per+per);
   page.innerHTML = backPill('Regresar', "go('chofer')")
     + '<h2>Historial del taxímetro</h2><p class="muted mt">'+hist.length+' recorrido(s) guardado(s) en este teléfono.</p>'
+    + (hist.length ? '<button class="btn ghost" id="taxi-clear-hist" style="margin-top:10px" onclick="clearTaxiHist(this)">Borrar todo el historial</button>' : '')
     + (slice.length ? slice.map((r,i)=>{
         const idx = taxiHistPage*per+i;
         return '<div class="card white"><div class="flex"><div class="flex1"><b>'+fmtDateTime(new Date(r.endAt).toISOString())+'</b>'
@@ -2629,6 +2633,23 @@ function renderTaxiHist(){
       + '<span class="pg">'+(taxiHistPage+1)+' / '+pages+'</span>'
       + '<button class="btn ghost small" style="width:auto" '+(taxiHistPage>=pages-1?'disabled':'')+' onclick="taxiHistPage++;renderTaxiHist()">Más antiguos ›</button></div>'
       : '<p class="muted center mt">Aún no hay recorridos guardados.</p>');
+}
+/* Borrar el historial del taxímetro (solo local, en este teléfono): el conteo
+   diario de hoy se calcula desde este historial, así que al borrarlo el
+   conteo vuelve a 0. Confirmación en dos pasos en línea, nada de modal. */
+function clearTaxiHist(btn){
+  if(!taxiClearArmed){
+    taxiClearArmed = true;
+    btn.textContent = '¿Seguro? Toca de nuevo para borrar';
+    btn.classList.remove('ghost'); btn.classList.add('danger');
+    setTimeout(()=>{ taxiClearArmed = false; if(document.getElementById('taxi-clear-hist')) renderTaxiHist(); }, 5000);
+    return;
+  }
+  taxiClearArmed = false;
+  try { localStorage.removeItem(TAXI_HIST_KEY); } catch(e){}
+  taxiHistPage = 0;
+  renderTaxiHist();
+  toast('Historial del taxímetro borrado.');
 }
 let taxiRunMap = null;
 function showTaxiRun(idx){
@@ -3130,7 +3151,7 @@ function renderDriverHome(){
   renderDriverExpanded();
   driverCounts().then(c=>{
     const ps = document.getElementById('de-plan-sub');
-    if(ps) ps.textContent = sub ? ('De paga · ilimitado · te quedan ' + Math.max(0, Math.ceil((new Date(d.subscription_until) - Date.now())/86400000)) + ' días') : ('Gratis · ' + c.today + ' de 5 servicios hoy · $50/sem · $150/mes · $500/año');
+    if(ps) ps.textContent = sub ? ('De paga · ilimitado · te quedan ' + Math.max(0, Math.ceil((new Date(d.subscription_until) - Date.now())/86400000)) + ' días') : ('Gratis · ' + c.today + ' de '+FREE_DAILY_LIMIT+' servicios hoy · $50/sem · $150/mes · $500/año');
     const tt = document.getElementById('de-trips-title');
     if(tt && c.active) tt.textContent = 'Servicio en curso · ver el mapa';
     const ts = document.getElementById('de-trips-sub');
@@ -3164,7 +3185,7 @@ function renderPlan(){
   const opts = SUB_PLANS.map((p,i)=>'<button class="plan-opt '+(subPlanSel===i?'sel':'')+'" style="'+(subPlanSel===i?'border-color:#f59e0b;background:#fffbeb':'')+'" onclick="subPlanSel='+i+';subConfirm=false;renderDriverHome()"><b>'+p.label+' '+fmt$(p.price)+'</b><span class="muted">'+p.desc+'</span></button>').join('');
   let html = '<h2>Mi plan y suscripción</h2>'
     + '<div class="card white">'
-    + '<div class="kv"><span>Plan actual</span><b>'+(sub ? 'Suscripción · ilimitado' : 'Gratis · 5 servicios al día')+'</b></div>'
+    + '<div class="kv"><span>Plan actual</span><b>'+(sub ? 'Suscripción · ilimitado' : 'Gratis · '+FREE_DAILY_LIMIT+' servicios al día')+'</b></div>'
     + (sub ? '<div class="kv"><span>Vigente hasta</span><b>'+new Date(myDriver.subscription_until).toLocaleDateString('es-MX')+'</b></div>' : '')
     + '<div class="kv"><span>Servicios de $80 o más</span><b>'+(sub ? 'Permitidos' : 'Solo con suscripción')+'</b></div>'
     + '<div class="kv"><span>Prioridad en solicitudes</span><b>'+(sub ? 'Sí · PRIORIDAD' : 'No')+'</b></div></div>'
@@ -3224,7 +3245,7 @@ async function renderDriverInbox(){
   const p = $('#chofer-page');
   const sub = !!(myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date());
   const counts = await driverCounts();
-  const atLimit = !sub && counts.today >= 5;
+  const atLimit = !sub && counts.today >= FREE_DAILY_LIMIT;
   let active = [];
   try {
     const mj = await api('/api/requests?driver_id='+myDriver.id);
@@ -3256,7 +3277,7 @@ async function renderDriverInbox(){
       html += '<div class="card warn"><b>Estás fuera de línea. Ponte en línea para aceptar o contraofertar estas solicitudes.</b></div>';
     }
     if(atLimit){
-      html += '<div class="card red"><b>Llegaste a tus 5 servicios de hoy con el plan gratis: ya no puedes aceptar más hasta mañana. Elige tu suscripción — $50 por semana, $150 por mes o $500 por año — desde tu panel y sigue hoy mismo sin límite.</b></div>';
+      html += '<div class="card red"><b>Llegaste a tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis: ya no puedes aceptar más hasta mañana. Elige tu suscripción — $50 por semana, $150 por mes o $500 por año — desde tu panel y sigue hoy mismo sin límite.</b></div>';
     }
     if(!list.length){
       html += '<p class="muted center mt">'+(myDriver.vehicle==='moto' ? 'Ahorita no hay mandados en moto buscando conductor. Cuando un pasajero publique, aparecerá aquí.' : 'Ahorita no hay viajes ni mandados en mototaxi buscando conductor. Cuando un pasajero publique, aparecerá aquí.')+'</p>';
@@ -3291,7 +3312,7 @@ async function renderDriverInbox(){
     } else if(highFare && !sub){
       html += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
     } else if(atLimit){
-      html += '<div class="card warn"><b>Ya hiciste tus 5 servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
+      html += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
     } else if(driverCounter && driverCounter.rid===r.id){
       html += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
         + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
@@ -3542,7 +3563,7 @@ async function renderAdminDetail(){
   } catch(e){}
   const subBlock = sub
     ? '<b>Suscripción de paga activa · Servicios ilimitados · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>'
-    : '<b>Plan gratis · '+todayCount+' de 5 servicios de hoy · '+(todayCount>=5 ? 'ya llegó a su límite de hoy' : 'todavía puede aceptar más hoy')+'</b>'
+    : '<b>Plan gratis · '+todayCount+' de '+FREE_DAILY_LIMIT+' servicios de hoy · '+(todayCount>=FREE_DAILY_LIMIT ? 'ya llegó a su límite de hoy' : 'todavía puede aceptar más hoy')+'</b>'
       + '<p class="muted mt">Precios de la suscripción: $50 por semana · $150 por mes · $500 por año (el chofer elige y paga por transferencia).</p>';
   body.innerHTML = '<button class="backpill" onclick="adminDetail=null;adminBlockStep=false;adminDeleteStep=false;renderAdminDrivers()">Regresar a la lista de choferes</button>'
     + '<h1>Ficha del chofer</h1>'
