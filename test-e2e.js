@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.8 en /api/health', h.ok && h.version === '1.4.8', JSON.stringify(h));
+  check('versión 1.4.10 en /api/health', h.ok && h.version === '1.4.10', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.8', h134.ok && h134.version === '1.4.8', JSON.stringify(h134));
+  check('versión 1.4.10', h134.ok && h134.version === '1.4.10', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -472,7 +472,7 @@ async function api(path, body) {
   // Giro sin depender de coords.speed/coords.heading (v1.4.7): en iOS llegan
   // null andando y el rumbo nunca se calculaba (mapa siempre en norte-arriba).
   // Ahora velocidad y rumbo salen del desplazamiento entre lecturas.
-  check('taxímetro: velocidad y rumbo del desplazamiento entre lecturas (sin coords.speed)', html.includes('let lastFix = null;') && html.includes('havKm(lastFix.lat, lastFix.lng, lat, lng)') && html.includes('speedKmh = (dt > 0 && dd >= 0.0025) ? (dd / (dt / 3600)) : 0') && html.includes('h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360') && html.includes('lastFix = { lat, lng, t: now };'));
+  check('taxímetro: velocidad y rumbo del desplazamiento entre lecturas (sin coords.speed)', html.includes('let lastFix = null, taxiHeadingRef = null;') && html.includes('havKm(lastFix.lat, lastFix.lng, lat, lng)') && html.includes('speedKmh = (dt > 0 && dd >= 0.0025) ? (dd / (dt / 3600)) : 0') && html.includes('taxiBearingDeg(taxiHeadingRef, { lat, lng })') && html.includes('lastFix = { lat, lng, t: now };'));
   // Sentido del giro (v1.4.8): el rumbo prefería la brújula del teléfono
   // (hacia dónde apunta el aparato), pero en la mototaxi el teléfono va
   // mirando al chofer, así que el mapa giraba 180° al revés y la moto
@@ -480,10 +480,81 @@ async function api(path, body) {
   // brújula: el rumbo es siempre el del desplazamiento entre lecturas.
   // Simulación del caso real: dos lecturas yendo al SUR (latitud bajando)
   // con la brújula presente y al revés (0°, norte) → rumbo 180° (sur) y
-  // bearing -180°.
+  // bearing -180°, con la fórmula de círculo máximo (taxiBearingDeg).
   const latA = 16.8709, lngA = -93.2063, latB = 16.8700, lngB = -93.2063;
-  const hSur = (Math.atan2(lngB-lngA, latB-latA) * 180/Math.PI + 360) % 360;
-  check('giro v1.4.8: el rumbo es siempre el del desplazamiento, nunca la brújula del teléfono', !html.includes('coords.heading') && html.includes('h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360') && Math.abs(hSur - 180) < 0.01 && Math.abs((-hSur) - (-180)) < 0.01);
+  const dLngS = (lngB-lngA)*Math.PI/180, la1S = latA*Math.PI/180, la2S = latB*Math.PI/180;
+  const hSur = (Math.atan2(Math.sin(dLngS)*Math.cos(la2S), Math.cos(la1S)*Math.sin(la2S)-Math.sin(la1S)*Math.cos(la2S)*Math.cos(dLngS)) * 180/Math.PI + 360) % 360;
+  check('giro v1.4.8: el rumbo es siempre el del desplazamiento, nunca la brújula del teléfono', !html.includes('coords.heading') && html.includes('function taxiBearingDeg(') && Math.abs(hSur - 180) < 0.01 && Math.abs((-hSur) - (-180)) < 0.01);
+  // Rumbo con referencia ESTABLE (v1.4.9): replica el método de la app real
+  // (MapView followVehicle: lastVehiclePosRef solo avanza con >4 m y rumbo
+  // bearingDeg de círculo máximo; bearing = -rumbo; marcador clavado en el
+  // centro y el mapa gira debajo). La web movía su referencia en CADA
+  // lectura (~1 Hz): con ruido de GPS el rumbo salía de dos puntos de ~5 m
+  // y saltaba, así que la línea azul quedaba AL LADO de la mototaxi
+  // (capturas 5:17/5:18) aunque el ícono apuntara arriba.
+  // (a) Viaje recto al ESTE, lecturas ~1 Hz a 2.8 m, ruido GPS realista
+  // (deriva lenta ±0.3 m/lectura + temblor ±0.5 m, error total ~±3 m): el
+  // rumbo suavizado 0.7 debe mantenerse ~90° (este) y el bearing ~-90°,
+  // o sea la línea queda abajo. El método viejo (referencia cada lectura,
+  // ≥2 m) se degrada mucho más con el mismo ruido.
+  function havKmT(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180;
+    const x=r(c-a), y=r(d-b);
+    return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }
+  function bearingDegT(a,b){
+    const dLng=(b.lng-a.lng)*Math.PI/180, la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180;
+    const y=Math.sin(dLng)*Math.cos(la2);
+    const x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLng);
+    return (Math.atan2(y,x)*180/Math.PI+360)%360; }
+  function normDeg(d){ while(d>180)d-=360; while(d<-180)d+=360; return d; }
+  let seed9=777; function rnd9(){ seed9=(seed9*1103515245+12345)%2147483648; return seed9/2147483648; }
+  const lat9=16.8709, lng9=-93.2063, mLa9=111320, mLn9=111320*Math.cos(lat9*Math.PI/180);
+  let dx9=0, dy9=0; const pts9=[];
+  for(let i=0;i<40;i++){
+    dx9+=(rnd9()*2-1)*0.3; dy9+=(rnd9()*2-1)*0.3;
+    pts9.push({ lat: lat9+(dy9+(rnd9()*2-1)*0.5)/mLa9, lng: lng9+(i*2.8+dx9+(rnd9()*2-1)*0.5)/mLn9 });
+  }
+  let ref9=null, lastH9=null; const hs9=[];
+  for(const p of pts9){
+    if(!ref9){ ref9=p; continue; }
+    if(havKmT(ref9.lat,ref9.lng,p.lat,p.lng)>0.004){
+      const h=bearingDegT(ref9,p); ref9=p;
+      if(lastH9==null) lastH9=h; else lastH9=lastH9+normDeg(h-lastH9)*0.7;
+      hs9.push(lastH9);
+    }
+  }
+  let prev9=null, lastH9o=null; const hs9o=[];
+  for(const p of pts9){
+    if(prev9 && havKmT(prev9.lat,prev9.lng,p.lat,p.lng)>=0.002){
+      const h=(Math.atan2(p.lng-prev9.lng,p.lat-prev9.lat)*180/Math.PI+360)%360;
+      if(lastH9o==null) lastH9o=h; else lastH9o=lastH9o+normDeg(h-lastH9o)*0.7;
+      hs9o.push(lastH9o);
+    }
+    prev9=p;
+  }
+  const rms9=a=>Math.sqrt(a.reduce((s,h)=>s+normDeg(h-90)**2,0)/a.length);
+  const max9=a=>Math.max(...a.map(h=>Math.abs(normDeg(h-90))));
+  check('giro v1.4.9: con referencia estable el rumbo se mantiene al este (línea abajo)', html.includes('function taxiBearingDeg(') && html.includes('taxiHeadingRef') && html.includes('if(havKm(taxiHeadingRef.lat, taxiHeadingRef.lng, lat, lng) > 0.004){') && hs9.length>=10 && rms9(hs9)<=8 && max9(hs9)<=15 && rms9(hs9o)>rms9(hs9), 'nuevo rms='+rms9(hs9).toFixed(1)+' max='+max9(hs9).toFixed(1)+' vs viejo rms='+rms9(hs9o).toFixed(1));
+  // (b) Parado con temblor: la referencia del rumbo NO se actualiza ni gira.
+  // Sin puerta de velocidad (la app real tampoco la tiene): la referencia
+  // de >4 m ya filtra el temblor parado.
+  let seed9b=777, dx9b=0, dy9b=0, ref9b=null, upd9b=0;
+  function rnd9b(){ seed9b=(seed9b*1103515245+12345)%2147483648; return seed9b/2147483648; }
+  for(let i=0;i<20;i++){
+    dx9b+=(rnd9b()*2-1)*0.3; dy9b+=(rnd9b()*2-1)*0.3;
+    const p={ lat: lat9+(dy9b+(rnd9b()*2-1)*0.5)/mLa9, lng: lng9+(dx9b+(rnd9b()*2-1)*0.5)/mLn9 };
+    if(!ref9b){ ref9b=p; continue; }
+    if(havKmT(ref9b.lat,ref9b.lng,p.lat,p.lng)>0.004){ upd9b++; ref9b=p; }
+  }
+  check('giro v1.4.9: parado con temblor la referencia del rumbo no avanza ni gira', upd9b===0 && !html.includes('if(speedKmh >= 5)'), 'actualizaciones='+upd9b);
+  // Anuncio flotante de entrada a sangre (v1.4.10, igual que la app real
+  // EntryAdOverlay): en la web la imagen quedaba dentro de un marco
+  // blanco de 12 px (tarjeta con padding:12px e imagen con
+  // border-radius:12px, capturas 5:24); en la app real la imagen va
+  // pegada a los bordes de la tarjeta (max-h 62dvh, object-contain,
+  // fondo negro 5%, sin radio propio — las esquinas las recorta la
+  // tarjeta) y solo el pie lleva padding 16 px; la tarjeta tiene
+  // max-height 85dvh con overflow y la X va en top/right 12 px.
+  check('anuncio flotante a sangre como la app real (v1.4.10)', html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);max-height:85dvh;overflow-y:auto;') && !html.includes('.adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);background:#fff;border:2px solid #f59e0b;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:12px}') && html.includes('#entry-ad-overlay .adfloat img{width:100%;max-height:62dvh;object-fit:contain;background:rgba(0,0,0,.05);display:block;cursor:pointer}') && !html.includes('.adfloat img{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;') && html.includes("#entry-ad-overlay .adfoot{padding:16px}") && !html.includes("#entry-ad-overlay .adfoot{margin-top:8px}") && html.includes('#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;'));
   // Etiqueta "Inicio del recorrido" nunca tapada por el círculo de velocidad.
   check('taxímetro: la etiqueta de inicio se corre si el círculo la taparía', html.includes('function adjustTaxiStartOffset(){') && html.includes('taxiStartMarker.setOffset([offX, 34])') && html.includes("taxiMap.on('move', adjustTaxiStartOffset)") && html.includes('adjustTaxiStartOffset();'));
   // Aprobación del chofer (v1.4.7): el inicio del chofer revisaba

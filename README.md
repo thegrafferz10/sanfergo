@@ -1,9 +1,20 @@
-# SanFerGo — versión pública (v1.4.8)
+# SanFerGo — versión pública (v1.4.10)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.10 (2026-11-22) — el anuncio flotante de entrada va a sangre, como en la app real
+
+- El usuario mandó dos capturas 5:24 CST de la web y pidió: "También arregla esto de los anuncios, en la app se ve bonito". Diferencia visible: en la web la imagen del anuncio quedaba metida dentro de un marco blanco de 12 px (la tarjeta `.adfloat` llevaba `padding:12px` y la imagen `border-radius:12px`), mientras en la app real (`App.tsx`, `EntryAdOverlay`) la imagen va A SANGRE, pegada a los bordes de la tarjeta (`max-h-[62dvh] w-full object-contain bg-black/5`, sin radio propio — las esquinas las recorta la tarjeta) y solo el bloque de abajo lleva `p-4` con "Publicidad", el nombre del negocio y el botón verde "Ver negocio".
+- Arreglo (solo CSS del flotante, sin tocar la lógica de anuncios): `.adfloat` sin padding, con `max-height:85dvh; overflow-y:auto` (como la app real); `.adfloat img` sin `border-radius`, fondo `rgba(0,0,0,.05)` (el `bg-black/5` de la app real), `max-height:62dvh; object-fit:contain`; `.adfoot` con `padding:16px` (el `p-4`) y sin `margin-top`; `.adx` en `top:12px; right:12px` (el `right-3 top-3`) sobre la esquina de la imagen a sangre. Precarga, sorteo al azar, cierre instantáneo con la X, "Ver negocio" y anuncios libres sin cambios.
+
+## v1.4.9 (2026-11-22) — el giro usa la referencia estable de la app real: la línea azul siempre abajo
+
+- El usuario seguía viendo la línea azul AL LADO de la mototaxi (capturas 5:17/5:18: la línea va a la derecha, la moto apunta arriba pero viaja de lado) y exigió, con razón: "en la app real funciona muy bien, no sé por qué aquí no lo puedes hacer" — la línea azul SIEMPRE debe quedar ABAJO de la mototaxi. Su video de 41 s de la app real andando lo confirma: la mototaxi queda clavada apuntando SIEMPRE hacia arriba en el centro, el mapa va girando debajo para acomodarse (incluso cuando la calle hace curva), y la línea azul queda SIEMPRE abajo, recta detrás de ella.
+- Causa raíz: la web movía su referencia de rumbo en CADA lectura GPS (~1 Hz). Con lecturas de ~1 Hz el rumbo salía de dos puntos de ~5 m con ruido de GPS de varios metros, así que el rumbo saltaba y el mapa nunca quedaba derecho. La app real (`MapView.tsx`, modo `followVehicle`) guarda una referencia (`lastVehiclePosRef`) que SOLO se actualiza cuando el mototaxi avanzó MÁS DE ~4 m desde ella (`distMeters(prevPos, vehicle) > 4`) y solo entonces calcula el rumbo con `bearingDeg` (círculo máximo); el marcador queda clavado en el centro y es el mapa el que se acomoda debajo; el bearing de la cámara es `-rumbo`, suavizado cuadro a cuadro por el camino más corto (constante ~500 ms).
+- Arreglo: la web replica ese método exacto en el taxímetro (`startTaxiWatch`): referencia estable `taxiHeadingRef` que solo avanza con >4 m de movimiento real, rumbo con `taxiBearingDeg` (la misma fórmula de círculo máximo de la app real), suavizado 0.7 por lectura por el camino más corto, bearing = -rumbo, un solo `easeTo` por lectura (centro + giro + padding) y marcador centrado en la franja libre con el padding medido del DOM. Se quitó la puerta de velocidad (la app real tampoco la tiene: la referencia de >4 m ya filtra el temblor parado). El viaje en vivo NO se tocó: su rumbo ya venía de desplazamientos entre ticks del polling. Sin cambios de tarifa, conteo de km/espera, umbral de 4 m solo-para-cobrar, diseño compacto de v1.4.7, ícono ni brújula (sigue prohibida: cero referencias a `coords.heading` en el cliente). El servidor sirve `index.html` también para `/?v=1.4.9` (la ruta `/` ignora el query y se sirve sin caché), para mandar el link con versión y forzar carga fresca en el teléfono. El giro con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo andando en la mototaxi.
 
 ## v1.4.8 (2026-11-22) — el giro ya no usa la brújula del teléfono: la moto iba hacia abajo
 
