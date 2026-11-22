@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.3.5)
+# SanFerGo — versión pública (v1.3.6)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.3.6 (2026-11-22) — auditoría contra la app real
+- Aceptación del chofer confirma al instante (sin segundo paso del pasajero); la contraoferta sigue esperando la decisión del pasajero.
+- Rejilla de $5 en todos los caminos de aceptación; límite gratis de 5 servicios/día y tope de $80+ también al confirmar por respond-offer.
+- Precio sugerido de mandado suma $10 por parada extra; sin mínimo de distancia (solo mínimo de precio $20).
+- Chofer bloqueado puede terminar su viaje en curso; citas sin encimes por duración; anuncio de entrada al azar entre todos los activos; pago fijo al publicar; día en hora de Chiapas.
+- Mapa principal OSM (Carto ya exige llave) con respaldo Esri; selector de destino sin botones (coincidencias al escribir); "Usar ubicación actual" abre el mapa para confirmar el pin; píldora "Vas a: destino" dinámica.
+- Mandados "Quiero": selector Mototaxi/Moto en el paso 1, entrega solo con "Marcar mi punto", sin destino inventado a Centro; historial con "Repetir este viaje" por viaje.
 
 ## Qué incluye
 

@@ -37,10 +37,15 @@ async function api(path, body) {
   check('publicar viaje $25', req.ok && req.request.status === 'buscando', JSON.stringify(req));
   const rid = req.request.id;
   const off = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: rid, kind: 'acepta', price: 25 });
-  check('chofer acepta precio', off.ok && off.offer.status === 'pendiente', JSON.stringify(off));
-  const counter = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rid, offer_id: off.offer.id, action: 'contraoferta', price: 20 });
+  check("'acepta' del chofer confirma AL INSTANTE (sin segundo paso del pasajero)", off.ok && off.request.status === 'aceptado' && off.request.final_price === 25 && off.request.driver_id === drv.driver.id, JSON.stringify(off));
+  // La negociación en dos sentidos sigue viva con la contraoferta: el
+  // chofer contraoferta, el pasajero contraoferta y el chofer acepta.
+  const reqN = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const offN = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: reqN.request.id, kind: 'contraoferta', price: 35 });
+  check('chofer contraoferta $35 (queda pendiente)', offN.ok && offN.offer.kind === 'contraoferta' && offN.offer.status === 'pendiente', JSON.stringify(offN));
+  const counter = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: reqN.request.id, offer_id: offN.offer.id, action: 'contraoferta', price: 20 });
   check('pasajera contraoferta $20', counter.ok);
-  const acc = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rid, offer_id: off.offer.id, action: 'acepta' });
+  const acc = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: reqN.request.id, offer_id: offN.offer.id, action: 'acepta' });
   check('chofer acepta contraoferta: viaje confirmado a $20', acc.ok && acc.request.status === 'aceptado' && acc.request.final_price === 20, JSON.stringify(acc));
   const loc = await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: rid, lat: 16.8700, lng: -93.2070 });
   check('chofer comparte ubicación en vivo', loc.ok);
@@ -78,7 +83,22 @@ async function api(path, body) {
   const sub = await api('/api/subscribe-driver', { driver_id: drv3.driver.id, plan: 'weekly' });
   check('suscripción semanal $50 activa 7 días', sub.ok && sub.driver.plan === 'suscripcion' && sub.price === 50 && sub.days === 7 && sub.plan === 'weekly', JSON.stringify(sub));
   const big2 = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: req3.request.id, kind: 'acepta', price: 90 });
-  check('con suscripción sí puede tomar el de $90 (prioridad)', big2.ok && big2.offer.is_premium === 1, JSON.stringify(big2));
+  check('con suscripción sí puede tomar el de $90 (prioridad, confirma al instante)', big2.ok && big2.offer.is_premium === 1 && big2.request.status === 'aceptado' && big2.request.final_price === 90, JSON.stringify(big2));
+
+  console.log('== Vehículo del mandado (Quiero: mototaxi/moto) ==');
+  const drvM = await api('/api/register-driver', { name: 'Moto Con Foto', phone: '9610000011', vehicle: 'moto', unit: 'M-2', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(drvM.driver.id);
+  await api('/api/set-driver-online', { driver_id: drvM.driver.id, online: true });
+  const manMoto = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Mandado en moto', vehicle: 'moto' });
+  check('mandado en moto guarda vehicle=moto', manMoto.ok && manMoto.request.vehicle === 'moto', JSON.stringify(manMoto));
+  const motoOk = await api('/api/driver-respond', { driver_id: drvM.driver.id, request_id: manMoto.request.id, kind: 'acepta', price: 30 });
+  check('moto sí puede tomar mandado en moto', motoOk.ok && motoOk.request.status === 'aceptado', JSON.stringify(motoOk));
+  const manTaxi = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Mandado en mototaxi', vehicle: 'mototaxi' });
+  check('mandado en mototaxi guarda vehicle=mototaxi', manTaxi.ok && manTaxi.request.vehicle === 'mototaxi', JSON.stringify(manTaxi));
+  const taxiNo = await api('/api/driver-respond', { driver_id: drvM.driver.id, request_id: manTaxi.request.id, kind: 'acepta', price: 30 });
+  check('moto NO puede tomar mandado en mototaxi', !taxiNo.ok, JSON.stringify(taxiNo));
+  const taxiOk = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: manTaxi.request.id, kind: 'acepta', price: 30 });
+  check('mototaxi sí puede tomar mandado en mototaxi', taxiOk.ok && taxiOk.request.status === 'aceptado', JSON.stringify(taxiOk));
 
   console.log('== Cosas perdidas ==');
   const lost = await api('/api/report-lost-item', { reporter_type: 'pasajero', reporter_name: 'Lucia Prueba', reporter_phone: '9610000001', item: 'Celular', service: 'Viaje Centro-Mercado', date_text: 'hoy', contact: '9610000001' });
@@ -102,7 +122,8 @@ async function api(path, body) {
   async function acceptedTrip(price) {
     const rq = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price, payment_method: 'efectivo' });
     const of = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rq.request.id, kind: 'acepta', price });
-    await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rq.request.id, offer_id: of.offer.id, action: 'acepta' });
+    // 'acepta' ya confirma al instante: no hay segundo paso por respond-offer.
+    if (!of.ok || of.request.status !== 'aceptado') throw new Error('acceptedTrip no confirmó: ' + JSON.stringify(of));
     return rq.request.id;
   }
   const rc1 = await acceptedTrip(25);
@@ -141,7 +162,7 @@ async function api(path, body) {
     stops: [{ zone: 'Mercado', lat: 16.87018, lng: -93.20777 }, { zone: 'Centro', lat: 16.8709, lng: -93.2063 }], extra_stops: 1 });
   check('mandado guarda lista, paradas y WhatsApp de quien recibe', m2.ok && m2.request.recipient_phone === '9612222222' && m2.request.extra_stops === 1 && JSON.parse(m2.request.items_json).length === 2, JSON.stringify(m2.request));
   const m2off = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: m2.request.id, kind: 'acepta', price: 40 });
-  await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: m2.request.id, offer_id: m2off.offer.id, action: 'acepta' });
+  check("'acepta' del mandado confirma al instante", m2off.ok && m2off.request.status === 'aceptado' && m2off.request.final_price === 40, JSON.stringify(m2off));
   const upd = await api('/api/update-delivery-point', { driver_id: drv3.driver.id, request_id: m2.request.id, lat: 16.87786, lng: -93.20794, detail: 'casa de la esquina' });
   check('chofer actualiza el punto de entrega con ubicación pegada', upd.ok && /Ubicación de WhatsApp/.test(upd.request.dest_detail) && /casa de la esquina/.test(upd.request.dest_detail), JSON.stringify(upd.request.dest_detail));
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: m2.request.id, stage: 'a_recoger' });
@@ -264,8 +285,11 @@ async function api(path, body) {
   const blockNoReason = await api('/api/block-driver', { token: admLogin.token, driver_id: adm.driver.id, reason: '' });
   check('bloquear sin motivo rechazado', !blockNoReason.ok, JSON.stringify(blockNoReason));
   const rb = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
-  const rbOff = await api('/api/driver-respond', { driver_id: adm.driver.id, request_id: rb.request.id, kind: 'acepta', price: 25 });
-  check('chofer responde antes del bloqueo', rbOff.ok, JSON.stringify(rbOff));
+  // Oferta pendiente (contraoferta) antes del bloqueo: 'acepta' ya confirma
+  // al instante, así que para probar el rechazo por bloqueo se usa una
+  // contraoferta pendiente.
+  const rbOff = await api('/api/driver-respond', { driver_id: adm.driver.id, request_id: rb.request.id, kind: 'contraoferta', price: 30 });
+  check('chofer responde antes del bloqueo (contraoferta pendiente)', rbOff.ok && rbOff.offer.status === 'pendiente', JSON.stringify(rbOff));
   const block = await api('/api/block-driver', { token: admLogin.token, driver_id: adm.driver.id, reason: 'Manejo peligroso' });
   check('admin bloquea con motivo y lo saca de línea', block.ok && block.driver.is_blocked === 1 && block.driver.online === 0 && block.driver.block_reason === 'Manejo peligroso', JSON.stringify(block));
   const acceptBlocked = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rb.request.id, offer_id: rbOff.offer.id, action: 'acepta' });
@@ -280,13 +304,13 @@ async function api(path, body) {
   const unblock = await api('/api/unblock-driver', { token: admLogin.token, driver_id: adm.driver.id });
   check('admin desbloquea y limpia el motivo', unblock.ok && unblock.driver.is_blocked === 0 && !unblock.driver.block_reason, JSON.stringify(unblock));
   const acceptOk = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rb.request.id, offer_id: rbOff.offer.id, action: 'acepta' });
-  check('desbloqueado: su oferta sí se puede aceptar', acceptOk.ok && acceptOk.request.status === 'aceptado', JSON.stringify(acceptOk));
+  check('desbloqueado: su oferta sí se puede aceptar', acceptOk.ok && acceptOk.request.status === 'aceptado' && acceptOk.request.final_price === 30, JSON.stringify(acceptOk));
   const onAgain = await api('/api/set-driver-online', { driver_id: adm.driver.id, online: true });
   check('desbloqueado vuelve a ponerse en línea', onAgain.ok && onAgain.driver.online === 1, JSON.stringify(onAgain));
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.3.5 en /api/health', h.ok && h.version === '1.3.5', JSON.stringify(h));
+  check('versión 1.3.6 en /api/health', h.ok && h.version === '1.3.6', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -387,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.3.5', h134.ok && h134.version === '1.3.5', JSON.stringify(h134));
+  check('versión 1.3.6', h134.ok && h134.version === '1.3.6', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -410,6 +434,113 @@ async function api(path, body) {
   const bi = html.indexOf('bot.innerHTML = (canCancel');
   check('Cancelar, aviso verde y tarjeta del chofer van en la columna de abajo, en ese orden', bi > 0 && html.indexOf('+ arriveHtml', bi) > bi && html.indexOf('drivercard', bi) > html.indexOf('+ arriveHtml', bi));
   check('encuadre del viaje activo deja más aire abajo que arriba', html.includes('bottom: botPad') && html.includes('offset: [0, -60]'));
+
+  console.log('== Correcciones: acepta instantáneo, rejilla $5, límites, mandados, citas, anuncios, pago ==');
+  // (2) Rejilla de $5 en aceptar_precio y en acepta.
+  const rqG = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  const ap22 = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqG.request.id, kind: 'aceptar_precio', price: 22 });
+  check("aceptar_precio a $22 rechazado (fuera de la rejilla)", !ap22.ok && /cinco en cinco/.test(ap22.error || ''), JSON.stringify(ap22));
+  const ac33 = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqG.request.id, kind: 'acepta', price: 33 });
+  check("'acepta' a $33 rechazado (fuera de la rejilla)", !ac33.ok && /cinco en cinco/.test(ac33.error || ''), JSON.stringify(ac33));
+  const ac25 = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqG.request.id, kind: 'acepta', price: 25 });
+  check("'acepta' a $25 confirma al instante tras los rechazos", ac25.ok && ac25.request.status === 'aceptado' && ac25.request.final_price === 25, JSON.stringify(ac25));
+  // (3a) Tope de $80+ también al aceptar una contraoferta del pasajero
+  // (vía driver-respond y vía respond-offer), con chofer sin suscripción.
+  const drvFree = await api('/api/register-driver', { name: 'Gratis Tope', phone: '9610000006', vehicle: 'mototaxi', unit: 'T-6', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(drvFree.driver.id);
+  await api('/api/set-driver-online', { driver_id: drvFree.driver.id, online: true });
+  const rq80 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  const off80 = await api('/api/driver-respond', { driver_id: drvFree.driver.id, request_id: rq80.request.id, kind: 'contraoferta', price: 35 });
+  check('chofer gratis contraoferta $35 (pendiente)', off80.ok && off80.offer.status === 'pendiente', JSON.stringify(off80));
+  const pc90 = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rq80.request.id, offer_id: off80.offer.id, action: 'contraoferta', price: 90 });
+  check('pasajera contraoferta $90', pc90.ok, JSON.stringify(pc90));
+  const acc80a = await api('/api/driver-respond', { driver_id: drvFree.driver.id, request_id: rq80.request.id, kind: 'aceptar_contraoferta_pasajero' });
+  check('chofer gratis NO acepta contraoferta de $90 (tope $80+)', !acc80a.ok && /80/.test(acc80a.error || ''), JSON.stringify(acc80a));
+  const acc80b = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rq80.request.id, offer_id: off80.offer.id, action: 'acepta' });
+  check('respond-offer tampoco confirma la contraoferta de $90 (tope $80+)', !acc80b.ok && /80/.test(acc80b.error || ''), JSON.stringify(acc80b));
+  // (3b) Límite gratis de 5 servicios también al confirmar por respond-offer.
+  const drvLim = await api('/api/register-driver', { name: 'Gratis Límite', phone: '9610000007', vehicle: 'mototaxi', unit: 'L-7', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(drvLim.driver.id);
+  await api('/api/set-driver-online', { driver_id: drvLim.driver.id, online: true });
+  async function tripFor(driverId, price) {
+    const rq = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price, payment_method: 'efectivo' });
+    return api('/api/driver-respond', { driver_id: driverId, request_id: rq.request.id, kind: 'acepta', price });
+  }
+  for (let i = 0; i < 4; i++) { const t = await tripFor(drvLim.driver.id, 25); if (!t.ok) throw new Error('trip límite ' + i + ': ' + JSON.stringify(t)); }
+  const rqL = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  const offL = await api('/api/driver-respond', { driver_id: drvLim.driver.id, request_id: rqL.request.id, kind: 'contraoferta', price: 35 });
+  check('con 4 servicios, la contraoferta $35 queda pendiente', offL.ok && offL.offer.status === 'pendiente', JSON.stringify(offL));
+  const t5 = await tripFor(drvLim.driver.id, 25);
+  check('quinto servicio gratis del día confirma', t5.ok && t5.request.status === 'aceptado', JSON.stringify(t5));
+  const accL = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rqL.request.id, offer_id: offL.offer.id, action: 'acepta' });
+  check('con 5 servicios, respond-offer ya no confirma (límite gratis)', !accL.ok && /5 servicios gratis/.test(accL.error || ''), JSON.stringify(accL));
+  // (4) Precio sugerido de mandado suma $10 por parada extra.
+  async function suggestedMandado(extraStops) {
+    const r = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', extra_stops: extraStops });
+    return r.ok ? r.request.price : null;
+  }
+  check('mandado sin precio, 1.0 km, 0 paradas extra sugiere $20', (await suggestedMandado(0)) === 20);
+  check('mandado sin precio, 1.0 km, 1 parada extra sugiere $30', (await suggestedMandado(1)) === 30);
+  check('mandado sin precio, 1.0 km, 2 paradas extra sugiere $40', (await suggestedMandado(2)) === 40);
+  const manFixed = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 40, payment_method: 'efectivo', extra_stops: 2 });
+  check('mandado con precio puesto ($40) no suma paradas extra', manFixed.ok && manFixed.request.price === 40, JSON.stringify(manFixed));
+  // (5) Viaje corto (menos de 0.5 km) sí se puede publicar a $20.
+  const short = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.8705, dest_lng: -93.2068, distance_km: 0.3, price: 20, payment_method: 'efectivo' });
+  check('viaje de 0.3 km a $20 se publica', short.ok && short.request.status === 'buscando' && short.request.price === 20, JSON.stringify(short));
+  const shortSug = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.8705, dest_lng: -93.2068, distance_km: 0.3, payment_method: 'efectivo' });
+  check('viaje de 0.3 km sin precio sugiere $20', shortSug.ok && shortSug.request.price === 20, JSON.stringify(shortSug));
+  // (6) Chofer bloqueado SÍ puede avanzar y finalizar un viaje ya en curso.
+  const drvBlk = await api('/api/register-driver', { name: 'Bloqueado Curso', phone: '9610000008', vehicle: 'mototaxi', unit: 'B-8', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(drvBlk.driver.id);
+  await api('/api/set-driver-online', { driver_id: drvBlk.driver.id, online: true });
+  const rqB = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  const offB = await api('/api/driver-respond', { driver_id: drvBlk.driver.id, request_id: rqB.request.id, kind: 'acepta', price: 25 });
+  check('viaje aceptado antes del bloqueo', offB.ok && offB.request.status === 'aceptado', JSON.stringify(offB));
+  const blkB = await api('/api/block-driver', { token: admLogin.token, driver_id: drvBlk.driver.id, reason: 'Prueba: viaje en curso' });
+  check('admin bloquea al chofer con el viaje en curso', blkB.ok && blkB.driver.is_blocked === 1, JSON.stringify(blkB));
+  let blkOk = true;
+  for (const st of ['en_camino', 'llego', 'en_viaje', 'finalizado']) {
+    const a = await api('/api/advance-stage', { driver_id: drvBlk.driver.id, request_id: rqB.request.id, stage: st });
+    if (!a.ok || a.request.trip_stage !== st) { blkOk = false; console.log('  avance bloqueado falló en ' + st + ' :: ' + JSON.stringify(a)); }
+  }
+  check('chofer bloqueado avanza y finaliza su viaje en curso', blkOk);
+  await api('/api/unblock-driver', { token: admLogin.token, driver_id: drvBlk.driver.id });
+  // (9) La forma de pago solo cambia mientras sigue buscando.
+  const rqP = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  const payOk = await api('/api/set-payment-method', { request_id: rqP.request.id, method: 'transferencia' });
+  check('cambiar pago mientras busca sí se puede', payOk.ok, JSON.stringify(payOk));
+  const rqP2 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqP2.request.id, kind: 'acepta', price: 25 });
+  const payNo = await api('/api/set-payment-method', { request_id: rqP2.request.id, method: 'transferencia' });
+  check('cambiar pago con viaje aceptado rechazado (ya quedó fijada)', !payNo.ok && /fijada/.test(payNo.error || ''), JSON.stringify(payNo));
+  const pay404 = await api('/api/set-payment-method', { request_id: 999999, method: 'transferencia' });
+  check('cambiar pago de solicitud inexistente: 404', !pay404.ok, JSON.stringify(pay404));
+  // (7) Citas sin encimes: solape real por duración del servicio (60 min).
+  const biz = await api('/api/request-business', { token: li1.token, name: 'Salón Citas ' + RUN, type: 'citas', whatsapp: '9610000010' });
+  check('negocio de citas creado (pendiente)', biz.ok && biz.business.id, JSON.stringify(biz));
+  const bizAp = await api('/api/approve-business', { token: admLogin.token, business_id: biz.business.id });
+  check('admin activa el negocio de citas', bizAp.ok && bizAp.business.status === 'activo', JSON.stringify(bizAp));
+  const svc = await api('/api/add-service', { token: li1.token, business_id: biz.business.id, name: 'Corte', price: 100, duration_minutes: 60 });
+  check('servicio de 60 min agregado', svc.ok && svc.service.id, JSON.stringify(svc));
+  const ap1 = await api('/api/create-appointment', { token: li1.token, business_id: biz.business.id, service_id: svc.service.id, date: '2026-12-01', time: '10:00' });
+  check('cita 10:00 (60 min) reservada', ap1.ok && ap1.appointment.id, JSON.stringify(ap1));
+  const apOverlap = await api('/api/create-appointment', { token: li1.token, business_id: biz.business.id, service_id: svc.service.id, date: '2026-12-01', time: '10:30' });
+  check('cita 10:30 rechazada (se solapa con la de 10:00-11:00)', !apOverlap.ok, JSON.stringify(apOverlap));
+  const apSame = await api('/api/create-appointment', { token: li1.token, business_id: biz.business.id, service_id: svc.service.id, date: '2026-12-01', time: '10:00' });
+  check('cita a la misma hora exacta rechazada', !apSame.ok, JSON.stringify(apSame));
+  const ap11 = await api('/api/create-appointment', { token: li1.token, business_id: biz.business.id, service_id: svc.service.id, date: '2026-12-01', time: '11:00' });
+  check('cita 11:00 aceptada (justo al terminar la anterior)', ap11.ok && ap11.appointment.id, JSON.stringify(ap11));
+  // (8) entry-ad con historial: el sorteo es al azar entre TODOS los activos.
+  const adA = await api('/api/create-ad', { token: admLogin.token, label: 'Anuncio negocio ' + RUN, image: ADIMG, kind: 'negocio', business_id: biz.business.id, entries: ['viajes'] });
+  check('anuncio del negocio con historial (Ana tiene cita ahí)', adA.ok && adA.ad.id, JSON.stringify(adA));
+  const adB = await api('/api/create-ad', { token: admLogin.token, label: 'Anuncio libre ' + RUN, image: ADIMG, kind: 'libre', entries: ['viajes'] });
+  check('anuncio libre para el sorteo', adB.ok && adB.ad.id, JSON.stringify(adB));
+  const seen = new Set();
+  for (let i = 0; i < 40; i++) {
+    const e = await api('/api/entry-ad?entry=viajes&token=' + li1.token);
+    if (e.ok && e.ad) seen.add(e.ad.id);
+  }
+  check('entry-ad con historial devuelve AMBOS anuncios en 40 sorteos (al azar, no solo el del historial)', seen.has(adA.ad.id) && seen.has(adB.ad.id), 'vistos: ' + [...seen].join(','));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

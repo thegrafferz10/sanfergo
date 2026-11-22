@@ -2,7 +2,7 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.3.5: el admin entra DIRECTO a su panel al
+// Estado del spec: 2026-11-22 (v1.3.6: el admin entra DIRECTO a su panel al
 // iniciar sesión; chofer nuevo nace PENDIENTE hasta que el admin lo aprueba;
 // Negocios desbloqueado con modelo por tipo (entrega/catálogo/citas) y
 // paquete Premium $100/mes; anuncios de entrada flotantes, uno al azar por
@@ -161,8 +161,12 @@ addCol('requests', 'recipient_phone', 'TEXT');
 addCol('requests', 'items_json', 'TEXT');
 addCol('requests', 'stops_json', 'TEXT');
 addCol('requests', 'extra_stops', 'INTEGER DEFAULT 0');
+addCol('requests', 'vehicle', 'TEXT');
 addCol('requests', 'trip_started_at', 'TEXT');
 addCol('requests', 'finished_at', 'TEXT');
+// Duración de la cita en minutos (copia de la duración del servicio al
+// reservar; las citas viejas sin este campo usan la del servicio o 60).
+addCol('business_appointments', 'duration_minutes', 'INTEGER');
 
 // ---- Cuentas e inicio de sesión (desde v1.2.0) ----
 // Contraseñas con scrypt (nunca en texto plano). La sesión es un token
@@ -329,11 +333,14 @@ function validNegotiatedPrice(p) { return Number.isFinite(p) && p >= MIN_TRIP &&
 const GRID_ERROR = 'El precio debe ir de cinco en cinco: $20, $25, $30, $35…';
 // Precio sugerido: la tarifa redondeada hacia arriba a múltiplo de $5.
 function suggestedPrice(km) { return roundUp5(fareFor(km)); }
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+// Día en hora de Chiapas (America/Mexico_City = UTC-6 todo el año, sin
+// horario de verano desde 2022): el "día" no debe cambiar a las 18:00 CST
+// como pasaba con toISOString() (UTC).
+function todayStr() { return new Date(Date.now() - 6 * 3600 * 1000).toISOString().slice(0, 10); }
 function driverServicesToday(driverId) {
   const row = db.prepare(
     `SELECT COUNT(*) c FROM requests WHERE driver_id=? AND status IN ('aceptado','finalizado')
-     AND substr(created_at,1,10)=?`).get(driverId, todayStr());
+     AND substr(datetime(created_at,'-6 hours'),1,10)=?`).get(driverId, todayStr());
   return row ? row.c : 0;
 }
 function driverServicesTotal(driverId) {
@@ -491,7 +498,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.3.5' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.3.6' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -706,11 +713,12 @@ async function api(req, res, pathname) {
 
   // ---- Anuncios de entrada flotantes (v1.3.5) ----
   // El Inicio NO muestra anuncios. Al entrar a Viajes, Negocios o Mandados
-  // aparece UN solo anuncio flotante, elegido al azar entre los activos que
-  // rotan en esa entrada (uno a la vez; si la persona tiene historial con
-  // un negocio, se prefieren los anuncios de ese negocio). El anuncio es
-  // SOLO imagen, obligatoria para publicar. Libre (sin enlace) o De un
-  // negocio (con selector de negocios activos; al tocarlo va a su ficha).
+  // aparece UN solo anuncio flotante, elegido AL AZAR entre los anuncios
+  // activos que rotan en esa entrada (uno a la vez; con 2 anuncios, unas
+  // veces uno y otras el otro, para cada usuario, tenga o no historial).
+  // El anuncio es SOLO imagen, obligatoria para publicar. Libre (sin
+  // enlace) o De un negocio (con selector de negocios activos; al tocarlo
+  // va a su ficha).
   // /api/ads se conserva como lista de activos (compatibilidad y panel).
   function adEntries(a) {
     try { const e = JSON.parse(a.entries || 'null'); if (Array.isArray(e) && e.length) return e.filter(x => AD_ENTRIES.includes(x)); } catch (e) {}
@@ -731,16 +739,10 @@ async function api(req, res, pathname) {
     const all = db.prepare('SELECT * FROM ads WHERE active=1 ORDER BY id ASC').all()
       .filter(a => a.image && adEntries(a).includes(entry)).map(adWithBusiness);
     if (!all.length) return send(res, 200, { ok: true, ad: null });
-    // Con historial de la persona se prefieren los anuncios de negocios con
-    // los que ya pidió (pedidos o citas); sin historial, al azar.
-    let pool = all;
-    const me = accountFromToken(q.get('token') || '');
-    if (me) {
-      const mine = db.prepare(`SELECT DISTINCT business_id FROM business_orders WHERE account_id=?
-        UNION SELECT DISTINCT business_id FROM business_appointments WHERE account_id=?`).all(me.id, me.id).map(r => r.business_id);
-      const preferred = all.filter(a => a.business_id && mine.includes(a.business_id));
-      if (preferred.length) pool = preferred;
-    }
+    // Sorteo AL AZAR entre TODOS los anuncios activos de esta entrada, sin
+    // preferencia por historial: con historial la persona también debe ver
+    // los demás anuncios.
+    const pool = all;
     const ad = pool[Math.floor(Math.random() * pool.length)];
     return send(res, 200, { ok: true, ad });
   }
@@ -996,10 +998,21 @@ async function api(req, res, pathname) {
     if (!sv) return send(res, 400, { ok: false, error: 'Servicio no encontrado en este negocio.' });
     const date = String(body.date || '').trim(), time = String(body.time || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return send(res, 400, { ok: false, error: 'Elige el día (AAAA-MM-DD) y la hora (HH:MM) de tu cita.' });
-    const clash = db.prepare(`SELECT id FROM business_appointments WHERE business_id=? AND date=? AND time=? AND status!='cancelada'`).get(b.id, date, time);
-    if (clash) return send(res, 400, { ok: false, error: 'Esa hora ya está ocupada en este negocio. Elige otra hora.' });
-    const r = db.prepare(`INSERT INTO business_appointments (business_id, service_id, account_id, client_name, client_phone, date, time, status)
-      VALUES (?,?,?,?,?,?,?, 'reservada')`).run(b.id, sv.id, a.id, a.name, a.phone || '', date, time);
+    // Sin encimes: solape real de intervalos [inicio, inicio+duración).
+    // La duración es la del servicio (60 min por defecto si no tiene).
+    const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const newStart = toMin(time), newDur = (sv.duration_minutes != null ? sv.duration_minutes : 60) || 60, newEnd = newStart + newDur;
+    const existing = db.prepare(`SELECT ap.*, s.duration_minutes AS service_duration FROM business_appointments ap
+      LEFT JOIN business_services s ON s.id=ap.service_id
+      WHERE ap.business_id=? AND ap.date=? AND ap.status!='cancelada'`).all(b.id, date);
+    const clash = existing.find(ap => {
+      const dur2 = (ap.duration_minutes != null ? ap.duration_minutes : (ap.service_duration != null ? ap.service_duration : 60)) || 60;
+      const s2 = toMin(ap.time), e2 = s2 + dur2;
+      return newStart < e2 && s2 < newEnd;
+    });
+    if (clash) return send(res, 400, { ok: false, error: 'Esa hora se cruza con otra cita de este negocio. Elige otra hora.' });
+    const r = db.prepare(`INSERT INTO business_appointments (business_id, service_id, account_id, client_name, client_phone, date, time, duration_minutes, status)
+      VALUES (?,?,?,?,?,?,?,?, 'reservada')`).run(b.id, sv.id, a.id, a.name, a.phone || '', date, time, newDur);
     return send(res, 200, { ok: true, appointment: db.prepare('SELECT * FROM business_appointments WHERE id=?').get(r.lastInsertRowid) });
   }
   if (pathname === '/api/my-appointments') {
@@ -1146,7 +1159,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/create-request') {
     const { passenger_id, passenger_name, passenger_phone, kind, origin_zone, origin_detail, origin_lat, origin_lng,
       dest_zone, dest_detail, dest_lat, dest_lng, distance_km, eta_minutes, price, payment_method, description,
-      recipient_phone, items, stops, extra_stops } = body;
+      recipient_phone, items, stops, extra_stops, vehicle } = body;
     if (kind !== 'viaje' && kind !== 'mandado') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
     if (!dest_zone && !dest_detail) return send(res, 400, { ok: false, error: 'Falta el destino.' });
     // No se publica sin número de teléfono del pasajero: el conductor
@@ -1156,9 +1169,18 @@ async function api(req, res, pathname) {
     const pPhone = p ? p.phone : (passenger_phone || '').trim();
     if (!pPhone) return send(res, 400, { ok: false, error: 'Falta tu número de teléfono: el conductor necesita poder marcarte. Regístrate como pasajero o escribe tu teléfono.' });
     const km = distance_km ?? (origin_lat != null && dest_lat != null ? haversineKm(origin_lat, origin_lng, dest_lat, dest_lng) : 1);
-    const finalPrice = price ?? suggestedPrice(km);
+    // Vehículo elegido para el mandado (el cliente lo manda en "Quiero un
+    // mandado": mototaxi predeterminado, moto como opción). En viajes
+    // siempre es mototaxi; si no viene, no se restringe.
+    const reqVehicle = (vehicle === 'moto' || vehicle === 'mototaxi') ? vehicle : null;
+    // Precio sugerido de mandado: tarifa + $10 por parada extra (solo en
+    // la rama sugerida; si el pasajero pone su precio, se respeta tal cual).
+    const stopsFee = kind === 'mandado' ? MANDADO_EXTRA_STOP * (extra_stops || 0) : 0;
+    const finalPrice = price ?? (suggestedPrice(km) + stopsFee);
     if (price != null && !validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
-    if (km < 0.5 || km > 30) return send(res, 400, { ok: false, error: 'Distancia fuera de rango para SanFerGo.' });
+    // Sin mínimo de distancia: solo hay mínimo de precio ($20). Un viaje
+    // corto a $20 se puede publicar.
+    if (km > 30) return send(res, 400, { ok: false, error: 'Distancia fuera de rango para SanFerGo.' });
     // Forma de pago OBLIGATORIA al publicar (v1.3.0): es la final del
     // servicio y ya no se vuelve a pedir al confirmar.
     if (payment_method !== 'efectivo' && payment_method !== 'transferencia') return send(res, 400, { ok: false, error: 'Elige la forma de pago: efectivo o transferencia.' });
@@ -1167,14 +1189,14 @@ async function api(req, res, pathname) {
     const r = db.prepare(`INSERT INTO requests (kind, passenger_id, passenger_name, passenger_phone, passenger_photo,
       origin_zone, origin_detail, origin_lat, origin_lng, dest_zone, dest_detail, dest_lat, dest_lng,
       distance_km, eta_minutes, price, payment_method, description, recipient_phone, items_json, stops_json, extra_stops,
-      status, trip_stage)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
+      vehicle, status, trip_stage)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
       kind, passenger_id || null, pName || null, pPhone, p ? p.face_photo : null,
       origin_zone || null, origin_detail || null, origin_lat ?? null, origin_lng ?? null,
       dest_zone || null, dest_detail || null, dest_lat ?? null, dest_lng ?? null,
       Math.round(km * 10) / 10, eta_minutes ?? Math.max(3, Math.round(km * 3.5)), finalPrice,
       payment_method, description || '',
-      recipient_phone ? String(recipient_phone).trim() : null, itemsJson, stopsJson, extra_stops || 0);
+      recipient_phone ? String(recipient_phone).trim() : null, itemsJson, stopsJson, extra_stops || 0, reqVehicle);
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(r.lastInsertRowid) });
   }
   if (pathname === '/api/requests') {
@@ -1187,10 +1209,11 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/driver-respond') {
     const { driver_id, request_id, price, eta_minutes } = body;
-    // kind (o action): 'aceptar_precio' confirma al instante (v1.3.0);
-    // 'acepta' deja una oferta pendiente (compatibilidad); 'contraoferta'
-    // deja la oferta pendiente del pasajero; 'aceptar_contraoferta_pasajero'
-    // y 'rechazar_contraoferta_pasajero' responden a la contraoferta del pasajero.
+    // kind (o action): 'aceptar_precio' y 'acepta' confirman AL INSTANTE
+    // (la aceptación del chofer confirma directo, sin segundo paso del
+    // pasajero); 'contraoferta' deja la oferta pendiente del pasajero;
+    // 'aceptar_contraoferta_pasajero' y 'rechazar_contraoferta_pasajero'
+    // responden a la contraoferta del pasajero.
     const kind = body.kind || body.action;
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
@@ -1201,6 +1224,7 @@ async function api(req, res, pathname) {
     if (!d.online) return send(res, 400, { ok: false, error: 'Ponte en línea para responder solicitudes.' });
     if (!driverComplete(d)) return send(res, 400, { ok: false, error: 'Completa tu registro con tus fotos para responder.' });
     if (r.kind === 'viaje' && d.vehicle !== 'mototaxi') return send(res, 400, { ok: false, error: 'Los viajes son solo en mototaxi.' });
+    if (r.vehicle && d.vehicle !== r.vehicle) return send(res, 400, { ok: false, error: r.vehicle === 'moto' ? 'Este mandado es para moto.' : 'Este servicio es para mototaxi.' });
     const hasSub = driverHasSub(d);
     const offeredPrice = price ?? r.price;
     if (!hasSub) {
@@ -1224,6 +1248,13 @@ async function api(req, res, pathname) {
     }
     if (kind === 'aceptar_contraoferta_pasajero') {
       if (!existing || existing.passenger_counter_price == null) return send(res, 400, { ok: false, error: 'No hay contraoferta del pasajero para aceptar.' });
+      // La confirmación también pasa por el límite gratis, el tope de $80+
+      // y la rejilla de $5 (igual que al aceptar el precio del pasajero).
+      if (!hasSub) {
+        if (driverServicesToday(driver_id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
+        if (existing.passenger_counter_price >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
+      }
+      if (!validNegotiatedPrice(existing.passenger_counter_price)) return send(res, 400, { ok: false, error: GRID_ERROR });
       const req2 = confirmRequest(request_id, d, existing.passenger_counter_price, existing.id);
       return send(res, 200, { ok: true, request: req2, offer: db.prepare('SELECT * FROM offers WHERE id=?').get(existing.id) });
     }
@@ -1232,14 +1263,22 @@ async function api(req, res, pathname) {
     // pago es la elegida al publicar y queda guardada en la solicitud.
     if (kind === 'aceptar_precio') {
       if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
-      if (offeredPrice < MIN_TRIP) return send(res, 400, { ok: false, error: 'El precio debe ser de al menos $20.' });
+      if (!validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
       const offer = insertOffer('acepta', offeredPrice);
       const req2 = confirmRequest(request_id, d, offeredPrice, offer.id);
       return send(res, 200, { ok: true, request: req2, offer });
     }
-    // 'acepta' (compatibilidad) y 'contraoferta': la oferta queda pendiente
-    // de la decisión del pasajero en /api/respond-offer. La contraoferta
-    // también va de cinco en cinco (v1.3.1).
+    // 'acepta': igual que 'aceptar_precio' — el chofer acepta el precio del
+    // pasajero y el servicio se confirma EN ESE INSTANTE, sin segundo paso.
+    if (kind === 'acepta') {
+      if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
+      if (!validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const offer = insertOffer('acepta', offeredPrice);
+      const req2 = confirmRequest(request_id, d, offeredPrice, offer.id);
+      return send(res, 200, { ok: true, request: req2, offer });
+    }
+    // 'contraoferta': la oferta queda pendiente de la decisión del pasajero
+    // en /api/respond-offer. La contraoferta también va de cinco en cinco (v1.3.1).
     if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
     if (kind === 'contraoferta' && !validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
     const offer = insertOffer(kind === 'contraoferta' ? 'contraoferta' : 'acepta', offeredPrice);
@@ -1263,6 +1302,14 @@ async function api(req, res, pathname) {
       if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
       if (d.is_blocked) return send(res, 403, { ok: false, error: 'Este conductor está bloqueado y no puede tomar el servicio.' });
       const finalPrice = o.passenger_counter_price || o.price; // si el pasajero contraofertó, se confirma a ese precio
+      // Esta vía también la usa el chofer al aceptar la contraoferta del
+      // pasajero: los chequeos son sobre el chofer de la oferta. Límite
+      // gratis, tope de $80+ y rejilla de $5, igual que en driver-respond.
+      if (!driverHasSub(d)) {
+        if (driverServicesToday(d.id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
+        if (finalPrice >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
+      }
+      if (!validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
       // Al aceptar una contraoferta el viaje se confirma DE UNA VEZ con la
       // forma de pago elegida al publicar (sin paso de pago, v1.3.0).
       const req2 = confirmRequest(request_id, d, finalPrice, offer_id);
@@ -1309,8 +1356,9 @@ async function api(req, res, pathname) {
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.driver_id !== driver_id) return send(res, 403, { ok: false, error: 'Solo el conductor asignado puede avanzar el viaje.' });
-    const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
-    if (d && d.is_blocked) return send(res, 403, { ok: false, error: blockedMsg(d) });
+    // Un chofer bloqueado SÍ puede avanzar y finalizar un viaje ya en curso:
+    // el bloqueo lo saca de línea y le impide responder, pero los viajes en
+    // curso no se tocan.
     const allowed = r.kind === 'viaje' ? TRIP_STAGES : MANDADO_STAGES;
     if (!allowed.includes(stage)) return send(res, 400, { ok: false, error: 'Etapa no válida.' });
     const cur = allowed.indexOf(r.trip_stage), next = allowed.indexOf(stage);
@@ -1353,6 +1401,11 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-payment-method') {
     const { request_id, method } = body;
     if (method !== 'efectivo' && method !== 'transferencia') return send(res, 400, { ok: false, error: 'Método no válido.' });
+    // El pago se elige ANTES de publicar y es el final del servicio: solo
+    // se puede cambiar mientras la solicitud sigue buscando conductor.
+    const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
+    if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
+    if (r.status !== 'buscando') return send(res, 400, { ok: false, error: 'La forma de pago ya quedó fijada al publicar el servicio.' });
     db.prepare('UPDATE requests SET payment_method=? WHERE id=?').run(method, request_id);
     return send(res, 200, { ok: true });
   }
