@@ -189,13 +189,22 @@ input[type=file]{padding:8px}
 .taxidark .td-bar{flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
 .taxidark .td-bar i{display:block;height:100%;background:#f2a81d;border-radius:99px}
 .taxidark .td-wait{margin-left:auto;font-size:14px;white-space:nowrap}
-.taxidark.taxprice{display:flex;justify-content:space-between;align-items:baseline}
-.taxidark.taxprice span{color:#f2a81d;font-weight:700;font-size:16px}
-.taxidark.taxprice b{font-size:34px;font-weight:800}
+/* Precio final como píldora flotante compacta y centrada (app real, v1.4.7):
+   ~60% de ancho, no tarjeta a todo lo ancho. */
+.taxidark.taxprice{display:flex;justify-content:center;align-items:center;gap:12px;width:max-content;max-width:75%;margin-left:auto;margin-right:auto;padding:10px 20px}
+.taxidark.taxprice span{color:#f2a81d;font-weight:700;font-size:15px}
+.taxidark.taxprice b{font-size:30px;font-weight:800;white-space:nowrap}
 .taxidark .td-kv{display:flex;gap:12px}
 .taxidark .td-kv>div{flex:1;min-width:0}
 .taxidark .td-kv span{display:block;color:#f2a81d;font-weight:700;font-size:14px}
 .taxidark .td-kv b{display:block;font-size:20px;font-weight:800;margin-top:2px}
+/* Tarjeta final en UNA sola fila (app real, v1.4.7): Tiempo de viaje y
+   Kilómetros a la izquierda y FINALIZAR a la derecha, no filas apiladas
+   con el botón a todo lo ancho. */
+.taxidark.taxifinal{display:flex;align-items:center;gap:12px}
+.taxidark.taxifinal .td-kv{flex:1;min-width:0}
+.taxidark.taxifinal .td-kv b{white-space:nowrap}
+.taxidark.taxifinal button{width:auto;margin-top:0;padding:13px 18px;flex-shrink:0}
 .taxidark.taxiidle{display:flex;align-items:center;gap:12px}
 .taxidark.taxiidle .td-disc{flex:1;font-size:13px;line-height:1.4;opacity:.95}
 .strip .taxidark.taxiidle button{width:auto;margin-top:0;padding:13px 22px;flex-shrink:0}
@@ -403,7 +412,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.6) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.7) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -749,9 +758,28 @@ function dotEl(color, size){
   return el;
 }
 function motoIconEl(){
+  // EL MISMO ícono de la app real (MototaxiTopIcon, v1.4.7): mototaxi amarilla
+  // vista desde arriba con el conductor — rueda delantera y manubrio al
+  // frente, casco del chofer, parabrisas y techo ámbar de la cabina con sus
+  // dos ruedas traseras. Apunta hacia arriba; el mapa gira debajo. Se usa
+  // en el taxímetro Y en el marcador del chofer del viaje en vivo.
   const el = document.createElement('div');
-  el.style.width = '34px'; el.style.height = '34px'; el.style.pointerEvents = 'none';
-  el.innerHTML = '<svg viewBox="0 0 40 40" width="34" height="34"><g><rect x="14" y="4" width="12" height="32" rx="6" fill="#f2a81d" stroke="#111827" stroke-width="2"/><rect x="16" y="8" width="8" height="9" rx="2" fill="#111827" opacity=".75"/><circle cx="20" cy="2.5" r="2.4" fill="#111827"/><circle cx="20" cy="38" r="2.4" fill="#111827"/><rect x="12" y="18" width="16" height="4" rx="2" fill="#111827" opacity=".6"/></g></svg>';
+  el.style.width = '46px'; el.style.height = '62px'; el.style.pointerEvents = 'none';
+  el.style.filter = 'drop-shadow(0 3px 5px rgba(0,0,0,0.45))';
+  el.innerHTML = '<svg width="46" height="62" viewBox="0 0 48 64" fill="none">'
+    + '<rect x="1.5" y="41" width="6.5" height="14" rx="3" fill="#111827"/>'
+    + '<rect x="40" y="41" width="6.5" height="14" rx="3" fill="#111827"/>'
+    + '<rect x="21.25" y="0.5" width="5.5" height="13" rx="2.75" fill="#111827"/>'
+    + '<rect x="12.5" y="14.5" width="23" height="4" rx="2" fill="#1f2937"/>'
+    + '<circle cx="11" cy="16.5" r="2.2" fill="#1f2937"/>'
+    + '<circle cx="37" cy="16.5" r="2.2" fill="#1f2937"/>'
+    + '<circle cx="24" cy="16.5" r="2.3" fill="#fde68a" stroke="#92400e" stroke-width="0.8"/>'
+    + '<path d="M16.5 19 L31.5 19 L33.5 30 L14.5 30 Z" fill="#f59e0b" stroke="#92400e" stroke-width="1.4"/>'
+    + '<circle cx="24" cy="24.5" r="5.2" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>'
+    + '<rect x="9.5" y="29.5" width="29" height="4.5" rx="2.25" fill="#7dd3fc" opacity="0.95"/>'
+    + '<rect x="6.5" y="33" width="35" height="27" rx="8" fill="#f59e0b" stroke="#92400e" stroke-width="1.6"/>'
+    + '<rect x="11" y="37" width="26" height="19" rx="5.5" fill="#fbbf24"/>'
+    + '</svg>';
   return el;
 }
 async function osrmRoute(a, b){
@@ -2426,7 +2454,10 @@ function followPadding(topId, botId, defTop, defBot){
   if(bot && bot.offsetHeight) b = Math.max(h - bot.offsetTop + 16, 60);
   return { top: t, bottom: b, left: 16, right: 16 };
 }
-function taxiFollowPadding(){ return followPadding('taxi-top', 'taxi-bottom', 170, 280); }
+/* Los valores por defecto (150/220) son para el diseño compacto de v1.4.7
+   (píldora de Precio final + una sola tarjeta final); la medición desde el
+   DOM manda en cuanto las tiras ya están pintadas. */
+function taxiFollowPadding(){ return followPadding('taxi-top', 'taxi-bottom', 150, 220); }
 function liveFollowPadding(){ return followPadding('live-top', 'live-bottom', 170, 280); }
 /* UN SOLO easeTo por actualización: en MapLibre cada easeTo cancela la
    animación anterior, así que si el giro y el centrado van en dos llamadas
@@ -2464,6 +2495,7 @@ function openTaximeter(fromDriver){
     taxiMap.on('dragstart', taxiFollowOff);
     taxiMap.on('zoomstart', taxiFollowOff);
     taxiMap.on('rotatestart', taxiFollowOff);
+    taxiMap.on('move', adjustTaxiStartOffset);
     setTimeout(async ()=>{
       taxiMap.resize();
       try { const p = await myLocation(); taxiCenterOn(p, 16); markTaxiHere(p); }
@@ -2514,7 +2546,7 @@ function taxiMotoEl(label){
   wrap.appendChild(inner);
   return wrap;
 }
-let taxiStartMarker = null;
+let taxiStartMarker = null, taxiStartLngLat = null; // [lng, lat] del punto de inicio
 function markTaxiStart(p){
   if(!taxiMap) return;
   if(taxiStartMarker) taxiStartMarker.remove();
@@ -2523,9 +2555,36 @@ function markTaxiStart(p){
   // Al inicio la mototaxi está sobre este mismo punto y su píldora
   // "Vas aquí" + ícono se extienden hacia arriba desde el punto: la
   // etiqueta va 34 px hacia abajo para no taparla nunca.
-  taxiStartMarker = new maplibregl.Marker({ element: el, offset: [0, 34] }).setLngLat([p.lng, p.lat]).addTo(taxiMap);
+  taxiStartLngLat = [p.lng, p.lat];
+  taxiStartMarker = new maplibregl.Marker({ element: el, offset: [0, 34] }).setLngLat(taxiStartLngLat).addTo(taxiMap);
+  adjustTaxiStartOffset();
 }
-function clearTaxiStart(){ if(taxiStartMarker){ taxiStartMarker.remove(); taxiStartMarker = null; } }
+function clearTaxiStart(){ if(taxiStartMarker){ taxiStartMarker.remove(); taxiStartMarker = null; } taxiStartLngLat = null; }
+function adjustTaxiStartOffset(){
+  // La etiqueta es ancha (~160 px) y va 34 px debajo del punto: cuando el
+  // punto de inicio cae cerca del borde derecho, el círculo negro de
+  // velocidad (a la derecha, encima de las tarjetas) la tapaba por la
+  // mitad ("Inicio del recor..."). Si la banda vertical de la etiqueta
+  // cruza la del círculo, se corre a la izquierda lo justo para que su
+  // borde derecho quede libre del círculo. Se recalcula en cada lectura
+  // del GPS y con cada movimiento del mapa.
+  if(!taxiMap || !taxiStartMarker || !taxiStartLngLat) return;
+  try {
+    const pt = taxiMap.project(taxiStartLngLat);
+    const sp = document.querySelector('#taxi-bottom .taxispeed');
+    if(!sp){ taxiStartMarker.setOffset([0, 34]); return; }
+    const m = taxiMap.getContainer().getBoundingClientRect();
+    const r = sp.getBoundingClientRect();
+    const circleTop = r.top - m.top, circleLeft = r.left - m.left, circleBottom = r.bottom - m.top;
+    const labelTop = pt.y + 23, labelBottom = pt.y + 45;
+    let offX = 0;
+    if(labelBottom > circleTop && labelTop < circleBottom){
+      const halfW = 80;
+      if(pt.x + halfW > circleLeft - 6) offX = (circleLeft - 6) - (pt.x + halfW);
+    }
+    taxiStartMarker.setOffset([offX, 34]);
+  } catch(e){}
+}
 function markTaxiHere(p){
   if(!taxiMap) return;
   if(taxiMarker) taxiMarker.remove();
@@ -2558,17 +2617,19 @@ function renderTaxiStrips(){
     const waitCharge = (s.waitSecs/60)*WAIT_PER_MIN;
     const moving = (s.lastSpeedKmh||0) >= 5;
     top.classList.add('taxitop'); bot.classList.add('taxibot');
-    top.innerHTML = taxiLimitHtml(true)
-      + '<div class="taxidark">'
+    // Sin píldora de plan corriendo (app real, v1.4.7): la app real no la
+    // muestra en el recorrido; se queda en la pantalla de inicio del
+    // taxímetro (y en taxiLimitReached cuando se acaba el límite).
+    top.innerHTML = '<div class="taxidark">'
       + '<div class="td-row"><span class="td-lab">Tiempo</span><div class="td-bar"><i style="width:'+Math.min(100,(s.totalSecs||0)/600*100)+'%"></i></div><b>'+fmtTaxiSecs(s.totalSecs||0)+'</b></div>'
       + '<div class="td-row"><span class="td-lab">Distancia</span><div class="td-bar"><i style="width:'+Math.min(100,(s.km||0)*20)+'%"></i></div><b>'+fmtTaxiDist(s.km||0)+'</b></div>'
       + '<div class="td-row"><span class="td-lab">Espera</span><span class="td-wait">'+(moving?'En movimiento':'Detenido')+' '+fmtHMS(s.waitSecs||0)+' · +$'+waitCharge.toFixed(2)+'</span></div>'
       + '</div>';
     bot.innerHTML = '<div class="taxispeed"><b>'+Math.round(s.lastSpeedKmh||0)+'</b><span>Km/h</span></div>'
       + '<div class="taxidark taxprice"><span>Precio final</span><b>$'+price.toFixed(2)+'</b></div>'
-      + '<div class="taxidark"><div class="td-kv"><div><span>Tiempo de viaje</span><b>'+fmtHMS(s.totalSecs||0)+'</b></div><div><span>Kilómetros</span><b>'+(s.km||0).toFixed(2)+'</b></div></div>'
+      + '<div class="taxidark taxifinal"><div class="td-kv"><div><span>Tiempo de viaje</span><b>'+fmtHMS(s.totalSecs||0)+'</b></div><div><span>Kilómetros</span><b>'+(s.km||0).toFixed(2)+'</b></div></div>'
       + '<button class="amber" onclick="stopTaxi()">FINALIZAR</button></div>';
-    zoom.classList.add('hidden'); compass.classList.remove('hidden');
+    zoom.classList.add('hidden'); compass.classList.add('hidden'); // sin brújula corriendo (app real, v1.4.7)
   } else {
     const price = taxiPrice(s);
     top.classList.remove('taxitop'); bot.classList.remove('taxibot');
@@ -2652,13 +2713,31 @@ function startTaxiTick(){
 }
 function startTaxiWatch(){
   if(taxiWatchId!=null || !navigator.geolocation) return;
+  // Última lectura aceptada (posición + hora): en iOS coords.speed y
+  // coords.heading llegan null aunque la mototaxi vaya andando, y con
+  // speedKmh = 0 el rumbo nunca se calculaba y el mapa quedaba siempre en
+  // norte-arriba (la mototaxi iba de lado). Por eso la velocidad y el rumbo
+  // se calculan del desplazamiento entre lecturas cuando el GPS no los
+  // trae; coords.speed/coords.heading solo mandan si traen un valor
+  // válido. La tarifa y el conteo de km/espera NO cambian (el umbral de
+  // 4 m queda solo para cobrar).
+  let lastFix = null;
   taxiWatchId = navigator.geolocation.watchPosition(pos=>{
     const s = loadTaxi(); if(!s || !s.running) return;
     if(pos.coords.accuracy != null && pos.coords.accuracy > 150) return; // filtro GPS: hasta 150 m de error
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    const speedKmh = (pos.coords.speed!=null ? pos.coords.speed : 0) * 3.6;
+    const now = Date.now();
+    let speedKmh = (pos.coords.speed!=null && !isNaN(pos.coords.speed)) ? pos.coords.speed * 3.6 : null;
+    if(speedKmh==null && lastFix){
+      const dt = (now - lastFix.t) / 1000;
+      const dd = havKm(lastFix.lat, lastFix.lng, lat, lng);
+      // Piso de ruido: menos de 2.5 m entre lecturas es temblor del GPS
+      // parado, no movimiento.
+      speedKmh = (dt > 0 && dd >= 0.0025) ? (dd / (dt / 3600)) : 0;
+    }
+    if(speedKmh==null) speedKmh = 0;
     s.lastSpeedKmh = speedKmh;
-    s.lastCountAt = Date.now();
+    s.lastCountAt = now;
     if(s.lastLat!=null){
       const d = havKm(s.lastLat, s.lastLng, lat, lng);
       // El umbral de 4 m es SOLO para cobrar la distancia: a 12 km/h
@@ -2677,9 +2756,10 @@ function startTaxiWatch(){
         if(taxiMarker) taxiMarker.setLngLat([lng, lat]);
         else markTaxiHere({ lat, lng });
         // heading-up: la mototaxi apunta arriba y el mapa gira debajo.
-        // Rumbo del GPS si viene (iOS lo da andando); si no, de los puntos
-        // con ≥ 2 m de desplazamiento. bearing = -heading (rumbo horario
-        // desde el norte; el mapa gira al revés para dejarlo arriba).
+        // Rumbo del GPS si viene válido; si no, del desplazamiento entre
+        // lecturas (≥ 2 m), sin depender de coords.speed. bearing = -heading
+        // (rumbo horario desde el norte; el mapa gira al revés para dejarlo
+        // arriba).
         // UN SOLO easeTo por lectura: el giro viaja dentro del centrado de
         // taxiFollowCenter; si no se recentra (seguimiento apagado o guarda
         // de 2 m), el giro va solo en su propio easeTo. Dos easeTo seguidos
@@ -2688,11 +2768,8 @@ function startTaxiWatch(){
         if(speedKmh >= 5){
           let h = null;
           if(pos.coords.heading!=null && !isNaN(pos.coords.heading)) h = pos.coords.heading;
-          else {
-            const pts = s.points || [];
-            let prev = null;
-            for(let i=pts.length-1;i>=0;i--){ if(havKm(pts[i][1], pts[i][0], lat, lng) >= 0.002){ prev = pts[i]; break; } }
-            if(prev) h = (Math.atan2(lng-prev[0], lat-prev[1]) * 180/Math.PI + 360) % 360;
+          else if(lastFix && havKm(lastFix.lat, lastFix.lng, lat, lng) >= 0.002){
+            h = (Math.atan2(lng-lastFix.lng, lat-lastFix.lat) * 180/Math.PI + 360) % 360;
           }
           if(h!=null){
             if(taxiLastHeading==null) taxiLastHeading = h;
@@ -2702,12 +2779,14 @@ function startTaxiWatch(){
           }
         }
         if(!taxiFollowCenter({ lat, lng }, newBearing) && newBearing!=null) taxiMap.easeTo({ bearing: newBearing, duration: 300 });
+        adjustTaxiStartOffset();
       }
     } else {
       s.lastLat = lat; s.lastLng = lng;
       s.points = [[lng, lat]];
       if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); taxiFollowCenter({ lat, lng }); }
     }
+    lastFix = { lat, lng, t: now };
     saveTaxi(s);
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 2000 });
 }
@@ -3205,7 +3284,7 @@ function driverTab(tab){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-chofer').classList.add('active');
   currentView = 'chofer';
-  if(tab==='inicio') renderDriverHome();
+  if(tab==='inicio'){ renderDriverHome(); refreshMyDriver().then(d=>{ if(d && currentView==='chofer' && driverTabName==='inicio') renderDriverHome(); }); }
   if(tab==='recibir') renderDriverInbox();
 }
 let driverHomeExpanded = null; // 'plan' | 'trips' | 'hist' | null
@@ -3224,12 +3303,25 @@ async function driverCounts(){
     return { today: todayCount, confirmedTotal: confirmed.length, inCourse: confirmed.length, active: confirmed[0] || null };
   } catch(e){ return { today: 0, confirmedTotal: 0, inCourse: 0, active: null }; }
 }
+/* El estado del chofer se vuelve a pedir al servidor al abrir su inicio y
+   al tocar "Ponerme en línea": el estado guardado en memoria podía quedar
+   viejo (aprobado por el admin en otra sesión) y la pantalla seguía
+   diciendo "pendiente" aunque el servidor ya lo tenía aprobado. */
+async function refreshMyDriver(){
+  if(!myDriver) return null;
+  try {
+    const j = await api('/api/drivers');
+    const d = j.drivers.find(x=>x.id===myDriver.id);
+    if(d){ myDriver = d; store.did = d.id; return d; }
+    return null;
+  } catch(e){ return null; }
+}
 function renderDriverHome(){
   const p = $('#chofer-page');
   const d = myDriver;
   const complete = d.selfie && d.vehicle_photo;
   const blocked = d.is_blocked;
-  const approved = d.status === 'activo';
+  const approved = d.status === 'aprobado'; // ojo: los choferes usan 'pendiente'/'aprobado'; 'activo' es de los negocios
   const sub = d.subscription_until && new Date(d.subscription_until) > new Date();
   const planPill = sub ? '<span class="chip amber">DE PAGA</span>' : '<span class="chip">GRATIS</span>';
   const vehicleLine = (d.vehicle==='moto' ? 'Moto de dos ruedas' : 'Mototaxi') + ' · Unidad ' + esc(d.unit||'—');
@@ -3320,8 +3412,17 @@ async function confirmSubscribe(){
   } catch(e){ toast(e.message); }
 }
 async function toggleOnline(){
-  try { const j = await api('/api/set-driver-online', { driver_id: myDriver.id, online: !myDriver.online }); myDriver = j.driver; if(myDriver.online) requestNotificationPermission(); renderDriverHome(); toast(myDriver.online ? 'Ya estás en línea. Te llegarán solicitudes.' : 'Fuera de línea.'); }
-  catch(e){ toast(e.message); }
+  if(!myDriver) return;
+  // Estado fresco del servidor antes de intentar: si el admin ya lo aprobó,
+  // el botón tiene que funcionar aunque la pantalla se haya pintado con el
+  // estado viejo.
+  await refreshMyDriver();
+  const d = myDriver;
+  if(!d) return;
+  if(d.is_blocked){ toast('Estás bloqueado por el administrador: no puedes ponerte en línea.'); renderDriverHome(); return; }
+  if(d.status !== 'aprobado'){ toast('Tu registro de chofer está pendiente de aprobación por el administrador de SanFerGo.'); renderDriverHome(); return; }
+  try { const j = await api('/api/set-driver-online', { driver_id: d.id, online: !d.online }); myDriver = j.driver; if(myDriver.online) requestNotificationPermission(); renderDriverHome(); toast(myDriver.online ? 'Ya estás en línea. Te llegarán solicitudes.' : 'Fuera de línea.'); }
+  catch(e){ toast(e.message); renderDriverHome(); }
 }
 async function loadDriverTrips(){
   const box = $('#driver-trips'); if(!box) return;
