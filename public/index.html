@@ -175,6 +175,42 @@ input[type=file]{padding:8px}
 .plan-opt b{display:block;font-size:17px}
 .plan-opt .price{display:block;margin-top:4px}
 .taxipill{background:#e8f5ee;color:var(--green);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;text-align:center;margin-bottom:8px}
+.taxipill.dark{background:rgba(17,24,39,.9);color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+/* Taxímetro igual que la app real (v1.4.1): tarjetas oscuras, mototaxi con
+   píldora "Vas aquí"/"Estás aquí", etiqueta "Inicio del recorrido", círculo
+   negro de velocidad, zoom propio y barra inferior del modo chofer. */
+.strip.top.taxitop,.strip.bottom.taxibot{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px}
+#view-taximetro .strip.bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 70px)}
+#view-taximetro .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:70}
+.taxidark{background:rgba(17,24,39,.88);color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.taxidark .td-row{display:flex;align-items:center;gap:10px;font-size:14px;padding:3px 0}
+.taxidark .td-lab{color:#f2a81d;font-weight:700;width:74px;flex-shrink:0}
+.taxidark .td-row b{margin-left:auto;white-space:nowrap}
+.taxidark .td-bar{flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.taxidark .td-bar i{display:block;height:100%;background:#f2a81d;border-radius:99px}
+.taxidark .td-wait{margin-left:auto;font-size:14px;white-space:nowrap}
+.taxidark.taxprice{display:flex;justify-content:space-between;align-items:baseline}
+.taxidark.taxprice span{color:#f2a81d;font-weight:700;font-size:16px}
+.taxidark.taxprice b{font-size:34px;font-weight:800}
+.taxidark .td-kv{display:flex;gap:12px}
+.taxidark .td-kv>div{flex:1;min-width:0}
+.taxidark .td-kv span{display:block;color:#f2a81d;font-weight:700;font-size:14px}
+.taxidark .td-kv b{display:block;font-size:20px;font-weight:800;margin-top:2px}
+.taxidark.taxiidle{display:flex;align-items:center;gap:12px}
+.taxidark.taxiidle .td-disc{flex:1;font-size:13px;line-height:1.4;opacity:.95}
+.strip .taxidark.taxiidle button{width:auto;margin-top:0;padding:13px 22px;flex-shrink:0}
+.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:76px;height:76px;border-radius:50%;background:rgba(17,24,39,.9);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:61}
+.taxispeed b{font-size:26px;line-height:1}
+.taxispeed span{font-size:12px}
+.taxi-moto{pointer-events:none}
+.taxi-moto-inner{transform:translateY(-13px);display:flex;flex-direction:column;align-items:center}
+.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.4);margin-bottom:2px;white-space:nowrap}
+.taxi-start{background:#fff;color:#111827;font-weight:700;font-size:12px;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap}
+.taxizoom{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:60;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.taxizoom button{width:42px;height:42px;font-size:20px;font-weight:700;color:var(--dark)}
+.taxizoom button+button{border-top:1px solid var(--line)}
+#taxi-compass{top:calc(env(safe-area-inset-top,0px) + 222px)}
+#taxi-recenter{top:calc(env(safe-area-inset-top,0px) + 274px);bottom:auto;background:rgba(17,24,39,.9);color:#fff}
 .pickrow{display:flex;gap:8px;align-items:center;min-width:0}
 .pickrow .backpill{flex-shrink:0}
 .pickrow .chip{flex:1;min-width:0}
@@ -326,8 +362,18 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
     <div class="map" id="taxi-map"></div>
     <div class="strip top" id="taxi-top"></div>
     <div class="strip bottom" id="taxi-bottom"></div>
+    <div class="taxizoom hidden" id="taxi-zoom">
+      <button onclick="taxiZoom(1)">+</button>
+      <button onclick="taxiZoom(-1)">−</button>
+      <button onclick="taxiResetNorth()">🧭</button>
+    </div>
     <button class="recenter hidden" id="taxi-recenter" onclick="taxiRecenter()">◎ Centrar en mi ubicación</button>
     <button class="compassbtn hidden" id="taxi-compass" onclick="taxiResetNorth()">🧭</button>
+  </div>
+  <div class="bottombar">
+    <button id="txb-inicio" onclick="driverTab('inicio')"><span class="ic">🏠</span>Inicio</button>
+    <button id="txb-taxi" class="on" onclick="driverTab('taximetro')"><span class="ic">⏱️</span>Taxímetro</button>
+    <button id="txb-recibir" onclick="driverTab('recibir')"><span class="ic">📩</span>Recibir Viajes <span class="badge hidden" id="taxi-driver-badge">0</span></button>
   </div>
 </div>
 
@@ -357,7 +403,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.0) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.1) ===== */
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -375,6 +421,9 @@ function havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180;
 function etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), ss=s%60; return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
+function fmtHMS(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
+function fmtTaxiSecs(s){ s=Math.max(0,Math.floor(s)); if(s<60) return s+' seg'; return fmtTime(s); }
+function fmtTaxiDist(km){ km=km||0; if(km<1) return Math.round(km*1000)+' m'; return km.toFixed(2)+' km'; }
 function fmtDateTime(iso){ try { return new Date((iso||'').replace(' ','T')+'Z').toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; } }
 async function api(path, body){
   const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {};
@@ -2293,17 +2342,17 @@ function taxiRunsToday(){
   const today = fmt.format(new Date());
   return taxiLoadHist().filter(r=>fmt.format(new Date(r.endAt))===today).length;
 }
-function taxiLimitHtml(){
+function taxiLimitHtml(dark){
   const n = taxiRunsToday();
-  if(taxiIsPremium()) return '<div class="taxipill">Premium · recorridos ilimitados · '+n+' hoy</div>';
-  return '<div class="taxipill">Plan gratis · '+n+' de 5 recorridos del taxímetro hoy</div>';
+  if(taxiIsPremium()) return '<div class="taxipill'+(dark?' dark':'')+'">Premium · recorridos ilimitados · '+n+' hoy</div>';
+  return '<div class="taxipill'+(dark?' dark':'')+'">Plan gratis · '+n+' de 5 recorridos del taxímetro hoy</div>';
 }
 let taxiLimitShown = false;
 function taxiLimitReached(){
   // Tarjeta VERDE EN LÍNEA (app real), nada de modal.
   taxiLimitShown = true;
   const top = document.getElementById('taxi-top');
-  if(top) top.innerHTML = taxiLimitHtml()
+  if(top) top.innerHTML = taxiLimitHtml(true)
     + '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:10px"><b>Has completado tus cinco viajes gratis</b>'
     + '<p style="opacity:.92;margin-top:6px">Ya hiciste tus 5 recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p>'
     + '<p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p>'
@@ -2341,55 +2390,117 @@ function openTaximeter(fromDriver){
       catch(e){}
     }, 120);
   } else {
-    setTimeout(()=>taxiMap.resize(), 60);
+    // El mapa ya existe: volver a centrar en la mototaxi y reponer su ícono
+    // (antes quedaba el marcador viejo en el punto anterior).
+    setTimeout(async ()=>{
+      taxiMap.resize();
+      const s2 = loadTaxi();
+      if(s2 && (s2.running || s2.done) && s2.lastLat!=null){
+        taxiMap.easeTo({ center: [s2.lastLng, s2.lastLat], zoom: 17, duration: 600 });
+        markTaxiHere({ lat: s2.lastLat, lng: s2.lastLng });
+      } else {
+        try { const p = await myLocation(); taxiMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 }); markTaxiHere(p); }
+        catch(e){}
+      }
+    }, 60);
+  }
+  // Restaurar la etiqueta "Inicio del recorrido" y la línea de ruta si el
+  // recorrido ya iba en curso (p. ej. tras recargar la página).
+  const sR = loadTaxi();
+  if(sR && (sR.running || sR.done) && sR.points && sR.points.length){
+    markTaxiStart({ lng: sR.points[0][0], lat: sR.points[0][1] });
+    if(sR.points.length > 1){
+      const drawRoute = ()=>{ try { setRouteLine(taxiMap, 'taxiroute', smoothTrack(sR.points), '#2b7de9', 5); } catch(e){} };
+      if(taxiMap.isStyleLoaded()) drawRoute(); else taxiMap.once('load', drawRoute);
+    }
   }
   startTaxiWatch();
   startTaxiTick();
   renderTaxiStrips();
 }
+function taxiMotoEl(label){
+  // Ícono de mototaxi con su píldora encima (app real: "Vas aquí" corriendo,
+  // "Estás aquí" antes de iniciar). El mapa gira debajo; el ícono queda fijo.
+  const wrap = document.createElement('div');
+  wrap.className = 'taxi-moto';
+  const inner = document.createElement('div');
+  inner.className = 'taxi-moto-inner';
+  const pill = document.createElement('div');
+  pill.className = 'taxi-vas'; pill.textContent = label;
+  inner.appendChild(pill);
+  inner.appendChild(motoIconEl());
+  wrap.appendChild(inner);
+  return wrap;
+}
+let taxiStartMarker = null;
+function markTaxiStart(p){
+  if(!taxiMap) return;
+  if(taxiStartMarker) taxiStartMarker.remove();
+  const el = document.createElement('div');
+  el.className = 'taxi-start'; el.textContent = 'Inicio del recorrido';
+  taxiStartMarker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(taxiMap);
+}
+function clearTaxiStart(){ if(taxiStartMarker){ taxiStartMarker.remove(); taxiStartMarker = null; } }
 function markTaxiHere(p){
   if(!taxiMap) return;
   if(taxiMarker) taxiMarker.remove();
-  taxiMarker = new maplibregl.Marker({ element: dotEl('#2b7de9', 14) }).setLngLat([p.lng, p.lat])
-    .setPopup(new maplibregl.Popup({ closeButton:false }).setText('Estás aquí')).addTo(taxiMap);
-  taxiMarker.togglePopup();
+  const s = loadTaxi();
+  const label = (s && (s.running || s.done)) ? 'Vas aquí' : 'Estás aquí';
+  taxiMarker = new maplibregl.Marker({ element: taxiMotoEl(label) }).setLngLat([p.lng, p.lat]).addTo(taxiMap);
 }
 function renderTaxiStrips(){
   const s = loadTaxi() || { running:false };
   const top = $('#taxi-top'), bot = $('#taxi-bottom');
+  const zoom = $('#taxi-zoom'), compass = $('#taxi-compass');
   if(!s.running && !s.done){
+    // Inicio del taxímetro (app real, v1.4.1): píldora oscura del plan, mapa
+    // con la mototaxi y "Estás aquí", tarjeta oscura con el texto + INICIAR
+    // a la derecha. Sin línea de tarifa ni "Volver": la salida es la barra
+    // inferior (Inicio / Taxímetro / Recibir Viajes).
     const taxiBlocked = !taxiIsPremium() && taxiRunsToday() >= FREE_DAILY_LIMIT;
-    top.innerHTML = taxiLimitHtml()
-      + (taxiLimitShown ? '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:10px"><b>Has completado tus cinco viajes gratis</b><p style="opacity:.92;margin-top:6px">Ya hiciste tus 5 recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p><p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p><div class="btnrow"><button class="btn amber" onclick="go(\'chofer\');driverHomeExpanded=\'plan\';renderDriverHome()">Ver mi plan y suscripción</button><button class="btn ghost" style="color:#fff;border-color:#fff" onclick="taxiLimitShown=false;renderTaxiStrips()">Entendido</button></div></div>' : '')
-      + '<div class="row"><b>Taxímetro</b><span>SanFerGo</span></div>'
-      + '<div class="row" style="margin-top:6px"><span>Esta aplicación es independiente de los sistemas de transporte, las tarifas que se muestran son un aproximado.</span></div>';
-    bot.innerHTML = '<div class="row"><span>Tarifa</span><b>$10 + $2.50 cada 300 m · espera $1.25/min</b></div>'
-      + '<button onclick="'+(taxiBlocked?'taxiLimitReached()':'startTaxi()')+'">INICIAR</button>'
-      + '<button class="ghostb" onclick="taxiBack()">Volver</button>';
-    $('#taxi-recenter').classList.add('hidden'); $('#taxi-compass').classList.add('hidden');
+    top.classList.add('taxitop'); bot.classList.add('taxibot');
+    top.innerHTML = taxiLimitHtml(true)
+      + (taxiLimitShown ? '<div class="card" style="background:#14532d;color:#fff;border:none;margin-top:2px"><b>Has completado tus cinco viajes gratis</b><p style="opacity:.92;margin-top:6px">Ya hiciste tus 5 recorridos del taxímetro de hoy con el plan gratis. Paga la suscripción para obtener recorridos ilimitados y los demás beneficios de ser premium.</p><p style="opacity:.92;margin-top:6px">Elige tu suscripción: $50 / semana · $150 / mes · $500 / año · recorridos ilimitados</p><div class="btnrow"><button class="btn amber" onclick="go(\'chofer\');driverHomeExpanded=\'plan\';renderDriverHome()">Ver mi plan y suscripción</button><button class="btn ghost" style="color:#fff;border-color:#fff" onclick="taxiLimitShown=false;renderTaxiStrips()">Entendido</button></div></div>' : '');
+    bot.innerHTML = '<div class="taxidark taxiidle"><span class="td-disc">Esta aplicación es independiente de los sistemas de transporte, las tarifas que se muestran son un aproximado.</span>'
+      + '<button class="amber" onclick="'+(taxiBlocked?'taxiLimitReached()':'startTaxi()')+'">INICIAR</button></div>';
+    zoom.classList.remove('hidden'); compass.classList.add('hidden');
   } else if(s.running){
+    // Taxímetro corriendo (app real, v1.4.1): tarjeta oscura con Tiempo /
+    // Distancia / Espera y sus barras, círculo negro de velocidad, tarjeta
+    // oscura de "Precio final" exacto y tarjeta oscura con tiempo, kilómetros
+    // y FINALIZAR. Solo presentación: los cálculos no cambian.
     const price = taxiPrice(s);
-    top.innerHTML = taxiLimitHtml() + '<div class="row"><b>Tiempo</b><span>'+fmtTime(s.totalSecs||0)+'</span><b>Distancia</b><span>'+(s.km||0).toFixed(2)+' km</span></div>'
-      + '<div class="bar"><i style="width:'+Math.min(100,(s.km||0)*20)+'%"></i></div>';
-    bot.innerHTML = '<div class="row"><span>Velocidad</span><b>'+Math.round(s.lastSpeedKmh||0)+' km/h</b><span>Precio final</span><b class="big2">'+fmt$(price)+'</b></div>'
-      + '<div class="row"><span>Tiempo de viaje</span><b>'+fmtTime(s.totalSecs||0)+'</b><span>Kilómetros</span><b>'+(s.km||0).toFixed(2)+'</b></div>'
-      + '<div class="row"><span>Esperando</span><b>'+fmtTime(s.waitSecs||0)+'</b><span>A cobrar</span><b>'+fmt$(Math.round(price))+'</b></div>'
-      + '<button onclick="stopTaxi()">FINALIZAR</button>';
-    $('#taxi-compass').classList.remove('hidden');
+    const waitCharge = (s.waitSecs/60)*WAIT_PER_MIN;
+    const moving = (s.lastSpeedKmh||0) >= 5;
+    top.classList.add('taxitop'); bot.classList.add('taxibot');
+    top.innerHTML = taxiLimitHtml(true)
+      + '<div class="taxidark">'
+      + '<div class="td-row"><span class="td-lab">Tiempo</span><div class="td-bar"><i style="width:'+Math.min(100,(s.totalSecs||0)/600*100)+'%"></i></div><b>'+fmtTaxiSecs(s.totalSecs||0)+'</b></div>'
+      + '<div class="td-row"><span class="td-lab">Distancia</span><div class="td-bar"><i style="width:'+Math.min(100,(s.km||0)*20)+'%"></i></div><b>'+fmtTaxiDist(s.km||0)+'</b></div>'
+      + '<div class="td-row"><span class="td-lab">Espera</span><span class="td-wait">'+(moving?'En movimiento':'Detenido')+' '+fmtHMS(s.waitSecs||0)+' · +$'+waitCharge.toFixed(2)+'</span></div>'
+      + '</div>';
+    bot.innerHTML = '<div class="taxispeed"><b>'+Math.round(s.lastSpeedKmh||0)+'</b><span>Km/h</span></div>'
+      + '<div class="taxidark taxprice"><span>Precio final</span><b>$'+price.toFixed(2)+'</b></div>'
+      + '<div class="taxidark"><div class="td-kv"><div><span>Tiempo de viaje</span><b>'+fmtHMS(s.totalSecs||0)+'</b></div><div><span>Kilómetros</span><b>'+(s.km||0).toFixed(2)+'</b></div></div>'
+      + '<button class="amber" onclick="stopTaxi()">FINALIZAR</button></div>';
+    zoom.classList.add('hidden'); compass.classList.remove('hidden');
   } else {
     const price = taxiPrice(s);
+    top.classList.remove('taxitop'); bot.classList.remove('taxibot');
     top.innerHTML = '<div class="row"><b>Resumen del viaje</b><span>'+fmtDateTime(new Date(s.endAt).toISOString())+'</span></div>';
     bot.innerHTML = '<div class="row"><span>Tiempo</span><b>'+fmtTime(s.totalSecs||0)+'</b><span>Distancia</span><b>'+(s.km||0).toFixed(2)+' km</b></div>'
       + '<div class="row"><span>Precio final</span><b class="big2">'+fmt$(price)+'</b></div>'
       + '<button onclick="taxiReceipt()">Generar recibo</button>'
       + '<button class="ghostb" onclick="taxiReset()">Nuevo viaje</button>'
       + '<button class="ghostb" onclick="taxiBack()">Volver</button>';
+    zoom.classList.add('hidden'); compass.classList.add('hidden');
   }
 }
 function taxiBack(){ taxiFromDriver ? go('chofer') : go('home'); }
 function taxiReset(){
   localStorage.removeItem(TAXI_KEY);
   if(taxiMap){ removeRouteLine(taxiMap, 'taxiroute'); }
+  clearTaxiStart();
   taxiFollow = false;
   openTaximeter(taxiFromDriver);
 }
@@ -2400,6 +2511,7 @@ function taxiRecenter(){
   else if(taxiMap) myLocation().then(p=>taxiMap.easeTo({ center:[p.lng,p.lat], zoom:17, duration:500 })).catch(()=>{});
 }
 function taxiResetNorth(){ if(taxiMap) taxiMap.easeTo({ bearing: 0, duration: 400 }); }
+function taxiZoom(d){ if(taxiMap) taxiMap.easeTo({ zoom: Math.min(20, Math.max(10, (taxiMap.getZoom()||15) + d)), duration: 300 }); }
 function startTaxi(){
   if(!taxiIsPremium() && taxiRunsToday() >= FREE_DAILY_LIMIT){ taxiLimitReached(); return; }
   const now = Date.now();
@@ -2412,6 +2524,7 @@ function startTaxi(){
     myLocation().then(p=>{
       taxiMap.easeTo({ center: [p.lng, p.lat], zoom: 17, duration: 600 });
       markTaxiHere(p);
+      markTaxiStart(p);
     }).catch(()=>{});
   }
   startTaxiWatch();
@@ -2486,7 +2599,7 @@ function startTaxiWatch(){
     } else {
       s.lastLat = lat; s.lastLng = lng;
       s.points = [[lng, lat]];
-      if(taxiMap){ markTaxiHere({ lat, lng }); if(taxiFollow) taxiMap.easeTo({ center:[lng,lat], zoom:17, duration:600 }); }
+      if(taxiMap){ markTaxiHere({ lat, lng }); if(!taxiStartMarker) markTaxiStart({ lat, lng }); if(taxiFollow) taxiMap.easeTo({ center:[lng,lat], zoom:17, duration:600 }); }
     }
     saveTaxi(s);
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 2000 });
@@ -3206,8 +3319,10 @@ function driverCounterPrompt(rid, price){
   renderDriverInbox();
 }
 function updateDriverBadge(n){
-  const b = $('#driver-badge'); if(!b) return;
-  b.textContent = n; b.classList.toggle('hidden', !n);
+  ['driver-badge','taxi-driver-badge'].forEach(id=>{
+    const b = document.getElementById(id); if(!b) return;
+    b.textContent = n; b.classList.toggle('hidden', !n);
+  });
 }
 async function driverRespond(rid, kind, price){
   try {
