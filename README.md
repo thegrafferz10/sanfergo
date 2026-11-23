@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.34)
+# SanFerGo — versión pública (v1.4.35)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.35 (2026-11-23) — Resumen del mandado al publicar y en la tarjeta del chofer
+
+- Hoja **Precio y publicar** del mandado: se quitaron los tres párrafos largos (solo en mandados, los viajes quedan como estaban): "Tú pones el precio, de $5 en $5…", la nota de pago bajo los botones ("Pagas $X en efectivo/transferencia directo al conductor…") y la nota bajo el botón de publicar ("Al publicar, tu mandado se envía a los choferes…"). En su lugar, arriba de la hoja, va un bloque compacto **Resumen de tu mandado**: qué se entrega (descripción en Enviar, lista de cosas en Quiero), dónde se recoge (donde estás tú / las paradas), dónde se entrega (Punto de WhatsApp con coordenadas / tu punto), quien recibe (nombre · teléfono, solo Enviar), pago del pedido (Ya pagado / Se pagará · Lleva $X para recogerlo, solo Enviar) y precio + forma de pago en una fila que se actualiza en vivo al mover el stepper (`priceStep`/`priceSetSuggested` actualizan `#md-sum-price`; el pago se refresca con el re-render al cambiarlo). La hoja sigue sin scroll: lo que quitan los párrafos lo ocupa el resumen.
+- Tarjeta del chofer (**Recibir Viajes**): el resumen va en la tarjeta misma, sin tocar nada para verlo — cuadro verde **Resumen del mandado** con Recibe (nombre · teléfono) y Pedido (Ya pagado / Se pagará · Lleva $X para recogerlo), en solicitudes, en la pestaña En curso y en la tarjeta inferior del mapa en vivo del chofer (nueva función `mandadoDriverSummaryHtml(r)`, usada en los tres sitios). Diagnóstico de por qué el usuario no veía las líneas en vivo con v1.4.34: el código y la API ya estaban bien (`/api/requests` hace `SELECT *` y devuelve los campos; la tarjeta los pintaba cuando existen; y un mandado publicado con el cliente v1.4.34 no puede carecer de ellos porque el servidor los exige) — el mandado de su captura ("The Noob Gamer", 17:09) se publicó con un cliente viejo en caché, sin `recipient_name`/`order_payment`/`order_amount`, así que las líneas, que solo aparecen cuando los campos existen, no salieron. Las solicitudes viejas sin esos campos siguen sin mostrar nada y la tarjeta no se rompe.
+- Pruebas: suite completa contra BD limpia: 515 OK, 0 FAIL (509 de antes + 6 nuevas: 5 estáticas del resumen en la hoja de precio, en la tarjeta del chofer y en el mapa en vivo, y 1 en vivo de que `/api/requests?open=1` devuelve quien recibe y el pago del pedido; la estática de v1.4.34 de la tarjeta se actualizó a los textos del cuadro de resumen).
 
 ## v1.4.34 (2026-11-23) — Mandados 'Enviar': quien recibe en el paso 2, sin paso 3, y pago del pedido
 

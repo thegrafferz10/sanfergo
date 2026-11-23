@@ -339,7 +339,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.34 en /api/health', h.ok && h.version === '1.4.34', JSON.stringify(h));
+  check('versión 1.4.35 en /api/health', h.ok && h.version === '1.4.35', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -440,7 +440,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.34', h134.ok && h134.version === '1.4.34', JSON.stringify(h134));
+  check('versión 1.4.35', h134.ok && h134.version === '1.4.35', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +602,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.34)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.34';") && h.version === '1.4.34', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.35)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.35';") && h.version === '1.4.35', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1192,6 +1192,9 @@ async function api(path, body) {
   // (g) Mandado tipo "enviar" con vehículo: la moto no lo toma si es mototaxi.
   const manEnv = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Llevar un paquete', vehicle: 'mototaxi', recipient_phone: '9614444444', recipient_name: 'María López', order_payment: 'por_pagar', order_amount: 150 });
   check('mandado "enviar" guarda vehicle=mototaxi, quien recibe y pago del pedido', manEnv.ok && manEnv.request.vehicle === 'mototaxi' && manEnv.request.recipient_phone === '9614444444' && manEnv.request.recipient_name === 'María López' && manEnv.request.order_payment === 'por_pagar' && manEnv.request.order_amount === 150, JSON.stringify(manEnv.request));
+  const openEnv = await api('/api/requests?open=1');
+  const openRow = (openEnv.requests || []).find(r => r.id === manEnv.request.id);
+  check('v1.4.35: /api/requests?open=1 le devuelve al chofer quien recibe y el pago del pedido', openEnv.ok && !!openRow && openRow.recipient_name === 'María López' && openRow.recipient_phone === '9614444444' && openRow.order_payment === 'por_pagar' && openRow.order_amount === 150, JSON.stringify(openRow));
   const manEnvPagado = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Llevar un paquete pagado', vehicle: 'mototaxi', recipient_phone: '9615555555', recipient_name: 'Juan Pérez', order_payment: 'pagado', order_amount: 0 });
   check('mandado "enviar" con pedido ya pagado guarda order_payment=pagado y amount 0', manEnvPagado.ok && manEnvPagado.request.order_payment === 'pagado' && manEnvPagado.request.order_amount === 0 && manEnvPagado.request.recipient_name === 'Juan Pérez', JSON.stringify(manEnvPagado.request));
   const manEnvSinMonto = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Llevar un paquete', vehicle: 'mototaxi', recipient_phone: '9614444444', recipient_name: 'María López', order_payment: 'por_pagar' });
@@ -1393,7 +1396,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.34 en /api/health (sección)', h27.ok && h27.version === '1.4.34', JSON.stringify(h27));
+  check('versión 1.4.35 en /api/health (sección)', h27.ok && h27.version === '1.4.35', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1438,7 +1441,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.34 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.34', JSON.stringify(h28));
+  check('versión 1.4.35 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.35', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1452,7 +1455,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.34 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.34', JSON.stringify(h29));
+  check('versión 1.4.35 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.35', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1461,7 +1464,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.34 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.34', JSON.stringify(h30));
+  check('versión 1.4.35 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.35', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1589,7 +1592,16 @@ async function api(path, body) {
   const envStep3 = envSec.slice(envSec.indexOf('md.step===3'), envSec.indexOf('md.step===4'));
   check('v1.4.34: paso 3 trae pago del pedido con sus dos opciones y la cantidad', envStep3.includes('¿Cómo se paga el pedido?') && envStep3.includes('Pedido ya pagado') && envStep3.includes('Se pagará el pedido') && envStep3.includes('Cantidad que el chofer necesita llevar') && envStep3.includes('id="md-order-amount"') && envStep3.includes('mdNextEnviar3()'));
   const inboxSec = html.slice(html.indexOf('async function renderDriverInbox(){'), html.indexOf('function driverCounterStep'));
-  check('v1.4.34: la solicitud le muestra al chofer quien recibe y el pago del pedido', inboxSec.includes('r.recipient_name') && inboxSec.includes('Recibe: ') && inboxSec.includes('Pedido: ya pagado') && inboxSec.includes('Pedido: se pagará') && inboxSec.includes('Lleva ') && inboxSec.includes('r.order_payment'));
+  const drvSumSec = html.slice(html.indexOf('function mandadoDriverSummaryHtml(r){'), html.indexOf('async function renderDriverInbox(){'));
+  check('v1.4.34: la solicitud le muestra al chofer quien recibe y el pago del pedido', inboxSec.includes('mandadoDriverSummaryHtml(r)') && drvSumSec.includes('Resumen del mandado') && drvSumSec.includes('Recibe') && drvSumSec.includes('Pedido') && drvSumSec.includes('Ya pagado') && drvSumSec.includes('Se pagará') && drvSumSec.includes('Lleva ') && drvSumSec.includes('r.order_payment') && drvSumSec.includes('r.recipient_name'));
+  // --- v1.4.35: resumen del mandado al publicar y en la tarjeta del chofer ---
+  const priceSec = html.slice(html.indexOf('function priceSheetHtml'), html.indexOf('function mdSummaryLine'));
+  check('v1.4.35: la hoja de precio del mandado trae el resumen y ya no los tres párrafos largos', priceSec.includes('Resumen de tu mandado') && priceSec.includes('mdPublishSummaryHtml()') && priceSec.includes('id="md-sum-price"') && priceSec.includes('id="md-sum-pay"') && priceSec.includes("isTrip ? '<p class=\"muted center mt\">Tú pones el precio") && priceSec.includes("isTrip ? '<p class=\"muted mt\" id=\"price-pay-note\">") && priceSec.includes("isTrip ? '<p class=\"muted center mt\">Al publicar, tu '"));
+  check('v1.4.35: el resumen del mandado trae qué se entrega, recogida, entrega, quien recibe, pago del pedido, precio y pago', html.includes('function mdPublishSummaryHtml(){') && html.includes('Qué se entrega') && html.includes('Se recoge') && html.includes('Se entrega') && html.includes('Punto de WhatsApp') && html.includes('Pedido') && html.includes('Se pagará · Lleva ') && html.includes('md-sum-price') && html.includes('md-sum-pay'));
+  check('v1.4.35: el precio del resumen se actualiza al mover el stepper', html.includes("getElementById('md-sum-price')") && html.includes('priceStep(') && html.includes('priceSetSuggested('));
+  check('v1.4.35: la tarjeta del chofer usa el resumen en solicitudes y en curso', inboxSec.includes('mandadoDriverSummaryHtml(r)') && inboxSec.includes("driverInboxTab==='curso'") && inboxSec.includes('Abrir mapa del servicio'));
+  const liveSec = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function driverPasteLocationInline'));
+  check('v1.4.35: el mapa en vivo del chofer también trae el resumen del mandado', liveSec.includes('mandadoDriverSummaryHtml(r)') && liveSec.includes('liveAsDriver'));
   check('v1.4.34: publicar Enviar manda nombre, pago del pedido y cantidad', html.includes("type:'enviar'") && html.includes('recipient_name: md.recipientName') && html.includes('order_payment: md.orderPay') && html.includes("order_amount: md.orderPay==='por_pagar'"));
   const quieroSec = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
   check('v1.4.34: "Quiero un mandado" sigue en 5 pasos', quieroSec.includes('Paso 1 de 5') && quieroSec.includes('Paso 4 de 5') && quieroSec.includes('md.step===5'));
