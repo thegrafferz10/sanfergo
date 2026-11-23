@@ -223,6 +223,19 @@ input[type=file]{padding:8px}
 .pickrow{display:flex;gap:8px;align-items:center;min-width:0}
 .pickrow .backpill{flex-shrink:0}
 .pickrow .chip{flex:1;min-width:0}
+/* Paso de destino igual a la app real (v1.4.13): las tiras superior e
+   inferior son transparentes y los elementos flotan sueltos sobre el mapa
+   (píldoras Regresar + origen con Cambiar dentro, tarjeta de búsqueda
+   aparte; pista + confirmar abajo), no una tarjeta blanca grande. Sin
+   esto, .strip button{width:100%} hacía que "Cambiar" ocupara toda la fila
+   y el chip del origen se aplastara en una tirita vertical de una letra
+   por línea (captura del usuario 6:35). */
+.strip.top.pickdest{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.strip.top.pickdest .backpill{width:auto;margin:0;background:#fff;font-size:15px;padding:8px 14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.strip.top.pickdest .pickrow{width:100%}
+.strip.top.pickdest .pick-change{width:auto;margin:0;flex-shrink:0;background:#fff;color:#14532d;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800}
+.strip.bottom.pickdest{background:transparent;box-shadow:none;padding:0}
+.strip.bottom.pickdest button{box-shadow:0 4px 16px rgba(0,0,0,.25)}
 .pickres{display:block;width:100%;text-align:left;padding:11px 12px;background:#fff;border-top:1px solid var(--line);font-size:15px}
 #pick-search{margin-top:8px}
 #pick-results{max-height:170px;overflow:auto;border-radius:12px;margin-top:6px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
@@ -244,20 +257,20 @@ input[type=file]{padding:8px}
 .map-pill.green{background:#166534}
 .map-pill.blue{background:#2563eb}
 .pickpin-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
-/* Anuncio flotante de entrada (v1.3.5; sin marco v1.4.12): un solo anuncio
-   al entrar a Viajes, Negocios o Mandados. Va un poco más arriba en la
-   pantalla, se cierra AL INSTANTE con la X grande de arriba (sin contador
-   ni espera) y no lleva 'Cerrar y seguir'. La imagen se muestra completa,
-   sin recortar, y SOLA: la tarjeta NO lleva borde ni radio (v1.4.12, el
-   usuario: "que aparezca sola imagen sin un Marco adicional") y se ciñe
-   al ancho de la imagen renderizada (width:max-content; la imagen con
-   width:auto y max-height:56dvh — un poco más chica que el tamaño
-   completo, a petición del usuario), así la imagen toca los bordes
-   izquierdo y derecho de la tarjeta sin franjas blancas a los lados; solo
-   el pie de abajo lleva padding. */
+/* Anuncio flotante de entrada (v1.3.5; geometría exacta de la app real
+   v1.4.13): un solo anuncio al entrar a Viajes, Negocios o Mandados. Va un
+   poco más arriba en la pantalla, se cierra AL INSTANTE con la X grande de
+   arriba (sin contador ni espera) y no lleva 'Cerrar y seguir'. La tarjeta
+   mide lo mismo que en la app real (max-width 340 px, radio 24 px, sin
+   borde) y la imagen va a todo lo ancho a su proporción natural
+   (width:100%, sin tope de alto), de borde a borde, sin franjas y sin
+   marco; solo el pie de abajo lleva padding. La v1.4.12 la había dejado
+   ceñida a la imagen (width:max-content, max-height:56dvh, ~266 px de
+   ancho) y el usuario dijo que en la app está súper bien y la web debe
+   verse así: por eso ahora es 340 px como en la app. */
 #entry-ad-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}
-#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:max-content;max-width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:0;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-#entry-ad-overlay .adfloat img{width:auto;max-width:100%;max-height:56dvh;object-fit:contain;background:#fff;display:block;cursor:pointer}
+#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,340px);max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#entry-ad-overlay .adfloat img{width:100%;max-height:none;object-fit:contain;background:#fff;display:block;cursor:pointer}
 #entry-ad-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
 #entry-ad-overlay .adfoot{padding:16px}
 #entry-ad-overlay .adfoot .pub{font-size:11px;color:#b45309;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
@@ -420,8 +433,8 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.12) ===== */
-const APP_VERSION = '1.4.12'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
+const APP_VERSION = '1.4.13'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -988,17 +1001,16 @@ async function showEntryAd(entry){
   } catch(err){}
 }
 function renderEntryAd(ad){
-  // Flotante de entrada (app real; SIN marco desde v1.4.12): overlay
-  // oscuro 60%, tarjeta pegada arriba (pt 7dvh), máx. 400 px, SIN borde
-  // ni radio — la tarjeta se ciñe al ancho de la imagen, X de 48×48
-  // DENTRO de la tarjeta arriba a la derecha, imagen completa máx.
-  // 62dvh, debajo "Publicidad", nombre del negocio en h2 + insignia
-  // Premium si aplica y botón verde "Ver negocio" a todo lo ancho (solo
-  // si el anuncio está vinculado a un negocio; el libre muestra solo
-  // "Publicidad" por diseño). La imagen va un poco más chica que el
-  // tamaño completo (max-height:56dvh, a petición del usuario), sin marco
-  // ni franjas. Anuncio libre sin imagen: cuerpo de texto
-  // con foto del negocio, nombre, categoría, título y texto.
+  // Flotante de entrada (app real; geometría exacta de la app desde
+  // v1.4.13): overlay oscuro 60%, tarjeta pegada arriba (pt 7dvh), ancho
+  // mín. 92vw y máx. 340 px, radio 24 px, SIN borde — la imagen va a todo
+  // lo ancho a su proporción natural (sin tope de alto), X de 48×48
+  // DENTRO de la tarjeta arriba a la derecha, debajo "Publicidad", nombre
+  // del negocio en h2 + insignia Premium si aplica y botón verde "Ver
+  // negocio" a todo lo ancho (solo si el anuncio está vinculado a un
+  // negocio; el libre muestra solo "Publicidad" por diseño). Anuncio libre
+  // sin imagen: cuerpo de texto con foto del negocio, nombre, categoría,
+  // título y texto.
   closeEntryAd();
   const ov = document.createElement('div');
   ov.id = 'entry-ad-overlay';
@@ -1607,47 +1619,48 @@ function openPick(which, ret, startPos){
   go('picker');
   const top = $('#pick-top'), bot = $('#pick-bottom');
   if(pickConfirm){
-    top.classList.add('pickconfirm');
+    top.classList.add('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<button class="backpill" onclick="closePick()">‹ Regresar</button>'
       + '<div class="pick-instructions"><b>Confirma o fija tu punto de salida</b><div class="muted">El pin está en tu ubicación actual. Si vives en un callejón o tu casa no da a la calle, arrastra el pin hasta la entrada, donde sí puede llegar el mototaxi, y confirma tu punto.</div></div>';
-    bot.classList.add('pickconfirm');
+    bot.classList.add('pickconfirm');bot.classList.remove('pickdest');
     bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone"></span></div><button onclick="confirmPick()">Confirmar este punto de salida</button>';
   } else if(pickWhich==='origin'){
     // Origen SIN GPS (app real): mapa a pantalla completa, tarjeta de
     // instrucciones, píldora inferior y botón ámbar. SIN buscador aquí.
-    top.classList.add('pickconfirm');
+    top.classList.add('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<button class="backpill" onclick="closePick()">‹ Regresar</button>'
       + '<div class="pick-instructions"><b>Marca tu punto de salida</b><div class="muted">Toca el mapa para marcarlo, arrastra el pin para ajustarlo y pellizca con dos dedos para acercar el mapa.</div></div>';
-    bot.classList.add('pickconfirm');
+    bot.classList.add('pickconfirm');bot.classList.remove('pickdest');
     bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button onclick="confirmPick()">Confirmar este punto de salida</button>';
   } else if(pickWhich==='dest'){
     // Paso de destino (app real): arriba la píldora verde de origen +
     // "Cambiar", buscador en tarjeta, pistas y abajo píldora + confirmar.
     const oz = wiz.origin ? nearestZoneName(wiz.origin) : null;
     const olabel = wiz.origin ? (wiz.origin.zone || wiz.origin.label || '') : '';
-    top.classList.remove('pickconfirm');
-    top.innerHTML = '<div style="display:flex;gap:8px;align-items:center"><span class="chip" id="pick-chip" style="font-size:13px;flex:1;white-space:normal;text-align:left">Sales de: '+esc(olabel)+(oz ? ' · cerca de '+esc(oz) : '')+'</span><button class="backpill" style="margin:0;background:#fff" onclick="wiz.step=1;closePickToViajes()">Cambiar</button></div>'
-      + '<div class="card white" style="margin-top:8px"><label style="font-weight:700">¿A dónde vas?</label>'
-      + '<input id="pick-search" placeholder="Escribe un lugar: Centro, Progreso, Madero…" autocomplete="off" oninput="pickSearchQ=this.value;renderPickResults()">'
+    top.classList.remove('pickconfirm');top.classList.remove('pickdest');top.classList.add('pickdest');
+    top.innerHTML = '<div class="pickrow"><button class="backpill" style="margin:0" onclick="closePick()">‹ Regresar</button>'
+      + '<span class="chip" style="display:flex;align-items:center;gap:6px;padding:2px 4px 2px 10px;font-size:13px"><span id="pick-chip" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sales de: '+esc(olabel)+(oz ? ' · cerca de '+esc(oz) : '')+'</span><button class="pick-change" onclick="wiz.step=1;closePickToViajes()">Cambiar</button></span></div>'
+      + '<div class="card white" style="margin-top:0;padding:8px"><label style="font-weight:800;font-size:14px">¿A dónde vas?</label>'
+      + '<input id="pick-search" style="border:2px solid #14532d;margin-top:4px" placeholder="Escribe un lugar: Centro, Progreso, Madero…" autocomplete="off" oninput="pickSearchQ=this.value;renderPickResults()">'
       + '<div id="pick-results"></div></div>';
-    bot.classList.remove('pickconfirm');
+    bot.classList.remove('pickconfirm');bot.classList.remove('pickdest');bot.classList.add('pickdest');
     bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button onclick="confirmPick()">Confirmar este destino</button>';
   } else if(pickWhich==='mdest'){
     // Mapa de marcar entrega de "Quiero un mandado" (app real): pantalla
     // completa SIN buscador; botón Regresar en círculo blanco arriba a la
     // izquierda; tarjeta de instrucciones; píldora verde y botón
     // "Confirmar este punto" (deshabilitado sin punto); el pin nace en el GPS.
-    top.classList.add('pickconfirm');
+    top.classList.add('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<button class="backpill" style="border-radius:50%;width:44px;height:44px;padding:0;justify-content:center" onclick="closePick()">‹</button>'
       + '<div class="pick-instructions"><b>Marca tu punto de entrega</b><div class="muted">El mapa abre en tu ubicación actual. Toca el mapa para marcar el punto, arrastra el pin para ajustarlo —por ejemplo a la entrada si vives en un callejón— y pellizca con dos dedos para acercar el mapa.</div></div>';
-    bot.classList.add('pickconfirm');
+    bot.classList.add('pickconfirm');bot.classList.remove('pickdest');
     bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button id="pick-confirm-btn" disabled onclick="confirmPick()">Confirmar este punto</button>';
   } else {
-    top.classList.remove('pickconfirm');
+    top.classList.remove('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<div class="pickrow"><button class="backpill" style="margin:0" onclick="closePick()">‹ Regresar</button><span class="chip" id="pick-chip" style="font-size:13px">'+pickTopLabel()+'</span></div>'
       + '<input id="pick-search" placeholder="Buscar lugar: Centro, Progreso, Madero, Juárez…" autocomplete="off" oninput="pickSearchQ=this.value;renderPickResults()">'
       + '<div id="pick-results"></div>';
-    bot.classList.remove('pickconfirm');
+    bot.classList.remove('pickconfirm');bot.classList.remove('pickdest');
     bot.innerHTML = '<button onclick="confirmPick()">Usar este punto</button>';
   }
   renderPickResults();
