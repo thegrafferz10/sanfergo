@@ -322,7 +322,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.14 en /api/health', h.ok && h.version === '1.4.14', JSON.stringify(h));
+  check('versión 1.4.15 en /api/health', h.ok && h.version === '1.4.15', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -423,7 +423,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.14', h134.ok && h134.version === '1.4.14', JSON.stringify(h134));
+  check('versión 1.4.15', h134.ok && h134.version === '1.4.15', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -581,7 +581,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.14)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.14';") && h.version === '1.4.14', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.15)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.15';") && h.version === '1.4.15', 'health=' + JSON.stringify(h));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
@@ -621,6 +621,46 @@ async function api(path, body) {
   // se dibujan igual y solo falta la línea azul. Igual en los mapas de
   // vista previa del asistente y de mandados.
   check('mapa en vivo: si OSRM falla, las tiras se dibujan igual (v1.4.14)', html.includes('try { rt = await osrmRoute(from, target); } catch(e){ rt = null; }') && html.includes('try { await renderLiveMap(); } catch(e)') && html.includes('try { rt = await osrmRoute(wiz.origin, wiz.dest); } catch(e){}') && html.includes('try { rt = await osrmRoute(first, dest); } catch(e){}'));
+  // Paso de detalles igual a la app real (v1.4.15, captura del usuario
+  // 7:29): las dos filas de puntos se aplastaban en tiritas verticales
+  // porque .strip button{width:100%} hacía que "Cambiar" ocupara casi
+  // toda la fila (misma causa que el paso de destino en v1.4.13). Ahora
+  // cada fila es punto de color + texto en UNA línea con ellipsis +
+  // "Cambiar" compacto con borde, como la pastilla de ruta de la app
+  // (routePill) y su captura 7:34. Se verifica sobre el código del
+  // paso 3 (rama wiz.step===3) y el CSS .pickdet.
+  const detHtml = html.slice(html.indexOf('if(wiz.step===3){'), html.indexOf('if(wiz.step===4){'));
+  check('detalles: las filas de puntos no se aplastan — texto en una línea con ellipsis y Cambiar compacto (v1.4.15)', detHtml.includes('class="strip top pickdet"') && (detHtml.match(/class="pickdet-txt"/g) || []).length === 2 && detHtml.includes('class="linklike"') && html.includes('.strip.top.pickdet .linklike{width:auto;margin:0;flex-shrink:0;background:#fff;color:#1c2420;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;font-weight:800;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.10)}') && html.includes('.strip.top.pickdet .pickdet-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'), detHtml.slice(0, 200));
+  // Encuadre del mapa en vivo del chofer por etapa (v1.4.15, reporte del
+  // usuario 7:31): antes de iniciar, el mapa encuadra SOLO chofer +
+  // recogida (la ruta azul hacia él); el destino no entra — encuadrar
+  // los tres puntos alejaba el zoom a todo el recorrido y el mapa
+  // quedaba enorme y vacío. Una vez iniciado, el encuadre es chofer +
+  // destino (la ruta hacia donde van a llegar). Sin GPS del chofer, se
+  // centra el punto objetivo a zoom de calle (maxZoom 16 de fitPoints).
+  // El lado pasajero no cambia (ya centraba la recogida a zoom 16).
+  check('mapa en vivo chofer: encuadre por etapa — recogida antes de iniciar, destino después (v1.4.15)', html.includes('const framePts = inTrip') && html.includes('? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])') && html.includes(': (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);') && html.includes('fitPoints(liveMap, framePts, liveFollowPadding())') && !html.includes('fitPoints(liveMap, pts, liveAsDriver ? 70'), detHtml.slice(0, 100));
+  // Marcador de recogida "Recoge aquí" (v1.4.15, petición EXPLÍCITA del
+  // usuario 19:35): camino a recoger, el punto es un PIN compacto con la
+  // etiqueta "Recoge aquí" — la píldora verde con el nombre del pasajero
+  // tapaba el mapa; el nombre ya está en las tiras de abajo. Una vez
+  // iniciado el viaje ya no se marca la recogida (solo el destino, que
+  // sigue con su píldora .pass-pin "Destino · zona").
+  check('mapa en vivo chofer: el marcador de recogida dice "Recoge aquí" (pin compacto, no el nombre) (v1.4.15)', html.includes("pinLbl.textContent = 'Recoge aquí'") && html.includes("pinWrap.className = 'pickup-pin'") && html.includes("pinLbl.className = 'pickup-lbl'") && html.includes('.pickup-lbl{background:#14532d;color:#fff;border:2px solid #fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35)}') && html.includes('.pickup-dot{width:14px;height:14px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}') && html.includes("if(!inTrip){") && !html.includes("pinEl.textContent = r.kind==='viaje'") && !html.includes('Aquí recoges al pasajero') && html.includes("destEl.textContent = 'Destino · ' + (r.dest_zone||'')"));
+  // "Cómo llegar" como BOTÓN AZUL (v1.4.15, referencia de la app): era un
+  // enlace <a> de texto azul que se partía en dos líneas ("Cómo /
+  // llegar"); ahora es un botón azul compacto de una línea, con la misma
+  // acción openGmaps. Ojo: .strip button{width:100%} lo habría vuelto
+  // ámbar y de ancho completo — el selector .strip button.howbtn se
+  // impone (misma trampa que aplastó el chip en v1.4.13).
+  check('"Cómo llegar" es un botón azul compacto de una línea, no un enlace (v1.4.15)', html.includes('<button type="button" class="howbtn" onclick="openGmaps(') && html.includes('>Cómo llegar</button>') && html.includes('.strip button.howbtn{width:auto;margin:0;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px;white-space:nowrap;flex-shrink:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}') && !html.includes('>Cómo llegar</a>') && !html.includes('<a href="#" style="font-weight:700;color:var(--blue)" onclick="openGmaps('));
+  // Centrado de los dos puntos en el mapa del paso "Tu recorrido"
+  // (v1.4.15, petición del usuario + foto de la app): el encuadre usaba
+  // padding fijo 70 y los puntos quedaban tapados tras las tarjetas. La
+  // app lo resuelve con fitCamera + insets (franja visible entre las
+  // tarjetas); la web replica eso midiendo la altura real de la tarjeta
+  // de arriba y la hoja de abajo y pasándola como padding a fitBounds.
+  check('detalles: el mapa encuadra los dos puntos en la franja visible entre las tarjetas (v1.4.15)', html.includes("const fm = el.closest('.fullmap');") && html.includes("fm.querySelector('.strip.top')") && html.includes("fm.querySelector('.strip.bottom')") && html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]], { top: topPad, bottom: botPad, left: 24, right: 24 });') && !html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]]);'));
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y

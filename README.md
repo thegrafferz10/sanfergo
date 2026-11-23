@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.14)
+# SanFerGo — versión pública (v1.4.15)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.15 (2026-11-22) — paso de detalles sin aplastar + mapa en vivo del chofer encuadrado por etapa
+
+- Detalle 1 (captura del usuario 7:29, paso "Tu recorrido"): las dos filas de puntos se veían feas — el texto del origen ("Punto en el mapa · cerca de Arco") y del destino ("Punto en el mapa · cerca de Madero") se aplastaba en tiritas verticales de una palabra por línea, al lado de dos botones ámbar "Cambiar" gigantes. Causa raíz: la misma que el paso de destino en v1.4.13 — la regla `.strip button{width:100%}` hacía que "Cambiar" ocupara casi toda la fila y el texto (flex:1, sin mínimo ni ellipsis) se encogiera a su mínimo; además `.strip button` le ponía fondo ámbar al botón aunque su clase es `linklike`. Arreglo (solo ese paso, patrón de la pastilla de ruta de la app real, `routePill`, y de su captura 7:34): cada fila es punto de color + texto en UNA línea con ellipsis + "Cambiar" compacto blanco con borde (nueva clase `.pickdet`: `width:auto`, `flex-shrink:0`, borde 1 px, radio 10 px, 12 px). Regresar, "≈ min · km de recorrido", la caja verde "Tu recorrido" y "Continuar" quedan igual en función y lugar.
+- Detalle 2 (captura del usuario 7:31, panel del chofer al aceptar el viaje): aparecía un mapa ENORME y vacío — la mototaxi en la orilla, el punto de recogida apenas visible y sin ruta. Causa raíz: `renderLiveMap` encuadraba los TRES puntos a la vez (recogida + destino + chofer) con `fitPoints`, así que con un recorrido de 2.7 km el zoom se alejaba a todo el trayecto y la ruta (chofer → recogida, un tramo corto) quedaba invisible. Arreglo (igual que la app real, que sigue al vehículo con el punto objetivo adelante y no encuadra todo el recorrido): el encuadre del chofer es POR ETAPA — antes de iniciar, SOLO chofer + punto de recogida (la ruta azul hacia él); una vez iniciado el viaje, chofer + destino (la ruta hacia donde van a llegar). Sin GPS del chofer aún, se centra el punto objetivo a zoom de calle. El lado pasajero no cambia (ya centraba la recogida a zoom 16). Tiras, botones de etapa, "Cómo llegar" y tarjeta inferior sin cambios.
+- Extra en la misma pantalla (el usuario marcó la píldora verde enorme): el marcador de recogida era una píldora gigante porque `.pass-pin` no envolvía el texto (`white-space:nowrap` sin tope de ancho) — con "Josue Eduardo · Punto en el mapa" ocupaba casi todo el ancho del mapa. Ahora es compacto como el letrero de la app real: máximo 200 px, texto envuelto y centrado, 12 px, radio 16 px (mismo cambio para la etiqueta "Destino · …").
+- Verificado en navegador real (Chrome headless) con el flujo completo: paso de detalles con los dos puntos (filas en una línea, Cambiar compacto) y mapa en vivo del chofer en etapa Confirmado (recogida + chofer encuadrados, zoom cerrado) y tras iniciar el viaje (destino + ruta).
 
 ## v1.4.14 (2026-11-22) — banner de viaje activo en Inicio: el mapa en vivo ya no se pierde
 
