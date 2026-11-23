@@ -264,6 +264,10 @@ async function api(path, body) {
   check('admin sube anuncio solo-imagen con entradas', ad.ok && ad.ad.id, JSON.stringify(ad));
   const adPub1 = await api('/api/ads');
   check('anuncio activo en lista pública de anuncios', adPub1.ok && adPub1.ads.some(a => a.id === ad.ad.id));
+  // v1.4.16: el carrusel de Negocios se alimenta de /api/ads — el anuncio
+  // trae sus entradas resueltas (incluye 'negocios') y business_id null
+  // al ser libre.
+  check('carrusel Negocios: /api/ads trae el anuncio con entradas que incluyen negocios (v1.4.16)', adPub1.ok && adPub1.ads.some(a => a.id === ad.ad.id && Array.isArray(a.entries) && a.entries.includes('negocios') && a.business_id == null), JSON.stringify(adPub1.ads.find(a => a.id === ad.ad.id)));
   const entryV = await api('/api/entry-ad?entry=viajes&token=' + admLogin.token);
   check('anuncio de entrada flotante en Viajes (v1.3.5)', entryV.ok && entryV.ad && entryV.ad.id === ad.ad.id, JSON.stringify(entryV));
   // v1.4.12: el anuncio libre (sin negocio) trae business_id y
@@ -322,7 +326,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.15 en /api/health', h.ok && h.version === '1.4.15', JSON.stringify(h));
+  check('versión 1.4.16 en /api/health', h.ok && h.version === '1.4.16', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -423,7 +427,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.15', h134.ok && h134.version === '1.4.15', JSON.stringify(h134));
+  check('versión 1.4.16', h134.ok && h134.version === '1.4.16', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -581,7 +585,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.15)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.15';") && h.version === '1.4.15', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.16)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.16';") && h.version === '1.4.16', 'health=' + JSON.stringify(h));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
@@ -661,6 +665,23 @@ async function api(path, body) {
   // tarjetas); la web replica eso midiendo la altura real de la tarjeta
   // de arriba y la hoja de abajo y pasándola como padding a fitBounds.
   check('detalles: el mapa encuadra los dos puntos en la franja visible entre las tarjetas (v1.4.15)', html.includes("const fm = el.closest('.fullmap');") && html.includes("fm.querySelector('.strip.top')") && html.includes("fm.querySelector('.strip.bottom')") && html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]], { top: topPad, bottom: botPad, left: 24, right: 24 });') && !html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]]);'));
+  // Carrusel de anuncios en Negocios (v1.4.16, petición del usuario con
+  // captura de referencia: como el inicio de la app de la captura:
+  // banners horizontales ARRIBA y las tarjetas de negocios abajo). El
+  // contenedor va entre el título y los tres botones, que quedan EXACTOS
+  // (mismo orden, mismo texto, mismas acciones).
+  check('carrusel Negocios: contenedor arriba de los tres botones, botones sin tocar (v1.4.16)', html.includes("box.innerHTML = '<div id=\"biz-ads-carousel\"></div>'") && html.includes("'Administrar negocio':'Crear un negocio'") && html.includes("onclick=\"bizScreen=\\'my-appts\\';renderNegocios()\">Ver mi cita</button>") && html.includes("onclick=\"bizScreen=\\'my-orders\\';renderNegocios()\">Ver mi pedido</button>"));
+  // Banners anchos con scroll-snap, puntos abajo (el activo verde y más
+  // ancho), imagen cover centrada a 210 px para que el precio/oferta del
+  // centro no se corte. La verificación visual está en la captura del
+  // navegador real (README).
+  check('carrusel Negocios: CSS de banners horizontales con scroll-snap y puntos (v1.4.16)', html.includes('.biz-carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;') && html.includes('.biz-carousel-slide img{width:100%;height:210px;object-fit:cover;object-position:center;display:block;') && html.includes('.biz-carousel-dots button.on{background:#14532d;width:18px;border-radius:4px}') && html.includes('#biz-ads-carousel:empty{display:none}'));
+  // Datos: los mismos anuncios activos de /api/ads que el flotante de
+  // entrada, filtrados por entrada 'negocios'. Swipe con snap, puntos
+  // que saltan al banner, auto-avance cada 5 s que se pausa al tocar, tap
+  // (sin arrastre) abre el negocio vinculado y el libre no hace nada.
+  // Sin anuncios activos no se muestra nada (sin caja vacía).
+  check('carrusel Negocios: se alimenta de /api/ads filtrando por entrada negocios, auto-avance 5 s, tap abre el negocio vinculado y el libre no hace nada, sin anuncios no muestra nada (v1.4.16)', html.includes("async function renderBizAdsCarousel(){") && html.includes("api('/api/ads')") && html.includes("(a.entries||[]).includes('negocios')") && html.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);") && html.includes("bizCarouselStop()") && html.includes('class="biz-carousel-dots"') && html.includes('data-biz="')); 
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y
