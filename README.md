@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.27)
+# SanFerGo — versión pública (v1.4.28)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.28 (2026-11-23) — en Negocios las opciones van arriba del anuncio y son compactas
+
+- En la pantalla principal de Negocios la fila de opciones (Administrar/Crear, Ver mi cita, Ver mi pedido) ahora va ARRIBA del carrusel de anuncios, justo debajo del título, y es compacta: una sola línea de unos 42px de alto con fuente de 13px (antes eran botones de 72px debajo del carrusel). El primer botón ya no dice "negocio": dice "Administrar" si ya tienes un negocio y "Crear" si no tienes. "Ver mi cita" y "Ver mi pedido" quedan con el mismo texto, los mismos colores y las mismas acciones. El carrusel (swipe, puntos, auto-avance de 5 s, tap abre el negocio vinculado), las pills de categoría, las tarjetas de negocios y el anuncio flotante de entrada no cambian.
+- Pruebas: suite completa contra BD limpia: 440 OK, 0 FAIL (435 de antes + 5 nuevos: versión en /api/health y orden/etiquetas/tamaño/acciones de la fila de opciones).
 
 ## v1.4.27 (2026-11-23) — los tres registros son asistentes por pasos + correcciones del panel de chofer
 

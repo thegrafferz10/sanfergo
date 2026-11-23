@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.27 en /api/health', h.ok && h.version === '1.4.27', JSON.stringify(h));
+  check('versión 1.4.28 en /api/health', h.ok && h.version === '1.4.28', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.27', h134.ok && h134.version === '1.4.27', JSON.stringify(h134));
+  check('versión 1.4.28', h134.ok && h134.version === '1.4.28', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.27)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.27';") && h.version === '1.4.27', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.28)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.28';") && h.version === '1.4.28', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -971,10 +971,11 @@ async function api(path, body) {
   check('detalles: el mapa encuadra los dos puntos en la franja visible entre las tarjetas (v1.4.15)', html.includes("const fm = el.closest('.fullmap');") && html.includes("fm.querySelector('.strip.top')") && html.includes("fm.querySelector('.strip.bottom')") && html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]], { top: topPad, bottom: botPad, left: 24, right: 24 });') && !html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]]);'));
   // Carrusel de anuncios en Negocios (v1.4.16, petición del usuario con
   // captura de referencia: como el inicio de la app de la captura:
-  // banners horizontales ARRIBA y las tarjetas de negocios abajo). El
-  // contenedor va entre el título y los tres botones, que quedan EXACTOS
-  // (mismo orden, mismo texto, mismas acciones).
-  check('carrusel Negocios: contenedor arriba de los tres botones, botones sin tocar (v1.4.16)', html.includes("box.innerHTML = '<div id=\"biz-ads-carousel\"></div>'") && html.includes("'Administrar negocio':'Crear un negocio'") && html.includes("onclick=\"bizScreen=\\'my-appts\\';renderNegocios()\">Ver mi cita</button>") && html.includes("onclick=\"bizScreen=\\'my-orders\\';renderNegocios()\">Ver mi pedido</button>"));
+  // banners horizontales ARRIBA y las tarjetas de negocios abajo). En
+  // v1.4.28 la fila de opciones pasó ARRIBA del carrusel y se hizo
+  // compacta (petición del usuario con captura): el orden ahora es
+  // título → opciones → carrusel → pills → tarjetas.
+  check('Negocios: la fila de opciones va arriba del carrusel (v1.4.28)', html.includes("box.innerHTML = '<div id=\"biz-options-row\"") && html.includes("'<div id=\"biz-ads-carousel\"></div>'") && html.indexOf('id="biz-options-row"') !== -1 && html.indexOf('id="biz-ads-carousel"') !== -1 && html.indexOf('id="biz-options-row"') < html.indexOf('id="biz-ads-carousel"'));
   // Banners anchos con scroll-snap, puntos abajo (el activo verde y más
   // ancho), imagen cover centrada a 210 px para que el precio/oferta del
   // centro no se corte. La verificación visual está en la captura del
@@ -1377,7 +1378,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.27 en /api/health (sección)', h27.ok && h27.version === '1.4.27', JSON.stringify(h27));
+  check('versión 1.4.28 en /api/health (sección)', h27.ok && h27.version === '1.4.28', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1415,6 +1416,20 @@ async function api(path, body) {
   } catch(e){ fmtOk = false; }
   check('fmtDateTime en vivo: ISO con Z y texto SQLite dan fecha válida (nada de Invalid Date)', fmtOk, 'iso=' + fmtIso + ' sql=' + fmtSql);
   check('driverTab resalta las tres pestañas en las dos barras (inicio/taximetro/recibir)', html.includes("const suf = tab==='taximetro' ? 'taxi' : tab;") && html.includes("document.getElementById('txb-'+t)"));
+
+  // v1.4.28: en Negocios la fila de opciones (Administrar/Crear, Ver mi
+  // cita, Ver mi pedido) va ARRIBA del carrusel y es compacta, y el
+  // primer botón ya no dice "negocio". El carrusel, las pills y las
+  // tarjetas no cambian.
+  console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
+  const h28 = await api('/api/health');
+  check('versión 1.4.28 en /api/health (sección v1.4.28)', h28.ok && h28.version === '1.4.28', JSON.stringify(h28));
+  const rbm = html.indexOf('async function renderBizMain(){');
+  const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
+  check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
+  check('Negocios: el primer botón dice Administrar/Crear sin la palabra negocio; Ver mi cita y Ver mi pedido iguales', rbmBody.includes("mine.length?'Administrar':'Crear'") && !rbmBody.includes('Administrar negocio') && !rbmBody.includes('Crear un negocio') && rbmBody.includes('>Ver mi cita</button>') && rbmBody.includes('>Ver mi pedido</button>'));
+  check('Negocios: los tres botones son compactos (42px, fuente 13px), no 72px', rbmBody.includes('height:42px') && rbmBody.includes('font-size:13px') && !rbmBody.includes('height:72px'));
+  check('Negocios: las tres acciones siguen iguales (mi negocio/crear, mis citas, mis pedidos)', rbmBody.includes("bizScreen=\\'my-appts\\';renderNegocios()") && rbmBody.includes("bizScreen=\\'my-orders\\';renderNegocios()") && rbmBody.includes("(mine.length?'mine':'create')"));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
