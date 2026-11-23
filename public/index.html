@@ -327,6 +327,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
     <div id="home-menu"></div>
     <div id="home-driver-btn"></div>
     <div id="home-account-link" class="center" style="margin-top:14px"></div>
+    <div id="home-version" class="center muted" style="margin-top:6px;font-size:12px"></div>
   </div>
 </div>
 
@@ -415,7 +416,8 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.10) ===== */
+/* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.11) ===== */
+const APP_VERSION = '1.4.11'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -927,6 +929,8 @@ function renderHome(){
   if(al) al.innerHTML = myAccount
     ? '<a href="#" onclick="go(\'cuenta\');return false" style="color:var(--green);font-weight:700;font-size:14px">Mi cuenta · @'+esc(myAccount.username)+'</a>'
     : '';
+  const ver = $('#home-version');
+  if(ver) ver.textContent = 'Versión ' + APP_VERSION;
   const db = $('#home-driver-btn');
   if(!db) return;
   if(myDriver){
@@ -2155,14 +2159,16 @@ function liveResetNorth(){ if(liveMap) liveMap.easeTo({ bearing: 0, duration: 40
 /* heading-up del viaje en vivo: solo calcula el rumbo suavizado y lo
    devuelve; NO hace easeTo aquí: el giro viaja junto con el centrado en
    UNA sola llamada del polling (dos easeTo seguidos se cancelan entre sí
-   en MapLibre y el mapa quedaba siempre en norte-arriba). */
+   en MapLibre y el mapa quedaba siempre en norte-arriba). El bearing que
+   devuelve es +rumbo (no -rumbo): en MapLibre el bearing lleva el signo
+   opuesto al rotate() de CSS de la app real (ver taxímetro, v1.4.11). */
 function applyHeading(heading){
   if(heading==null) return null;
   if(liveLastHeading==null) liveLastHeading = heading;
   let d = heading - liveLastHeading;
   while(d > 180) d -= 360; while(d < -180) d += 360;
   liveLastHeading += d * 0.7; // suavizado más reactivo, igual que el taxímetro
-  return -liveLastHeading;
+  return liveLastHeading;
 }
 function renderLiveStrips(){
   const r = liveReq; if(!r) return;
@@ -2786,8 +2792,14 @@ function startTaxiWatch(){
         // quedaba derecho y la línea azul quedaba AL LADO de la mototaxi
         // (capturas 5:17/5:18), aunque el ícono apuntara arriba. Sin puerta
         // de velocidad: la app real tampoco la tiene; la referencia de >4 m
-        // ya filtra el temblor parado. bearing = -heading (rumbo horario
-        // desde el norte; el mapa gira al revés para dejarlo arriba).
+        // ya filtra el temblor parado. bearing = +heading EN MAPLIBRE
+        // (¡al revés que el rotate() de CSS de la app real, donde es
+        // -rumbo!): en MapLibre el bearing se aplica con el signo opuesto
+        // — comprobado en navegador real con MapLibre 4.7.1: con bearing
+        // -90 el este queda ABAJO en pantalla, con bearing +90 queda
+        // ARRIBA. El signo viejo (-heading) dejaba la línea al lado o
+        // hacia abajo aunque el rumbo ya fuera estable (capturas 4:56,
+        // 5:17/5:18; "Nada sigue igual" 17:40).
         // UN SOLO easeTo por lectura: el giro viaja dentro del centrado de
         // taxiFollowCenter; si no se recentra (seguimiento apagado o guarda
         // de 2 m), el giro va solo en su propio easeTo. Dos easeTo seguidos
@@ -2800,7 +2812,7 @@ function startTaxiWatch(){
             if(taxiLastHeading==null) taxiLastHeading = h;
             let dd = h - taxiLastHeading; while(dd>180) dd-=360; while(dd<-180) dd+=360;
             taxiLastHeading += dd * 0.7;
-            newBearing = -taxiLastHeading;
+            newBearing = taxiLastHeading;
           }
         } else {
           taxiHeadingRef = { lat, lng };
