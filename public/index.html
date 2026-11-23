@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.32'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.33'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3486,9 +3486,6 @@ function renderMandadoEnviar(){
   } else if(md.step===2){
     page.innerHTML = backPill('Regresar', "mdBack(1)")
       + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 2 de 5 · El lugar a donde va tu mandado.</p>'
-      + '<label class="mt">¿Dónde se entrega?</label>'
-      + '<input id="md-dest-q" placeholder="Escribe un lugar: Centro, Progreso, Madero…" autocomplete="off" value="'+esc(md.destZone||'')+'" oninput="mdDestSearch(this.value)">'
-      + '<div id="md-dest-res"></div>'
       + (md.dest ? '<p class="muted mt">📍 Punto marcado: '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(md.destZone ? ' · cerca de '+esc(md.destZone) : '')+'</p>' : '')
       + '<div class="dashbox"><b>Ubicación por WhatsApp</b>'
       + (md.waDest ? '<p class="muted mt">📍 Punto de entrega marcado desde WhatsApp</p><p class="muted">'+md.waDest.lat.toFixed(5)+', '+md.waDest.lng.toFixed(5)+'</p><button class="btn ghost small" onclick="md.waDest=null;md.dest=null;md.destZone=\'\';renderMandados()">Quitar este punto</button>'
@@ -3500,8 +3497,7 @@ function renderMandadoEnviar(){
       + '<div id="md-ask-btn" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
       + '<div id="md-ask-hint" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
       + '</div>'
-      + '<label class="mt">Calle o referencia (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de la esquina, portón verde" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
-      + '<div class="err hidden" id="md-err2">Escribe el lugar de entrega y elige una coincidencia.</div>'
+      + '<div class="err hidden" id="md-err2">Pega la ubicación de WhatsApp y marca el punto de entrega.</div>'
       + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null){document.getElementById(\'md-err2\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
   } else if(md.step===3){
     const valid = md.recipient && md.recipient.replace(/\D/g,'').length===10;
