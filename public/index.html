@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.29'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.30'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -624,7 +624,12 @@ async function loadMe(){
         hasSession = true;
         if (myPassenger) store.pid = myPassenger.id; else store.pid = null;
         if (myDriver) store.did = myDriver.id; else store.did = null;
-      } catch(e){ store.token = null; myAccount = null; }
+      } catch(e){
+        // v1.4.30: si la cuenta está suspendida o bloqueada, /api/me
+        // devuelve 403 y se le avisa al entrar (la sesión se cierra).
+        if(/suspendida|bloqueada/.test(e.message||'')) toast(e.message);
+        store.token = null; myAccount = null;
+      }
     }
     // Sin sesión (modo sin cuenta, heredado): el teléfono recuerda sus
     // propios perfiles por id. Con sesión esto NO se ejecuta.
@@ -4043,7 +4048,7 @@ async function renderAdmin(){
   if(adminScreen==='choferes') return renderAdminDrivers();
   if(adminScreen==='pasajeros') return renderAdminPassengers();
   if(adminScreen==='cuentas') return renderAdminAccounts();
-  if(adminScreen==='anuncios') return renderAdminAds();
+  if(adminScreen==='anuncios'){ adScreen='menu'; return renderAdminAds(); }
   return renderAdminStores();
 }
 function renderAdminGrid(){
@@ -4327,18 +4332,89 @@ async function adminDriverTrips(did, name){
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
 }
 /* --- Administrar pasajeros --- */
+/* --- Administrar pasajeros: buscar por nombre y suspender / bloquear /
+   eliminar / reactivar (v1.4.30). La cuenta del admin, la cuenta con la
+   que entró el admin, y cualquier cuenta con perfil de chofer no son
+   accionables aquí — los choferes se gestionan en Administrar choferes.
+   Así la fila del propio usuario (Josué Eduardo, que también es chofer)
+   nunca se puede tocar desde esta pantalla. */
+let paxList = [], paxSearch = '', paxSel = {};
+function paxActionable(p){
+  if(!p.account_id) return false;
+  if(p.account_role === 'admin') return false;
+  if(myAccount && p.account_id === myAccount.id) return false;
+  if(p.account_has_driver) return false;
+  return true;
+}
+function paxFiltered(){
+  const q = normStr(paxSearch);
+  if(!q) return paxList;
+  return paxList.filter(p=> normStr(p.name).includes(q) || normStr(p.account_username||'').includes(q) || String(p.phone||'').includes(q));
+}
+function renderPaxList(){
+  const box = $('#pax-list'); if(!box) return;
+  const list = paxFiltered();
+  const selIds = Object.keys(paxSel).filter(k=>paxSel[k]);
+  const actionable = list.filter(paxActionable);
+  const allSel = actionable.length > 0 && actionable.every(p=>paxSel[p.id]);
+  const bar = $('#pax-bar');
+  bar.innerHTML = '<label class="chk"><input type="checkbox" '+(allSel?'checked':'')+' onchange="if(this.checked){ paxFiltered().forEach(p=>{ if(paxActionable(p)) paxSel[p.id]=true; }); } else { paxFiltered().forEach(p=>{ paxSel[p.id]=false; }); } renderPaxList()"> Seleccionar todos</label>'
+    + (selIds.length ? '<div class="btnrow">'
+      + '<button class="btn small" onclick="paxAction(\'suspender\')">Suspender ('+selIds.length+')</button>'
+      + '<button class="btn small" style="background:#b45309;color:#fff" onclick="paxAction(\'bloquear\')">Bloquear ('+selIds.length+')</button>'
+      + '<button class="btn danger small" onclick="paxAction(\'eliminar\')">Eliminar ('+selIds.length+')</button>'
+      + '<button class="btn small" style="background:#15803d;color:#fff" onclick="paxAction(\'reactivar\')">Reactivar ('+selIds.length+')</button></div>' : '');
+  box.innerHTML = list.length ? list.map(p=>{
+    const own = myAccount && p.account_id === myAccount.id;
+    const st = p.account_status || 'activo';
+    return '<div class="card white"><div class="flex">'
+      + (paxActionable(p) ? '<input type="checkbox" '+(paxSel[p.id]?'checked':'')+' onchange="paxSel['+p.id+']=this.checked;renderPaxList()">' : '')
+      + (p.face_photo?'<img class="avatar sm" src="'+p.face_photo+'">':'<div class="avatar sm"></div>')
+      + '<div class="flex1"><b>'+esc(p.name)+'</b><div class="muted">'+esc(p.phone)+(p.account_username ? ' · @'+esc(p.account_username) : '')+'</div>'+(st==='suspendido' && p.account_suspend_reason ? '<div class="muted">Motivo: '+esc(p.account_suspend_reason)+'</div>' : '')+'</div>'
+      + (st==='suspendido' ? '<span class="chip red">Suspendido</span>' : st==='bloqueado' ? '<span class="chip red">Bloqueado</span>' : '')
+      + (own ? '<span class="chip amber">Tu cuenta</span>' : p.account_has_driver ? '<span class="chip">Chofer</span>' : '')
+      + '<span class="muted">'+fmtDateTime(p.created_at)+'</span></div></div>';
+  }).join('') : '<p class="muted center mt">Ningún pasajero coincide con la búsqueda.</p>';
+}
+async function paxAction(kind){
+  const rows = paxList.filter(p=>paxSel[p.id] && paxActionable(p));
+  if(!rows.length) return;
+  const names = rows.map(p=>p.name).join(', ');
+  let reason = '';
+  if(kind==='suspender'){
+    // v1.4.30: al suspender se pide el motivo (opcional, puede quedar
+    // vacío); se le muestra al pasajero cuando intenta entrar.
+    const r = prompt('Motivo de la suspensión (opcional, se le muestra al pasajero):', '');
+    if(r === null) return;
+    reason = r.trim();
+    if(!confirm(rows.length===1 ? '¿Suspender la cuenta de '+rows[0].name+'? No podrá entrar hasta que la reactives.' : '¿Suspender '+rows.length+' cuentas? No podrán entrar hasta que las reactives.')) return;
+  }
+  if(kind==='eliminar'){
+    if(!confirm(rows.length===1 ? 'Se borrará la cuenta de '+rows[0].name+'. Cuando entre de nuevo tendrá que registrarse desde cero. ¿Borrar?' : 'Se borrarán '+rows.length+' cuentas ('+names+'). Cuando entren de nuevo tendrán que registrarse desde cero. ¿Borrar?')) return;
+  } else if(kind==='bloquear'){
+    if(!confirm(rows.length===1 ? '¿Bloquear la cuenta de '+rows[0].name+'? No podrá entrar hasta que la reactives.' : '¿Bloquear '+rows.length+' cuentas? No podrán entrar hasta que las reactives.')) return;
+  }
+  for(const p of rows){
+    try {
+      if(kind==='eliminar') await api('/api/admin/delete-account', { token: store.token, account_id: p.account_id });
+      else await api('/api/admin/set-account-status', { token: store.token, account_id: p.account_id, status: kind==='suspender' ? 'suspendido' : kind==='bloquear' ? 'bloqueado' : 'activo', suspend_reason: kind==='suspender' ? reason : undefined });
+    } catch(e){ toast(p.name + ': ' + e.message); }
+  }
+  paxSel = {};
+  await renderAdminPassengers();
+}
 async function renderAdminPassengers(){
   const page = $('#admin-page');
   page.innerHTML = adminBack('Administrar pasajeros') + '<div id="admin-body"><p class="muted mt">Cargando…</p></div>';
   const body = $('#admin-body'); if(!body) return;
   try {
     const j = await api('/api/admin-passengers?token=' + encodeURIComponent(store.token));
-    const list = j.passengers || [];
-    body.innerHTML = list.length ? '<p class="muted mt">'+list.length+' pasajero(s) registrado(s).</p>' + list.map(p=>'<div class="card white"><div class="flex">'
-      + (p.face_photo?'<img class="avatar sm" src="'+p.face_photo+'">':'<div class="avatar sm"></div>')
-      + '<div class="flex1"><b>'+esc(p.name)+'</b><div class="muted">'+esc(p.phone)+'</div></div>'
-      + '<span class="muted">'+fmtDateTime(p.created_at)+'</span></div></div>').join('')
-      : '<p class="muted center mt">No hay pasajeros registrados.</p>';
+    paxList = j.passengers || [];
+    paxSel = {};
+    body.innerHTML = '<p class="muted mt">'+paxList.length+' pasajero(s) registrado(s).</p>'
+      + '<input id="pax-search" placeholder="Buscar por nombre…" value="'+esc(paxSearch)+'" oninput="paxSearch=this.value;renderPaxList()">'
+      + '<div id="pax-bar"></div><div id="pax-list"></div>';
+    renderPaxList();
     // v1.4.26: el admin ya revisó la lista, así que los usuarios nuevos
     // se marcan como vistos y el aviso + el badge se limpian.
     try { await api('/api/admin/mark-users-seen', { token: store.token }); } catch(e){}
@@ -4362,53 +4438,96 @@ async function renderAdminAccounts(){
       : '<p class="muted center mt">No hay cuentas.</p>';
   } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
 }
-/* --- Anuncios: SOLO imagen (obligatoria), libre o de un negocio, con entradas --- */
-let adImgData = null, adBizList = [], adKind = 'libre';
+/* --- Anuncios: SOLO imagen (obligatoria). v1.4.30: la sección abre como
+   menú (Ver anuncios / Subir anuncio); al subir se elige primero Libre o
+   De un negocio y luego la ubicación: 'flotante' (imagen VERTICAL, sale
+   flotando al entrar a Viajes, Negocios o Mandados) o 'panel' (imagen
+   HORIZONTAL, banner arriba en el panel de Negocios). El admin sube cada
+   una en su formato. Los anuncios viejos (sin ubicación) siguen siendo
+   flotantes y salen en el carrusel como antes. */
+let adImgData = null, adBizList = [], adKind = 'libre', adScreen = 'menu', adPlacement = 'flotante';
+function adCard(a){
+  // Un anuncio puede tener una o las dos imágenes: vertical (flotante)
+  // y horizontal (panel). Se muestran las dos que tenga, con su rótulo.
+  const hasF = !!a.image, hasP = !!a.banner_image;
+  const place = hasF && hasP ? 'Ambos' : hasP ? 'Panel' : 'Flotante';
+  return '<div class="card white adcard">'
+    + (hasF?'<div class="muted">Vertical · flotante</div><img src="'+a.image+'">':'')
+    + (hasP?'<div class="muted">Horizontal · panel</div><img src="'+a.banner_image+'">':'')
+    + '<b>'+esc(a.business_name || a.label || a.title || 'Anuncio')+'</b>'
+    + '<p class="muted mt">'+(a.business_id ? 'De un negocio · ' : 'Libre · ')+place+(hasF ? ' · Rota en: '+((a.entries||['viajes','negocios','mandados']).join(', ')) : '')+'</p>'
+    + '<div class="btnrow"><button class="btn small '+(a.active?'':'ghost')+'" onclick="setAdActive('+a.id+', '+(a.active?0:1)+')">'+(a.active?'Ocultar':'Mostrar')+'</button>'
+    + '<button class="btn danger small" onclick="deleteAd('+a.id+')">Borrar</button></div></div>';
+}
 async function renderAdminAds(){
   const page = $('#admin-page');
   page.innerHTML = adminBack('Anuncios') + '<div id="admin-body"><p class="muted mt">Cargando…</p></div>';
   const body = $('#admin-body'); if(!body) return;
+  // Menú: primero las opciones, sin el formulario largo de frente.
+  if (adScreen === 'menu') {
+    body.innerHTML = '<div class="card white" style="cursor:pointer" onclick="adScreen=\'ver\';renderAdminAds()"><b>Ver anuncios</b><p class="muted mt">Los anuncios que están activos y los ocultos.</p></div>'
+      + '<div class="card white" style="cursor:pointer" onclick="adScreen=\'subir\';renderAdminAds()"><b>Subir anuncio</b><p class="muted mt">Sube un anuncio libre o de un negocio.</p></div>';
+    return;
+  }
+  if (adScreen === 'subir') {
+    body.innerHTML = backPill('Regresar', "adScreen='menu';renderAdminAds()")
+      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'libre\';adPlacement=\'flotante\';adImgData=null;adScreen=\'form\';renderAdminAds()"><b>Subir anuncio Libre</b><p class="muted mt">Un anuncio sin negocio vinculado.</p></div>'
+      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'negocio\';adPlacement=\'flotante\';adImgData=null;adScreen=\'form\';renderAdminAds()"><b>Subir anuncio de un negocio</b><p class="muted mt">Vinculado a un negocio activo: al tocarlo, el cliente llega a su ficha.</p></div>';
+    return;
+  }
+  if (adScreen === 'ver') {
+    try {
+      const j = await api('/api/admin-ads?token=' + encodeURIComponent(store.token));
+      const list = j.ads || [];
+      const act = list.filter(a=>a.active), hid = list.filter(a=>!a.active);
+      body.innerHTML = backPill('Regresar', "adScreen='menu';renderAdminAds()")
+        + '<h3 class="mt2">Anuncios activos ('+act.length+')</h3>'
+        + (act.length ? act.map(adCard).join('') : '<p class="muted center mt">No hay anuncios activos.</p>')
+        + (hid.length ? '<h3 class="mt2">Anuncios ocultos ('+hid.length+')</h3>' + hid.map(adCard).join('') : '');
+    } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
+    return;
+  }
+  // Formulario de subida: el tipo ya viene del menú; aquí solo se elige
+  // la ubicación y se sube la imagen en su formato.
   try {
-    const j = await api('/api/admin-ads?token=' + encodeURIComponent(store.token));
-    const list = j.ads || [];
-    adImgData = null;
     const biz = await api('/api/businesses');
     adBizList = biz.businesses || [];
-    body.innerHTML = '<div class="card white"><h3>Nuevo anuncio</h3>'
-      + '<p class="muted mt">El anuncio es solo imagen. Sale flotando, uno a la vez, al entrar a Viajes, Negocios o Mandados. El Inicio no muestra anuncios.</p>'
-      + '<div class="btnrow"><button type="button" class="pay-opt '+(adKind==='libre'?'sel':'')+'" onclick="adKind=\'libre\';renderAdminAds()">Anuncio libre</button>'
-      + '<button type="button" class="pay-opt '+(adKind==='negocio'?'sel':'')+'" onclick="adKind=\'negocio\';renderAdminAds()">De un negocio</button></div>'
-      + '<div class="photobox"><b>Imagen del anuncio *</b><div class="muted">La imagen ES el anuncio: se muestra tal cual en el flotante que sale al entrar a Viajes, Negocios o Mandados. En la página principal no sale. Vertical se ve mejor, como las historias.</div><div id="ad-prev"></div>'
-      + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{adImgData=d; document.getElementById(\'ad-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+    body.innerHTML = backPill('Regresar', "adScreen='subir';renderAdminAds()")
+      + '<div class="card white"><h3>'+(adKind==='libre'?'Subir anuncio Libre':'Subir anuncio de un negocio')+'</h3>'
+      + '<p class="muted mt">El anuncio es solo imagen.</p>'
       + (adKind==='libre'
         ? '<label class="mt">¿De qué es el anuncio? (opcional)</label><input id="ad-label" placeholder="Ej. Panadería Santa Fe" maxlength="120"><p class="muted mt">Es solo una etiqueta para reconocerlo en esta lista; no se muestra en el anuncio.</p>'
         : '<label class="mt">Negocio al que se vincula (solo activos)</label><select id="ad-biz"><option value="">Elige un negocio activo…</option>'
           + (adBizList.length ? adBizList.map(b=>'<option value="'+b.id+'">'+esc(b.name)+' · '+esc(b.category||'')+' · '+(b.is_premium?'SUSCRITO (Premium)':'Gratis')+'</option>').join('') : '')
           + '</select><p class="muted mt">Al tocar el anuncio, el cliente llega a la ficha del negocio. Los negocios con suscripción llevan la insignia ★ PREMIUM · VERIFICADO.</p>')
-      + '<label class="mt">Mostrar como flotante al entrar a…</label>'
-      + '<label class="chk"><input type="checkbox" id="ad-e-viajes" checked> Viajes (al pedir un viaje)</label>'
-      + '<label class="chk"><input type="checkbox" id="ad-e-negocios" checked> Negocios</label>'
-      + '<label class="chk"><input type="checkbox" id="ad-e-mandados" checked> Mandados (al pedir un mandado)</label>'
-      + '<button class="btn" onclick="createAd()">Publicar anuncio</button></div>'
-      + '<h3 class="mt2">Anuncios ('+list.length+')</h3>'
-      + (list.length ? list.map(a=>'<div class="card white adcard">'
-        + (a.image?'<img src="'+a.image+'">':'')
-        + '<b>'+esc(a.business_name || a.label || a.title || 'Anuncio')+'</b>'
-        + '<p class="muted mt">'+(a.business_id ? 'De un negocio · ' : 'Libre · ')+'Rota en: '+((a.entries||['viajes','negocios','mandados']).join(', '))+'</p>'
-        + '<div class="btnrow"><button class="btn small '+(a.active?'':'ghost')+'" onclick="setAdActive('+a.id+', '+(a.active?0:1)+')">'+(a.active?'Ocultar':'Mostrar')+'</button>'
-        + '<button class="btn danger small" onclick="deleteAd('+a.id+')">Borrar</button></div></div>').join('')
-        : '<p class="muted center mt">No hay anuncios todavía.</p>');
+      + '<label class="mt">¿Dónde se muestra?</label>'
+      + '<div class="btnrow"><button type="button" class="pay-opt '+(adPlacement==='flotante'?'sel':'')+'" onclick="adPlacement=\'flotante\';renderAdminAds()">Anuncio flotante</button>'
+      + '<button type="button" class="pay-opt '+(adPlacement==='panel'?'sel':'')+'" onclick="adPlacement=\'panel\';renderAdminAds()">Anuncio en el panel de Negocios</button></div>'
+      + '<div class="photobox"><b>'+(adPlacement==='panel' ? 'Imagen horizontal del anuncio *' : 'Imagen vertical del anuncio *')+'</b><div class="muted">'
+      + (adPlacement==='panel'
+        ? 'Formato HORIZONTAL: es el banner que sale arriba en el panel de Negocios. Súbela en horizontal para que se vea completa.'
+        : 'Formato VERTICAL, como las historias: es la que sale flotando al entrar a Viajes, Negocios o Mandados. En la página principal no sale.')
+      + '</div><div id="ad-prev">'+(adImgData?'<img src="'+adImgData+'">':'')+'</div>'
+      + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{adImgData=d; document.getElementById(\'ad-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+      + (adPlacement==='flotante'
+        ? '<label class="mt">Mostrar como flotante al entrar a…</label>'
+          + '<label class="chk"><input type="checkbox" id="ad-e-viajes" checked> Viajes (al pedir un viaje)</label>'
+          + '<label class="chk"><input type="checkbox" id="ad-e-negocios" checked> Negocios</label>'
+          + '<label class="chk"><input type="checkbox" id="ad-e-mandados" checked> Mandados (al pedir un mandado)</label>'
+        : '<p class="muted mt">Este anuncio sale solo arriba en el panel de Negocios, no como flotante.</p>')
+      + '<button class="btn" onclick="createAd()">Publicar anuncio</button></div>';
   } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
 }
 async function createAd(){
   const kind = adKind;
   const businessId = kind === 'negocio' ? parseInt(($('#ad-biz')||{}).value || '0', 10) : null;
   const label = ($('#ad-label')||{}).value ? $('#ad-label').value.trim() : '';
-  const entries = ['viajes','negocios','mandados'].filter(e=>{ const el = document.getElementById('ad-e-'+e); return el && el.checked; });
+  const slot = adPlacement === 'panel' ? 'panel' : 'flotante';
+  const entries = slot === 'panel' ? ['negocios'] : ['viajes','negocios','mandados'].filter(e=>{ const el = document.getElementById('ad-e-'+e); return el && el.checked; });
   if(!adImgData) return toast('Sube la imagen del anuncio: es obligatoria para publicar.');
   if(kind === 'negocio' && !businessId) return toast('Elige el negocio para vincular el anuncio.');
-  if(!entries.length) return toast('Elige al menos una entrada donde rote el anuncio.');
-  try { await api('/api/create-ad', { token: store.token, kind, business_id: businessId, label, image: adImgData, entries }); adImgData=null; toast('Anuncio subido.'); renderAdminAds(); }
+  if(slot === 'flotante' && !entries.length) return toast('Elige al menos una entrada donde rote el anuncio.');
+  try { await api('/api/create-ad', { token: store.token, kind, business_id: businessId, label, image: adImgData, entries, slot }); adImgData=null; toast('Anuncio subido.'); adScreen='ver'; renderAdminAds(); }
   catch(e){ toast(e.message); }
 }
 async function setAdActive(id, active){
@@ -4506,8 +4625,12 @@ async function renderBizMain(){
   renderBizAdsCarousel();
 }
 /* Carrusel de anuncios en Negocios (v1.4.16): banners horizontales con
-   los anuncios ACTIVOS que rotan en Negocios (los mismos de /api/ads que
-   el anuncio flotante de entrada). Swipe con scroll-snap, puntos abajo,
+   los anuncios ACTIVOS que tienen banner ('banner_image'). v1.4.30: un
+   anuncio tiene dos imágenes — la vertical ('image') sale flotando al
+   entrar, la horizontal ('banner_image') sale aquí arriba; los anuncios
+   viejos copiaron su vertical como banner al crearse la columna, así los
+   dos que ya están en vivo no dejan de aparecer hasta que el admin los
+   vuelva a subir en horizontal. Swipe con scroll-snap, puntos abajo,
    auto-avance cada 5 s (se pausa al tocar). Tocar un anuncio vinculado
    abre la ficha del negocio; el libre no hace nada. Sin anuncios activos
    no se muestra nada (sin caja vacía). */
@@ -4517,10 +4640,10 @@ async function renderBizAdsCarousel(){
   const wrap = document.getElementById('biz-ads-carousel'); if(!wrap) return;
   bizCarouselStop();
   let ads = [];
-  try { const j = await api('/api/ads'); ads = (j.ads||[]).filter(a=>a.image && (a.entries||[]).includes('negocios')); } catch(e){}
+  try { const j = await api('/api/ads'); ads = (j.ads||[]).filter(a=>a.banner_image); } catch(e){}
   if(!ads.length){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = '<div class="biz-carousel"><div class="biz-carousel-track" id="biz-carousel-track">'
-    + ads.map(a=>'<div class="biz-carousel-slide'+(a.business_id?' linked':'')+'" data-biz="'+(a.business_id||'')+'"><img src="'+a.image+'" alt="'+esc(a.business_name||a.label||'Publicidad')+'" draggable="false"></div>').join('')
+    + ads.map(a=>'<div class="biz-carousel-slide'+(a.business_id?' linked':'')+'" data-biz="'+(a.business_id||'')+'"><img src="'+a.banner_image+'" alt="'+esc(a.business_name||a.label||'Publicidad')+'" draggable="false"></div>').join('')
     + '</div>'
     + (ads.length>1 ? '<div class="biz-carousel-dots" id="biz-carousel-dots">'
       + ads.map((a,i)=>'<button type="button" aria-label="Anuncio '+(i+1)+'" data-i="'+i+'" class="'+(i===0?'on':'')+'"></button>').join('')
