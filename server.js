@@ -2,7 +2,11 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.12: el anuncio flotante de entrada va
+// Estado del spec: 2026-11-22 (v1.4.13: el paso de destino "¿A dónde vas?"
+// va igual que en la app real (fila Regresar + píldora de origen con Cambiar,
+// tarjeta de búsqueda aparte, tiras transparentes) y el anuncio flotante
+// lleva la geometría exacta de la app (tarjeta 340 px, imagen a todo lo
+// ancho a su proporción natural); v1.4.12: el anuncio flotante de entrada va
 // SIN marco — la tarjeta se ciñe al ancho de la imagen, sin borde ámbar
 // ni franjas blancas a los lados; el botón "Ver negocio" sale solo en el
 // anuncio vinculado (el libre muestra solo "Publicidad" por diseño, sin
@@ -605,7 +609,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.12' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.13' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {

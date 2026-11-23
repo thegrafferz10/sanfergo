@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.12)
+# SanFerGo — versión pública (v1.4.13)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.13 (2026-11-22) — el paso de destino "¿A dónde vas?" igual que en la app real + el anuncio con la geometría exacta de la app
+
+- El usuario pidió un viaje en la web (18:36 CST) y mandó dos capturas del paso "¿A dónde vas?": la web salía "todo feo" y debía verse como en la app. En la web, el chip verde del origen ("Sales de: …") se aplastaba en una tirita vertical de una letra por línea y no había botón "Regresar". Causa raíz: la regla `.strip button{width:100%}` hacía que el botón "Cambiar" ocupara toda la fila y el chip (flex:1, base 0) se encogiera a su mínimo. Arreglo (solo ese paso, sin tocar el flujo ni la lógica): la fila superior ahora es como en la app — píldora "‹ Regresar" (misma acción que en la app: volver al paso de origen) + píldora verde de origen con el texto truncado con ellipsis y el botón "Cambiar" compacto DENTRO de la píldora — y la tarjeta de búsqueda va aparte y compacta (borde verde 2 px en el input, como en la app). Las tiras superior e inferior son transparentes (nueva clase `.pickdest`): los elementos flotan sueltos sobre el mapa en vez de ir dentro de una tarjeta blanca grande. El mapa queda visible con "Estás aquí" y abajo van la píldora de pista + "Confirmar este destino", como en la app.
+- El usuario también marcó el anuncio en rojo (18:39 CST): en la app está súper bien y la web debe verse así. La v1.4.12 lo había dejado ceñido a la imagen (56dvh, ~266 px de ancho); ahora la web copia la geometría exacta del `EntryAdOverlay` actual de la app real: tarjeta `max-width:340px`, radio 24 px, sin borde, imagen `width:100%` a su proporción natural (sin tope de alto). El pie (PUBLICIDAD + nombre + "Ver negocio"), la X y la lógica (preload, sorteo, cierre instantáneo) no cambian. Verificado en navegador real (Chrome headless) con el paso de destino y con un anuncio vinculado, comparando contra las capturas de la app.
 
 ## v1.4.12 (2026-11-22) — el anuncio flotante de entrada va SIN marco: solo la imagen
 

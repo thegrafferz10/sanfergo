@@ -314,7 +314,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.12 en /api/health', h.ok && h.version === '1.4.12', JSON.stringify(h));
+  check('versión 1.4.13 en /api/health', h.ok && h.version === '1.4.13', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -415,7 +415,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.12', h134.ok && h134.version === '1.4.12', JSON.stringify(h134));
+  check('versión 1.4.13', h134.ok && h134.version === '1.4.13', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -573,22 +573,28 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.12)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.12';") && h.version === '1.4.12', 'health=' + JSON.stringify(h));
-  // Anuncio flotante de entrada SIN marco (v1.4.12, petición del usuario,
-  // capturas 6:15: "que aparezca sola imagen sin un Marco adicional"): en
-  // v1.4.10 la imagen ya iba a sangre (sin padding), pero quedaban dos
-  // marcos: el borde ámbar de 2 px de .adfloat y las franjas blancas a los
-  // lados — la imagen vertical (9:16) con width:100% + max-height:62dvh +
-  // object-fit:contain quedaba encogida dentro de la tarjeta de 400 px.
-  // Ahora la tarjeta NO lleva borde ni radio y se ciñe al ancho de la
-  // imagen (width:max-content, máx. min(92vw,400px)); la imagen con
-  // width:auto y max-width:100% toca los bordes izquierdo y derecho de la
-  // tarjeta, sin franjas. La imagen va un poco más chica que el tamaño
-  // completo (max-height:56dvh, agregado del usuario). El pie (padding
-  // 16 px) y la X (top/right 12 px) no cambian; la verificación visual de
-  // que la imagen llena la tarjeta está en la captura del navegador real
-  // (ver README v1.4.12).
-  check('anuncio flotante sin marco: la tarjeta se ciñe a la imagen (v1.4.12)', html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:max-content;max-width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:0;box-shadow:0 12px 40px rgba(0,0,0,.35)}') && !html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:2px solid #f59e0b;border-radius:24px;') && html.includes('#entry-ad-overlay .adfloat img{width:auto;max-width:100%;max-height:56dvh;object-fit:contain;background:#fff;display:block;cursor:pointer}') && !html.includes('.adfloat img{width:100%;max-height:62dvh;object-fit:contain;') && html.includes("#entry-ad-overlay .adfoot{padding:16px}") && html.includes('#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;'));
+  check('pie de versión en inicio (v1.4.13)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.13';") && h.version === '1.4.13', 'health=' + JSON.stringify(h));
+  // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
+  // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
+  // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
+  // a su proporción natural (width:100%, sin tope de alto). La v1.4.12 la
+  // dejaba ceñida a la imagen (width:max-content, 56dvh, ~266 px de ancho).
+  // El pie (padding 16 px) y la X (top/right 12 px) no cambian; la
+  // verificación visual está en la captura del navegador real (README).
+  check('anuncio flotante: geometría exacta de la app, tarjeta 340 px e imagen a todo lo ancho (v1.4.13)', html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,340px);max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35)}') && html.includes('#entry-ad-overlay .adfloat img{width:100%;max-height:none;object-fit:contain;background:#fff;display:block;cursor:pointer}') && !html.includes('width:max-content;max-width:min(92vw,400px)') && !html.includes('#entry-ad-overlay .adfloat img{width:auto;max-width:100%;max-height:56dvh;object-fit:contain;') && html.includes("#entry-ad-overlay .adfoot{padding:16px}") && html.includes('#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;'));
+  // Paso de destino igual a la app real (v1.4.13, capturas del usuario
+  // 6:35): fila compacta Regresar + píldora de origen (con Cambiar dentro)
+  // y tarjeta de búsqueda aparte; el chip ya no se aplasta en tirita
+  // vertical (la causa era .strip button{width:100%}). Se verifica sobre
+  // el código del paso: se recorta la rama dest de openPick y se comprueba
+  // su estructura y el CSS .pickdest. La verificación visual está en la
+  // captura del navegador real (README).
+  const di = html.indexOf("} else if(pickWhich==='dest'){");
+  const dj = html.indexOf("} else if(pickWhich==='mdest'){", di);
+  const destHtml = di >= 0 && dj > di ? html.slice(di, dj) : '';
+  check('destino: botón Regresar en el paso ¿A dónde vas? (v1.4.13)', destHtml.includes("onclick=\"closePick()\">‹ Regresar</button>") && destHtml.includes('class="pickrow"'), destHtml.slice(0, 200));
+  check('destino: el chip de origen no se aplasta — píldora con Cambiar dentro y ellipsis (v1.4.13)', destHtml.includes('class="pick-change"') && destHtml.includes('id="pick-chip"') && destHtml.includes('text-overflow:ellipsis;white-space:nowrap') && !destHtml.includes('white-space:normal') && html.includes('.strip.top.pickdest .pick-change{width:auto') && html.includes('.strip.top.pickdest .backpill{width:auto'), destHtml.slice(0, 300));
+  check('destino: tiras transparentes como en la app (v1.4.13)', destHtml.includes("classList.add('pickdest')") && html.includes('.strip.top.pickdest{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:6px;align-items:stretch}') && html.includes('.strip.bottom.pickdest{background:transparent;box-shadow:none;padding:0}'));
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y
