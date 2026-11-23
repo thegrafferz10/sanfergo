@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.23 en /api/health', h.ok && h.version === '1.4.23', JSON.stringify(h));
+  check('versión 1.4.24 en /api/health', h.ok && h.version === '1.4.24', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.23', h134.ok && h134.version === '1.4.23', JSON.stringify(h134));
+  check('versión 1.4.24', h134.ok && h134.version === '1.4.24', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,17 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.23)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.23';") && h.version === '1.4.23', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.24)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.24';") && h.version === '1.4.24', 'health=' + JSON.stringify(h));
+  // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
+  // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
+  // referencian, y el icon.svg viejo queda en su lugar sin usarse.
+  const iconRes = await fetch(B + '/icon.png');
+  check('GET /icon.png devuelve 200 con image/png', iconRes.status === 200 && (iconRes.headers.get('content-type') || '').includes('image/png'), 'status=' + iconRes.status + ' ct=' + iconRes.headers.get('content-type'));
+  const mfstRes = await fetch(B + '/manifest.webmanifest');
+  const mfstText = await mfstRes.text();
+  let mfst = null; try { mfst = JSON.parse(mfstText); } catch (e) {}
+  check('el manifest lista icon.png (192, 512 y 1024)', mfstRes.status === 200 && mfst && Array.isArray(mfst.icons) && mfst.icons.some(i => i.src === '/icon.png' && i.sizes === '192x192') && mfst.icons.some(i => i.src === '/icon.png' && i.sizes === '512x512') && mfst.icons.some(i => i.src === '/icon.png' && i.sizes === '1024x1024'), 'status=' + mfstRes.status + ' icons=' + JSON.stringify(mfst && mfst.icons));
+  check('el favicon de index.html es icon.png', html.includes('rel="icon" href="/icon.png"') && html.includes('type="image/png"') && !html.includes('href="/icon.svg"'), '');
   // Aviso de privacidad (v1.4.18): página pública en /privacidad y enlace
   // en el pie de la pantalla de inicio de sesión.
   const privRes = await fetch(B + '/privacidad');

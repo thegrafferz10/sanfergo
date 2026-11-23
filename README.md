@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.23)
+# SanFerGo — versión pública (v1.4.24)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.24 (2026-11-23) — nuevo ícono de la app
+
+- El logo final de SanFerGo (pin dorado con la mototaxi de frente y "SanFerGo") ahora es el ícono de la app: `public/icon.png` (1024x1024), referenciado por el manifest (192, 512 y 1024) y como favicon en `index.html`. `icon.svg` queda en su lugar sin usarse. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 397 OK, 0 FAIL (394 de antes + 3 nuevos: GET /icon.png 200 con image/png, el manifest lista icon.png en 192/512/1024, y el favicon de index.html es icon.png).
 
 ## v1.4.23 (2026-11-23) — formularios de registro con teléfono primero + enlace de admin
 
