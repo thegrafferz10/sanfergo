@@ -289,6 +289,24 @@ input[type=file]{padding:8px}
 #entry-ad-overlay .adfoot .pub{font-size:11px;color:#b45309;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
 #entry-ad-overlay .adfoot h2{font-size:22px;margin-top:2px}
 #entry-ad-overlay .adfoot .btn{background:#14532d;margin-top:10px}
+/* Carrusel de anuncios en Negocios (v1.4.16, petición del usuario: como
+   el inicio de la app de la captura: banners horizontales arriba y las
+   tarjetas de negocios abajo, sin tocarlas). Las imágenes de los anuncios
+   son verticales (322×480): el banner es ancho (210 px) con object-fit
+   cover centrado, así el precio y la oferta del centro quedan visibles;
+   las orillas se recortan como en un banner. Swipe con scroll-snap,
+   puntos abajo, auto-avance cada 5 s que se pausa al tocar. */
+#biz-ads-carousel{margin-top:12px}
+#biz-ads-carousel:empty{display:none}
+.biz-carousel{position:relative}
+.biz-carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:16px}
+.biz-carousel-track::-webkit-scrollbar{display:none}
+.biz-carousel-slide{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always}
+.biz-carousel-slide img{width:100%;height:210px;object-fit:cover;object-position:center;display:block;border-radius:16px;background:#f3ead8}
+.biz-carousel-slide.linked img{cursor:pointer}
+.biz-carousel-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.biz-carousel-dots button{width:7px;height:7px;border-radius:50%;border:0;padding:0;background:#d1d5db;cursor:pointer}
+.biz-carousel-dots button.on{background:#14532d;width:18px;border-radius:4px}
 /* Retícula de tarjetas uniformes del panel de administrador (v1.3.5) */
 .admingrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .admingrid button{position:relative;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px 12px;font-size:15px;font-weight:700;text-align:center}
@@ -448,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.15'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.16'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4141,6 +4159,7 @@ function renderNegocios(){
 }
 async function renderBizMain(){
   const page = $('#negocios-page');
+  bizCarouselStop();
   page.innerHTML = backPill('Regresar al inicio', "go('home')") + '<h2>Negocios</h2><div id="biz-main"><p class="muted mt">Cargando…</p></div>';
   const box = $('#biz-main'); if(!box) return;
   let mine = [];
@@ -4149,7 +4168,8 @@ async function renderBizMain(){
   try { const j = await api('/api/businesses'); list = j.businesses || []; } catch(e){}
   const cats = [...new Set(list.map(b=>b.category).filter(Boolean))];
   const filtered = bizCatFilter==='Todas' ? list : list.filter(b=>b.category===bizCatFilter);
-  box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">'
+  box.innerHTML = '<div id="biz-ads-carousel"></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">'
     + '<button style="height:72px;background:#f59e0b;color:#fff;border:none;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\''+(mine.length?'mine':'create')+'\';renderNegocios()">'+(mine.length?'Administrar negocio':'Crear un negocio')+'</button>'
     + '<button style="height:72px;background:#fff;color:#5b21b6;border:2px solid #5b21b6;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\'my-appts\';renderNegocios()">Ver mi cita</button>'
     + '<button style="height:72px;background:#fff;color:#14532d;border:2px solid #14532d;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\'my-orders\';renderNegocios()">Ver mi pedido</button></div>'
@@ -4166,6 +4186,58 @@ async function renderBizMain(){
       + ((b.colony||b.schedule) ? '<p class="muted mt">'+esc(b.colony||'')+(b.colony&&b.schedule?' · ':'')+esc(b.schedule||'')+'</p>' : '')
       + '<button class="btn small" style="margin-top:10px" onclick="openBusiness('+b.id+')">'+bizTypeAction(b.type)+'</button></div></div>').join('')
       : '<p class="muted center mt">'+(list.length ? 'No hay negocios de esta categoría todavía. Prueba con «Todas».' : 'Todavía no hay negocios aceptados en la app.')+'</p>');
+  renderBizAdsCarousel();
+}
+/* Carrusel de anuncios en Negocios (v1.4.16): banners horizontales con
+   los anuncios ACTIVOS que rotan en Negocios (los mismos de /api/ads que
+   el anuncio flotante de entrada). Swipe con scroll-snap, puntos abajo,
+   auto-avance cada 5 s (se pausa al tocar). Tocar un anuncio vinculado
+   abre la ficha del negocio; el libre no hace nada. Sin anuncios activos
+   no se muestra nada (sin caja vacía). */
+let bizCarouselTimer = null;
+function bizCarouselStop(){ if(bizCarouselTimer){ clearInterval(bizCarouselTimer); bizCarouselTimer = null; } }
+async function renderBizAdsCarousel(){
+  const wrap = document.getElementById('biz-ads-carousel'); if(!wrap) return;
+  bizCarouselStop();
+  let ads = [];
+  try { const j = await api('/api/ads'); ads = (j.ads||[]).filter(a=>a.image && (a.entries||[]).includes('negocios')); } catch(e){}
+  if(!ads.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div class="biz-carousel"><div class="biz-carousel-track" id="biz-carousel-track">'
+    + ads.map(a=>'<div class="biz-carousel-slide'+(a.business_id?' linked':'')+'" data-biz="'+(a.business_id||'')+'"><img src="'+a.image+'" alt="'+esc(a.business_name||a.label||'Publicidad')+'" draggable="false"></div>').join('')
+    + '</div>'
+    + (ads.length>1 ? '<div class="biz-carousel-dots" id="biz-carousel-dots">'
+      + ads.map((a,i)=>'<button type="button" aria-label="Anuncio '+(i+1)+'" data-i="'+i+'" class="'+(i===0?'on':'')+'"></button>').join('')
+      + '</div>' : '')
+    + '</div>';
+  const track = document.getElementById('biz-carousel-track');
+  const dots = Array.from(document.querySelectorAll('#biz-carousel-dots button'));
+  const cur = ()=> Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+  const paint = ()=>{ const i = cur(); dots.forEach((d,k)=>d.classList.toggle('on', k===i)); };
+  const goTo = (i)=>{ const n = ads.length; const idx = ((i % n) + n) % n; track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' }); };
+  track.addEventListener('scroll', paint, { passive: true });
+  dots.forEach(d=>d.addEventListener('click', ()=>goTo(+d.dataset.i)));
+  // Tap (sin arrastre) en un anuncio vinculado abre su negocio; el libre
+  // no hace nada. Se mide el desplazamiento para no abrirlo al deslizar.
+  let px = 0, py = 0;
+  track.addEventListener('pointerdown', e=>{ px = e.clientX; py = e.clientY; bizCarouselStop(); });
+  track.addEventListener('pointerup', e=>{
+    if(Math.hypot(e.clientX - px, e.clientY - py) < 8){
+      const slide = e.target.closest('.biz-carousel-slide');
+      if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);
+    }
+    bizCarouselStart();
+  });
+  track.addEventListener('pointercancel', ()=>bizCarouselStart());
+  bizCarouselStart();
+  function bizCarouselStart(){
+    bizCarouselStop();
+    if(ads.length < 2) return;
+    bizCarouselTimer = setInterval(()=>{
+      const t = document.getElementById('biz-carousel-track');
+      if(!t){ bizCarouselStop(); return; }
+      goTo(cur() + 1);
+    }, 5000);
+  }
 }
 async function renderBizDetail(){
   const page = $('#negocios-page');
