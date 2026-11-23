@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.32)
+# SanFerGo — versión pública (v1.4.33)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.33 (2026-11-23) — Mandados 'Enviar': paso de entrega solo con WhatsApp
+
+- El paso 2 de 5 de 'Enviar un mandado' ("¿Dónde se entrega?") ya no trae el buscador de lugares ni la "Calle o referencia (opcional)": el punto de entrega sale SOLO de la ubicación de WhatsApp. Quedan el título, la línea "📍 Punto marcado", la caja **Ubicación por WhatsApp** (pegar el enlace o las coordenadas, "Marcar como punto de entrega", el número de quien recibe y "Pedir ubicación por WhatsApp") y el botón **Continuar**, que sigue exigiendo un punto marcado; el mensaje de error cambió a "Pega la ubicación de WhatsApp y marca el punto de entrega." (antes pedía elegir una coincidencia del buscador). Sin cambios de servidor ni en el resto del flujo; el paso 3 ("¿Quién lo recibe?") y el paso de entrega de "Quiero un mandado" (con su "Referencia extra") no se tocan. Las funciones del buscador (`mdDestSearch`/`mdChooseDestPlace`) quedan sin uso en este paso.
+- Pruebas: suite completa contra BD limpia: 499 OK, 0 FAIL (498 de antes + 2 estáticas nuevas del paso 2; la de v1.4.32 que pedía el buscador y la referencia se cambió por la contraria).
 
 ## v1.4.32 (2026-11-23) — Mandados 'Enviar': ubicación de WhatsApp en el paso de entrega
 
