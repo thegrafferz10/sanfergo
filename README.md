@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.11)
+# SanFerGo — versión pública (v1.4.12)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.12 (2026-11-22) — el anuncio flotante de entrada va SIN marco: solo la imagen
+
+- El usuario mandó dos capturas 6:15 CST del anuncio flotante y pidió: "Arregla esto de los anuncios para que aparezca ver el negocio y quita el Marco y que aparezca sola imagen sin un Marco adicional". En las capturas se veían dos cosas: (1) el marco ámbar de 2 px de `.adfloat` y (2) franjas blancas a los lados de la imagen — la imagen es vertical (9:16) y con `width:100%` + `max-height:62dvh` + `object-fit:contain` quedaba encogida dentro de la tarjeta de 400 px.
+- Arreglo (solo CSS del flotante, sin tocar la lógica de anuncios): `.adfloat` sin borde ni radio (`border:0; border-radius:0`) y con `width:max-content; max-width:min(92vw,400px)` — la tarjeta se ciñe al ancho de la imagen renderizada; la imagen con `width:auto; max-width:100%; max-height:56dvh` (fondo blanco), así toca los bordes izquierdo y derecho de la tarjeta sin franjas. La imagen va un poco más chica que el tamaño completo (56dvh en vez de 62dvh, agregado del usuario), sin marco ni franjas. El pie (PUBLICIDAD + nombre + botón verde "Ver negocio"), la X grande, el cierre al tocar fuera, el preload y el sorteo al azar no cambian. Verificado en navegador real (Chrome headless) con un anuncio vinculado: la imagen toca los bordes laterales de la tarjeta, sin borde ámbar, y el pie muestra nombre + "Ver negocio".
+- El botón "Ver negocio" que faltaba en la segunda captura NO era un bug de render ni una carrera: era el anuncio LIBRE (misma imagen del combo, sin negocio vinculado). El servidor resuelve `business_id` y `business_name` en el mismo payload de `/api/entry-ad` (`adWithBusiness`), así que un anuncio vinculado nunca llega sin nombre ni botón; el libre, por diseño, muestra solo "Publicidad". El anuncio libre se arregla vinculándolo a Pizzería Santa Fe en el panel de admin (no es cambio de código).
 
 ## v1.4.11 (2026-11-22) — el bearing del giro es +rumbo en MapLibre (el signo estaba al revés) + pie de versión en inicio
 

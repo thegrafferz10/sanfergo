@@ -258,6 +258,10 @@ async function api(path, body) {
   check('anuncio activo en lista pública de anuncios', adPub1.ok && adPub1.ads.some(a => a.id === ad.ad.id));
   const entryV = await api('/api/entry-ad?entry=viajes&token=' + admLogin.token);
   check('anuncio de entrada flotante en Viajes (v1.3.5)', entryV.ok && entryV.ad && entryV.ad.id === ad.ad.id, JSON.stringify(entryV));
+  // v1.4.12: el anuncio libre (sin negocio) trae business_id y
+  // business_name en null en el MISMO payload — el pie muestra solo
+  // "Publicidad" por diseño, no por carrera ni por render roto.
+  check('anuncio libre: payload sin business_id ni business_name (v1.4.12)', entryV.ok && entryV.ad && entryV.ad.business_id == null && entryV.ad.business_name == null, JSON.stringify(entryV.ad));
   const entryM = await api('/api/entry-ad?entry=mandados&token=' + admLogin.token);
   check('anuncio NO rota en Mandados (no está en sus entradas)', entryM.ok && !entryM.ad, JSON.stringify(entryM));
   const entryBad = await api('/api/entry-ad?entry=inicio');
@@ -310,7 +314,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.11 en /api/health', h.ok && h.version === '1.4.11', JSON.stringify(h));
+  check('versión 1.4.12 en /api/health', h.ok && h.version === '1.4.12', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +415,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.11', h134.ok && h134.version === '1.4.11', JSON.stringify(h134));
+  check('versión 1.4.12', h134.ok && h134.version === '1.4.12', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -569,16 +573,29 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.11)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.11';") && h.version === '1.4.11', 'health=' + JSON.stringify(h));
-  // Anuncio flotante de entrada a sangre (v1.4.10, igual que la app real
-  // EntryAdOverlay): en la web la imagen quedaba dentro de un marco
-  // blanco de 12 px (tarjeta con padding:12px e imagen con
-  // border-radius:12px, capturas 5:24); en la app real la imagen va
-  // pegada a los bordes de la tarjeta (max-h 62dvh, object-contain,
-  // fondo negro 5%, sin radio propio — las esquinas las recorta la
-  // tarjeta) y solo el pie lleva padding 16 px; la tarjeta tiene
-  // max-height 85dvh con overflow y la X va en top/right 12 px.
-  check('anuncio flotante a sangre como la app real (v1.4.10)', html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);max-height:85dvh;overflow-y:auto;') && !html.includes('.adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);background:#fff;border:2px solid #f59e0b;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:12px}') && html.includes('#entry-ad-overlay .adfloat img{width:100%;max-height:62dvh;object-fit:contain;background:rgba(0,0,0,.05);display:block;cursor:pointer}') && !html.includes('.adfloat img{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;') && html.includes("#entry-ad-overlay .adfoot{padding:16px}") && !html.includes("#entry-ad-overlay .adfoot{margin-top:8px}") && html.includes('#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;'));
+  check('pie de versión en inicio (v1.4.12)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.12';") && h.version === '1.4.12', 'health=' + JSON.stringify(h));
+  // Anuncio flotante de entrada SIN marco (v1.4.12, petición del usuario,
+  // capturas 6:15: "que aparezca sola imagen sin un Marco adicional"): en
+  // v1.4.10 la imagen ya iba a sangre (sin padding), pero quedaban dos
+  // marcos: el borde ámbar de 2 px de .adfloat y las franjas blancas a los
+  // lados — la imagen vertical (9:16) con width:100% + max-height:62dvh +
+  // object-fit:contain quedaba encogida dentro de la tarjeta de 400 px.
+  // Ahora la tarjeta NO lleva borde ni radio y se ciñe al ancho de la
+  // imagen (width:max-content, máx. min(92vw,400px)); la imagen con
+  // width:auto y max-width:100% toca los bordes izquierdo y derecho de la
+  // tarjeta, sin franjas. La imagen va un poco más chica que el tamaño
+  // completo (max-height:56dvh, agregado del usuario). El pie (padding
+  // 16 px) y la X (top/right 12 px) no cambian; la verificación visual de
+  // que la imagen llena la tarjeta está en la captura del navegador real
+  // (ver README v1.4.12).
+  check('anuncio flotante sin marco: la tarjeta se ciñe a la imagen (v1.4.12)', html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:max-content;max-width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:0;box-shadow:0 12px 40px rgba(0,0,0,.35)}') && !html.includes('#entry-ad-overlay .adfloat{pointer-events:auto;position:relative;width:min(92vw,400px);max-height:85dvh;overflow-y:auto;background:#fff;border:2px solid #f59e0b;border-radius:24px;') && html.includes('#entry-ad-overlay .adfloat img{width:auto;max-width:100%;max-height:56dvh;object-fit:contain;background:#fff;display:block;cursor:pointer}') && !html.includes('.adfloat img{width:100%;max-height:62dvh;object-fit:contain;') && html.includes("#entry-ad-overlay .adfoot{padding:16px}") && html.includes('#entry-ad-overlay .adx{position:absolute;top:12px;right:12px;'));
+  // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
+  // servidor trae business_id/business_name ya resueltos en /api/entry-ad
+  // (adWithBusiness), así que no hay carrera entre cargar anuncios y
+  // negocios que deje el pie vacío en un anuncio vinculado. El render
+  // muestra el nombre solo si hay business_name o label, y el botón
+  // "Ver negocio" solo si hay business_id.
+  check('anuncio: el pie se renderiza desde business_name/business_id del payload (v1.4.12)', html.includes("const biz = ad.business_name || ad.label || '';") && html.includes("'<h2>'+esc(biz)+'</h2>'") && html.includes("ad.business_id ? '<button class=\"btn\"") && html.includes('>Ver negocio</button>'));
   // Etiqueta "Inicio del recorrido" nunca tapada por el círculo de velocidad.
   check('taxímetro: la etiqueta de inicio se corre si el círculo la taparía', html.includes('function adjustTaxiStartOffset(){') && html.includes('taxiStartMarker.setOffset([offX, 34])') && html.includes("taxiMap.on('move', adjustTaxiStartOffset)") && html.includes('adjustTaxiStartOffset();'));
   // Aprobación del chofer (v1.4.7): el inicio del chofer revisaba
@@ -693,6 +710,10 @@ async function api(path, body) {
   // (8) entry-ad con historial: el sorteo es al azar entre TODOS los activos.
   const adA = await api('/api/create-ad', { token: admLogin.token, label: 'Anuncio negocio ' + RUN, image: ADIMG, kind: 'negocio', business_id: biz.business.id, entries: ['viajes'] });
   check('anuncio del negocio con historial (Ana tiene cita ahí)', adA.ok && adA.ad.id, JSON.stringify(adA));
+  // v1.4.12: el anuncio vinculado trae business_id y business_name ya
+  // resueltos en el mismo payload de creación (adWithBusiness) — el pie
+  // (nombre + "Ver negocio") nunca llega vacío por carrera.
+  check('anuncio vinculado: payload trae business_id y business_name (v1.4.12)', adA.ok && adA.ad.business_id === biz.business.id && typeof adA.ad.business_name === 'string' && adA.ad.business_name.length > 0, JSON.stringify(adA.ad));
   const adB = await api('/api/create-ad', { token: admLogin.token, label: 'Anuncio libre ' + RUN, image: ADIMG, kind: 'libre', entries: ['viajes'] });
   check('anuncio libre para el sorteo', adB.ok && adB.ad.id, JSON.stringify(adB));
   const seen = new Set();
