@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.17 en /api/health', h.ok && h.version === '1.4.17', JSON.stringify(h));
+  check('versión 1.4.18 en /api/health', h.ok && h.version === '1.4.18', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.17', h134.ok && h134.version === '1.4.17', JSON.stringify(h134));
+  check('versión 1.4.18', h134.ok && h134.version === '1.4.18', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,14 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.17)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.17';") && h.version === '1.4.17', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.18)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.18';") && h.version === '1.4.18', 'health=' + JSON.stringify(h));
+  // Aviso de privacidad (v1.4.18): página pública en /privacidad y enlace
+  // en el pie de la pantalla de inicio de sesión.
+  const privRes = await fetch(B + '/privacidad');
+  const privText = await privRes.text();
+  check('GET /privacidad devuelve 200', privRes.status === 200, 'status=' + privRes.status);
+  check('el aviso de privacidad es de SanFerGo y explica los datos', /privacidad/i.test(privText) && privText.includes('Aviso de privacidad — SanFerGo') && privText.includes('9614868605') && privText.includes('No vendemos tus datos'));
+  check('la pantalla de inicio de sesión enlaza al aviso de privacidad en pestaña nueva', html.includes('Aviso de privacidad') && html.includes('href="/privacidad"') && html.includes('target="_blank"'));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho

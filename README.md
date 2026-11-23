@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.17)
+# SanFerGo — versión pública (v1.4.18)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.18 (2026-11-23) — página de Aviso de privacidad
+
+- Google exige una URL de política de privacidad para publicar la app en la pantalla de consentimiento OAuth: nueva página pública `GET /privacidad` (aviso en español: qué datos se recopilan, con quién se comparten, derechos de acceso/corrección/eliminación por WhatsApp 9614868605, contacto SanFerGo, San Fernando, Chiapas) y enlace "Aviso de privacidad" en el pie de la pantalla de inicio de sesión (abre en pestaña nueva). Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 309 OK, 0 FAIL (306 de antes + 3 nuevos de privacidad). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id` y una BD limpia.
 
 ## v1.4.17 (2026-11-23) — registro con código por correo + entrar con Google
 
