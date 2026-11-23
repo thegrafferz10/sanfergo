@@ -38,6 +38,14 @@ async function api(path, body) {
   const rid = req.request.id;
   const off = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: rid, kind: 'acepta', price: 25 });
   check("'acepta' del chofer confirma AL INSTANTE (sin segundo paso del pasajero)", off.ok && off.request.status === 'aceptado' && off.request.final_price === 25 && off.request.driver_id === drv.driver.id, JSON.stringify(off));
+  // Banner de viaje activo v1.4.14: su fuente es el servidor, no la
+  // memoria del teléfono — un fetch fresco (como al recargar o volver al
+  // inicio) devuelve el mismo viaje aceptado para el chofer y para el
+  // pasajero, así que el banner vuelve a aparecer.
+  const drvFresh = await api('/api/requests?driver_id=' + drv.driver.id);
+  check('tras aceptar, un fetch fresco del chofer devuelve el viaje aceptado (fuente del banner, sobrevive a recargar)', drvFresh.ok && drvFresh.requests.some(r=>r.id===rid && r.status==='aceptado'), JSON.stringify(drvFresh.requests && drvFresh.requests[0]));
+  const paxFresh = await api('/api/requests?passenger_id=' + pax.passenger.id);
+  check('tras aceptar, un fetch fresco del pasajero devuelve el viaje aceptado (fuente del banner de Inicio)', paxFresh.ok && paxFresh.requests.some(r=>r.id===rid && r.status==='aceptado'), JSON.stringify(paxFresh.requests && paxFresh.requests[0]));
   // La negociación en dos sentidos sigue viva con la contraoferta: el
   // chofer contraoferta, el pasajero contraoferta y el chofer acepta.
   const reqN = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
@@ -314,7 +322,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.13 en /api/health', h.ok && h.version === '1.4.13', JSON.stringify(h));
+  check('versión 1.4.14 en /api/health', h.ok && h.version === '1.4.14', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -415,7 +423,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.13', h134.ok && h134.version === '1.4.13', JSON.stringify(h134));
+  check('versión 1.4.14', h134.ok && h134.version === '1.4.14', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -573,7 +581,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.13)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.13';") && h.version === '1.4.13', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.14)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.14';") && h.version === '1.4.14', 'health=' + JSON.stringify(h));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
@@ -595,6 +603,24 @@ async function api(path, body) {
   check('destino: botón Regresar en el paso ¿A dónde vas? (v1.4.13)', destHtml.includes("onclick=\"closePick()\">‹ Regresar</button>") && destHtml.includes('class="pickrow"'), destHtml.slice(0, 200));
   check('destino: el chip de origen no se aplasta — píldora con Cambiar dentro y ellipsis (v1.4.13)', destHtml.includes('class="pick-change"') && destHtml.includes('id="pick-chip"') && destHtml.includes('text-overflow:ellipsis;white-space:nowrap') && !destHtml.includes('white-space:normal') && html.includes('.strip.top.pickdest .pick-change{width:auto') && html.includes('.strip.top.pickdest .backpill{width:auto'), destHtml.slice(0, 300));
   check('destino: tiras transparentes como en la app (v1.4.13)', destHtml.includes("classList.add('pickdest')") && html.includes('.strip.top.pickdest{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:6px;align-items:stretch}') && html.includes('.strip.bottom.pickdest{background:transparent;box-shadow:none;padding:0}'));
+  // Banner de viaje activo en Inicio (v1.4.14, reporte del usuario 7:03:
+  // aceptó y el mapa "se desapareció"). El banner del chofer va ARRIBA
+  // del Inicio de chofer (div primero en renderDriverHome, se pinta desde
+  // driverCounts) con botón ámbar "Ver mi viaje en curso" que abre el
+  // mapa en vivo; el del pasajero va en Inicio (fillHomeActiveBanner,
+  // desde myActiveRequest) con el mismo botón. La X solo oculta en la
+  // sesión (dismissed*Id en memoria: al recargar vuelve). En Viajes el
+  // viaje aceptado ya se reabre solo en el mapa en vivo (renderViajes).
+  check('banner chofer: aviso arriba del Inicio de chofer con botón al mapa en vivo (v1.4.14)', html.includes('<div id="driver-active-banner"></div>') && html.includes('¡El pasajero confirmó tu viaje!') && html.includes("onclick=\"goLive('+c.active.id+', true)\">") && html.includes('Ver mi viaje en curso') && html.includes('dismissedDriverActiveId') && html.includes('function dismissDriverActiveBanner()'));
+  check('banner pasajero: aviso en Inicio con botón al mapa en vivo (v1.4.14)', html.includes('<div id="home-active-banner"></div>') && html.includes('async function fillHomeActiveBanner()') && html.includes('¡Tu viaje fue aceptado! Tu mototaxi viene en camino') && html.includes("onclick=\"goLive('+active.id+', false)\">") && html.includes('dismissedPaxActiveId') && html.includes('function dismissPaxActiveBanner()'));
+  check('Viajes: el viaje aceptado se reabre solo en el mapa en vivo al entrar (v1.4.14)', html.includes("if(active.status==='aceptado'){ goLive(active.id, false); return; }"));
+  // Mapa en vivo a prueba de OSRM caído (v1.4.14): si el fetch de la ruta
+  // rechaza, renderLiveMap NO debe tumbar openLiveTrip antes de las
+  // tiras — la ruta se protege con try/catch y openLiveTrip protege el
+  // render del mapa, así las tiras (etapa, Precio final, botón de avance)
+  // se dibujan igual y solo falta la línea azul. Igual en los mapas de
+  // vista previa del asistente y de mandados.
+  check('mapa en vivo: si OSRM falla, las tiras se dibujan igual (v1.4.14)', html.includes('try { rt = await osrmRoute(from, target); } catch(e){ rt = null; }') && html.includes('try { await renderLiveMap(); } catch(e)') && html.includes('try { rt = await osrmRoute(wiz.origin, wiz.dest); } catch(e){}') && html.includes('try { rt = await osrmRoute(first, dest); } catch(e){}'));
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y

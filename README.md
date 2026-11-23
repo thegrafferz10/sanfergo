@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.13)
+# SanFerGo — versión pública (v1.4.14)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.14 (2026-11-22) — banner de viaje activo en Inicio: el mapa en vivo ya no se pierde
+
+- El usuario (chofer, 19:03 CST) aceptó un viaje, el mapa en vivo se le desapareció y no lo encontraba por ningún lado: su Inicio de chofer solo mostraba la entrada "Servicio en curso · ver el mapa" (1 en total · 1 en curso). Causa raíz: tras aceptar, el mapa en vivo solo vive en memoria (`liveReq`); al salir de la vista (Regresar o la barra Inicio/Taxímetro/Recibir Viajes) o al recargar, se pierde, y la única vuelta era abrir "Mis viajes confirmados" y tocar el botón de adentro — dos toques escondidos, sin ningún aviso arriba. La entrada en sí funciona (el dato sí viene del servidor), pero no se ve.
+- Arreglo (igual a la app real, que muestra el aviso verde con "Ver mi viaje en curso" arriba del Inicio de chofer): banner verde oscuro (#14532d) ARRIBA de todo en el Inicio de chofer — "¡El pasajero confirmó tu viaje!" + origen → destino · pasajero · $precio · ya puedes empezar el servicio + botón ámbar "Ver mi viaje en curso" que abre el mapa en vivo (para mandado: "¡El pasajero confirmó tu mandado!" / "Ver mi mandado en curso") + X para cerrarlo. Se pinta desde el servidor en cada visita al inicio (`driverCounts()`), así que sobrevive a salir del mapa y a recargar; la X solo lo oculta en esa sesión. La entrada "Servicio en curso · ver el mapa" sigue funcionando igual.
+- Lo mismo del lado pasajero: banner verde en el Inicio — "¡Tu viaje fue aceptado! Tu mototaxi viene en camino" + origen → destino · con chofer · $precio + botón ámbar "Ver mi viaje en curso" que abre el mapa en vivo (mandado igual con su texto) + X. En Viajes el viaje aceptado ya se reabría solo en el mapa en vivo al entrar (`renderViajes` hace `goLive` con el activo); eso se conserva y se verifica. El banner solo aparece con viaje aceptado y desaparece al terminar/cancelar. Tarifa, taxímetro, destino, anuncio y pie de versión sin cambios. Verificado en navegador real (Chrome headless) con el flujo completo: publicar → aceptar → salir del mapa → el banner aparece en Inicio → al tocarlo vuelve el mismo mapa en vivo; tras recargar, el banner vuelve a aparecer; del lado pasajero igual en Inicio y reabriendo Viajes.
 
 ## v1.4.13 (2026-11-22) — el paso de destino "¿A dónde vas?" igual que en la app real + el anuncio con la geometría exacta de la app
 

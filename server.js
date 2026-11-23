@@ -2,7 +2,7 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.13: el paso de destino "¿A dónde vas?"
+// Estado del spec: 2026-11-22 (v1.4.14: banner de viaje activo en Inicio (chofer y pasajero); v1.4.13: el paso de destino "¿A dónde vas?"
 // va igual que en la app real (fila Regresar + píldora de origen con Cambiar,
 // tarjeta de búsqueda aparte, tiras transparentes) y el anuncio flotante
 // lleva la geometría exacta de la app (tarjeta 340 px, imagen a todo lo
@@ -609,7 +609,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.13' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.14' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
