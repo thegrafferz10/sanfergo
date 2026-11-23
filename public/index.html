@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.26'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.27'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -499,7 +499,7 @@ function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), ss=s
 function fmtHMS(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
 function fmtTaxiSecs(s){ s=Math.max(0,Math.floor(s)); if(s<60) return s+' seg'; return fmtTime(s); }
 function fmtTaxiDist(km){ km=km||0; if(km<1) return Math.round(km*1000)+' m'; return km.toFixed(2)+' km'; }
-function fmtDateTime(iso){ try { return new Date((iso||'').replace(' ','T')+'Z').toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; } }
+function fmtDateTime(iso){ try { return new Date((iso||'').replace(' ','T').replace(/Z$/,'')+'Z').toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; } }
 async function api(path, body){
   const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {};
   const r = await fetch(API + path, opt);
@@ -1151,32 +1151,82 @@ function openRegistro(kind, ret){
       + (hasSelfie ? '' : '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1"></div><input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rd-prev1\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'selfie\')">Subir mi foto</button>')
       + (hasVeh ? '' : '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2"></div><input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'vehicle\')">Subir foto del vehículo</button>');
     } else {
+      regStep = 0;
       p.innerHTML = backPill('Regresar', "go('"+regReturn+"')")
       + '<h2>Registro de conductor</h2>'
+      + '<div id="rd-steps-ind" style="margin-top:10px"></div>'
+      + '<div id="rd-step0">'
       + '<label class="mt">Nombre completo</label><input id="rd-name" value="'+(d?esc(d.name):'')+'" placeholder="Ej. Mario Ramírez">'
       + '<label class="mt">Teléfono / WhatsApp</label><input id="rd-phone" value="'+(d?esc(d.phone):'')+'" placeholder="Ej. 961 000 0000" inputmode="tel">'
+      + '<button class="btn" onclick="rdNext(0)">Siguiente</button>'
+      + '</div>'
+      + '<div id="rd-step1" class="hidden">'
       + '<label class="mt">Tipo de vehículo</label><div class="btnrow"><button type="button" class="veh-opt '+(veh==='mototaxi'?'sel':'')+'" id="rd-v-taxi" onclick="regVehicle=\"mototaxi\";renderRegVehicle()">Mototaxi</button><button type="button" class="veh-opt '+(veh==='moto'?'sel':'')+'" id="rd-v-moto" onclick="regVehicle=\"moto\";renderRegVehicle()">Moto de dos ruedas</button></div>'
       + '<p class="muted mt" id="rd-veh-hint">'+(veh==='moto'?'Con moto de dos ruedas solo podrás tomar mandados, no viajes de pasajeros.':'Con mototaxi puedes tomar viajes y mandados en mototaxi.')+'</p>'
       + '<label class="mt">Número de unidad o placas</label><input id="rd-unit" value="'+(d?esc(d.unit||''):'')+'" placeholder="Ej. Unidad 12 · placas ABC-123">'
+      + '<button class="btn" onclick="rdNext(1)">Siguiente</button>'
+      + '<button class="btn ghost" onclick="showRegStep(0)">Regresar</button>'
+      + '</div>'
+      + '<div id="rd-step2" class="hidden">'
       + '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1">'+(hasSelfie?'<img src="'+d.selfie+'">':'')+'</div>'
       + '<input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rd-prev1\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
-      + '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2">'+(hasVeh?'<img src="'+d.vehicle_photo+'">':'')+'</div>'
+      + '<button class="btn" onclick="rdNext(2)">Siguiente</button>'
+      + '<button class="btn ghost" onclick="showRegStep(1)">Regresar</button>'
+      + '</div>'
+      + '<div id="rd-step3" class="hidden">'
+      + '<div class="photobox"><b id="rd-veh-photo-label">Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2">'+(hasVeh?'<img src="'+d.vehicle_photo+'">':'')+'</div>'
       + '<input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
       + '<div id="rd-photo-warn"></div>'
       + '<p class="muted mt">Al registrarte, tu solicitud queda pendiente: el administrador de SanFerGo la revisa y, cuando la acepta, tu cuenta se activa y puedes ponerte en línea.</p>'
-      + '<button class="btn amber" onclick="saveDriver()">Registrarme como conductor</button>';
+      + '<button class="btn amber" onclick="saveDriver()">Mandar mi solicitud de chofer</button>'
+      + '<button class="btn ghost" onclick="showRegStep(2)">Regresar</button>'
+      + '</div>';
       regVehicle = veh;
+      showRegStep(0);
     }
   }
   go('registro');
 }
 let regVehicle = 'mototaxi';
+let regStep = 0;
 function renderRegVehicle(){
   const t = document.getElementById('rd-v-taxi'), m = document.getElementById('rd-v-moto');
   if(t) t.classList.toggle('sel', regVehicle==='mototaxi');
   if(m) m.classList.toggle('sel', regVehicle==='moto');
   const h = document.getElementById('rd-veh-hint');
   if(h) h.textContent = regVehicle==='moto' ? 'Con moto de dos ruedas solo podrás tomar mandados, no viajes de pasajeros.' : 'Con mototaxi puedes tomar viajes y mandados en mototaxi.';
+  const pl = document.getElementById('rd-veh-photo-label');
+  if(pl) pl.textContent = 'Foto de tu ' + (regVehicle==='moto' ? 'moto' : 'mototaxi');
+}
+function showRegStep(n){
+  regStep = n;
+  for(let i=0;i<4;i++){ const el = document.getElementById('rd-step'+i); if(el) el.classList.toggle('hidden', i!==n); }
+  const ind = document.getElementById('rd-steps-ind'); if(ind) ind.innerHTML = wizSteps(n, 4);
+  if(n===3){
+    const warnBox = document.getElementById('rd-photo-warn');
+    if(warnBox){
+      const selfie = regPhoto1 || (myDriver && myDriver.selfie);
+      const vphoto = regPhoto2 || (myDriver && myDriver.vehicle_photo);
+      warnBox.innerHTML = (!selfie || !vphoto) ? '<div class="card warn"><b>Aviso: falta ' + (!selfie && !vphoto ? 'las dos fotos' : (!selfie ? 'tu foto (selfie)' : 'la foto de tu vehículo')) + '.</b><p class="muted mt">Si te registras así, tu registro queda incompleto y no podrás ponerte en línea hasta subirlas.</p></div>' : '';
+    }
+  }
+}
+function rdNext(step){
+  if(!validateDriverStep(step)) return;
+  showRegStep(step+1);
+}
+function validateDriverStep(step){
+  if(step===0){
+    const name = ($('#rd-name').value||'').trim();
+    const phone = ($('#rd-phone').value||'').replace(/\D/g,'');
+    if(name.length < 2) return toast('Escribe tu nombre completo.'), false;
+    if(phone.length < 7) return toast('Escribe tu teléfono o WhatsApp (mínimo 7 números).'), false;
+  }
+  if(step===1){
+    const unit = ($('#rd-unit').value||'').trim();
+    if(!unit) return toast('Escribe el número de unidad o las placas.'), false;
+  }
+  return true;
 }
 async function uploadDriverPhotoOnly(kind){
   const photo = kind==='selfie' ? regPhoto1 : regPhoto2;
@@ -1257,6 +1307,7 @@ async function saveDriver(){
 
 /* ===== INICIO DE SESIÓN / CUENTAS ===== */
 let loginTab = 'login';
+let rcStep = 0;
 function openLogin(tab){
   loginTab = tab || 'login';
   renderLogin();
@@ -1292,21 +1343,72 @@ function renderLogin(){
       + '<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:4px"><button class="btn amber" onclick="loginTab=\'create\';renderLogin()">Crear cuenta nueva</button></div>'
       + '<div class="center muted" style="margin-top:14px;font-size:12px"><a href="/privacidad" target="_blank" rel="noopener" style="color:var(--green)">Aviso de privacidad</a></div></div>';
   } else {
+    rcStep = 0;
     p.innerHTML = hero
       + '<div class="card white" id="rc-card" style="margin-top:16px"><h1>Crear tu cuenta</h1>'
+      + '<div id="rc-steps-ind" style="margin-top:10px"></div>'
+      + '<div id="rc-step0">'
       + '<label class="mt">Nombre completo</label><input id="rc-name" placeholder="Ej. María Hernández">'
       + '<label class="mt">Nombre de usuario</label><input id="rc-user" placeholder="Ej. maria.hernandez" autocomplete="username">'
       + '<label class="mt">Número de teléfono / WhatsApp</label><input id="rc-phone" placeholder="Ej. 961 000 0000" inputmode="tel">'
+      + '<p class="muted" style="margin-top:6px;font-size:13px">Si prefieres registrarte con tu correo, déjalo vacío: en el siguiente paso lo escribes.</p>'
+      + '<div class="err hidden" id="rc-err0"></div>'
+      + '<button class="btn" onclick="rcNext(0)">Siguiente</button>'
+      + '</div>'
+      + '<div id="rc-step1" class="hidden">'
       + '<label class="mt">Correo electrónico (si no usas tu número)</label><input id="rc-email" placeholder="Ej. tu@correo.com" inputmode="email">'
       + '<div id="rc-email-note" class="muted" style="margin-top:6px"></div>'
+      + '<div class="err hidden" id="rc-err1"></div>'
+      + '<button class="btn" onclick="rcNext(1)">Siguiente</button>'
+      + '<button class="btn ghost" onclick="showRcStep(0)">Regresar</button>'
+      + '</div>'
+      + '<div id="rc-step2" class="hidden">'
       + '<label class="mt">Contraseña</label>' + pwInput('rc-pass','Mínimo 6 caracteres','new-password')
       + '<label class="mt">Confirmar contraseña</label>' + pwInput('rc-pass2','Escribe la misma contraseña','new-password')
       + '<div class="err hidden" id="rc-err"></div><div id="rc-dup"></div>'
-      + '<button class="btn" id="rc-submit" onclick="doRegister()">Registrarme</button>'
+      + '<button class="btn" id="rc-submit" onclick="doRegister()">Terminar registro</button>'
+      + '<button class="btn ghost" onclick="showRcStep(1)">Regresar</button>'
+      + '</div>'
       + '<div class="center" style="margin-top:14px"><button class="linklike" onclick="loginTab=\'login\';renderLogin()">¿Ya tienes cuenta? Inicia sesión</button></div>'
       + '<div class="center muted" style="margin-top:12px;font-size:12px"><a href="/privacidad" target="_blank" rel="noopener" style="color:var(--green)">Aviso de privacidad</a></div></div>';
+    showRcStep(0);
   }
   afterRenderLogin();
+}
+/* Formularios por pasos (v1.4.27, igual que la app real): indicador
+   «Paso X de N» con su barra de avance. Cada paso valida solo lo suyo
+   antes de dejar pasar al siguiente; «Regresar» vuelve sin borrar nada. */
+function wizSteps(current, total){
+  let bars = '';
+  for(let i=0;i<total;i++) bars += '<span style="flex:1;height:8px;border-radius:99px;background:'+(i<=current?'var(--green)':'var(--line)')+'"></span>';
+  return '<p style="font-size:13px;font-weight:700;color:var(--muted)">Paso '+(current+1)+' de '+total+'</p><div style="display:flex;gap:6px;margin-top:6px">'+bars+'</div>';
+}
+function showRcStep(n){
+  rcStep = n;
+  for(let i=0;i<3;i++){ const el = document.getElementById('rc-step'+i); if(el) el.classList.toggle('hidden', i!==n); }
+  const ind = document.getElementById('rc-steps-ind'); if(ind) ind.innerHTML = wizSteps(n, 3);
+}
+function rcNext(step){
+  if(!validateRegStep(step)) return;
+  showErr('#rc-err'+step, '');
+  showRcStep(step+1);
+}
+function validateRegStep(step){
+  if(step===0){
+    const name = ($('#rc-name').value||'').trim();
+    const phone = ($('#rc-phone').value||'').replace(/\D/g,'');
+    if(name.length < 2) return showErr('#rc-err0', 'Escribe tu nombre completo.'), false;
+    if(phone && phone.length !== 10) return showErr('#rc-err0', 'Escribe tu número completo a 10 dígitos.'), false;
+  }
+  if(step===1){
+    const user = ($('#rc-user').value||'').trim().toLowerCase();
+    const email = ($('#rc-email').value||'').trim();
+    const phone = ($('#rc-phone').value||'').replace(/\D/g,'');
+    if(!/^[a-z0-9_]{3,20}$/.test(user)) return showErr('#rc-err1', 'El usuario debe tener de 3 a 20 letras, números o guion bajo.'), false;
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('#rc-err1', 'Ese correo no se ve válido.'), false;
+    if(!phone && !email) return showErr('#rc-err1', 'Regístrate con tu número o con tu correo.'), false;
+  }
+  return true;
 }
 function toggleGoogleNote(){
   const n = document.getElementById('google-note');
@@ -3583,7 +3685,11 @@ function enterDriverMode(){
 function exitDriverMode(){ store.mode='passenger'; go('home'); }
 function driverTab(tab){
   driverTabName = tab; driverPageIdx = 0;
-  ['inicio','taxi','recibir'].forEach(t=>{ const b=document.getElementById('cb-'+t); if(b) b.classList.toggle('on', t===tab); });
+  const suf = tab==='taximetro' ? 'taxi' : tab; // los botones se llaman cb-taxi/txb-taxi, no 'taximetro'
+  ['inicio','taxi','recibir'].forEach(t=>{
+    const b1 = document.getElementById('cb-'+t); if(b1) b1.classList.toggle('on', t===suf);
+    const b2 = document.getElementById('txb-'+t); if(b2) b2.classList.toggle('on', t===suf);
+  });
   if(tab==='taximetro'){ openTaximeter(true); return; }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-chofer').classList.add('active');
@@ -3640,6 +3746,16 @@ function renderDriverHome(){
   if(blocked) onlineWhy = 'Estás bloqueado por el administrador: no puedes ponerte en línea.';
   else if(!approved) onlineWhy = 'Tu registro está pendiente de aprobación del administrador.';
   else if(!complete) onlineWhy = 'Tu registro está incompleto: sube tus dos fotos para ponerte en línea.';
+  if(driverHomeExpanded){
+    // Pantalla completa (como la app real y como el panel de admin):
+    // la sección elegida ocupa todo el Inicio del chofer, con su
+    // pastilla ‹ Regresar arriba; el panel con las cuatro entradas no
+    // se pinta debajo, que en el teléfono quedaba fuera de pantalla
+    // y el toque parecía no hacer nada.
+    p.innerHTML = '<div id="driver-home-expanded"></div>';
+    renderDriverExpanded();
+    return;
+  }
   p.innerHTML = '<div id="driver-active-banner"></div>'
   + '<div class="card white"><div class="flex">'
     + (d.selfie?'<img style="width:84px;height:84px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #16a34a" src="'+d.selfie+'">':'<div class="avatar" style="width:84px;height:84px;font-size:34px;display:flex;align-items:center;justify-content:center;border:3px solid #16a34a">👤</div>')
@@ -3784,6 +3900,10 @@ async function loadDriverHist(){
 let driverInboxTab = 'sol', driverCounter = null;
 async function renderDriverInbox(){
   const p = $('#chofer-page');
+  // Se pinta la pantalla al instante (encabezado + Cargando…): antes la
+  // función no pintaba nada hasta que volvían las tres llamadas de red,
+  // y con el servidor dormido el toque parecía no hacer nada.
+  p.innerHTML = '<h2>Recibir Viajes</h2><p class="muted mt">Acepta al precio del pasajero o manda tu contraoferta.</p><p class="muted center mt">Cargando…</p>';
   const sub = !!(myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date());
   const counts = await driverCounts();
   const atLimit = !sub && counts.today >= FREE_DAILY_LIMIT;
@@ -4327,7 +4447,7 @@ async function renderAdminStores(){
    servicios ilimitados, pedidos y citas ilimitados, estadísticas,
    publicidad gratis. Topes gratis: 10 productos, 10 servicios,
    30 pedidos/citas al mes. */
-let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCart = {}, bizPhoto = null, bizFromAdmin = false;
+let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCart = {}, bizPhoto = null, bizFromAdmin = false, bizStep = 0;
 let bizOrderShow = false, bizBookId = null, bizOrderDone = null;
 function bizTypeLabel(t){ return t==='entrega' ? 'Pedir a domicilio' : t==='catalogo' ? 'Catálogo y contacto' : 'Reservar cita'; }
 let bizCatFilter = 'Todas';
@@ -4678,27 +4798,44 @@ function renderBizCreateForm(){
   // (app real): 3 tarjetas radio, la elegida en verde.
   const page = $('#negocios-page');
   bizPhoto = null;
-  const typeCard = (t, icon, title, desc) => '<button type="button" class="radio-card'+(bizCreateType===t?' sel':'')+'" onclick="bizCreateType=\''+t+'\';renderBizCreateForm()">'
+  bizStep = 0;
+  const typeCard = (t, icon, title, desc) => '<button type="button" id="nb-type-'+t+'" class="radio-card'+(bizCreateType===t?' sel':'')+'" onclick="setBizType(\''+t+'\')">'
     + '<span style="font-size:26px">'+icon+'</span><span><b>'+title+'</b><span class="muted">'+desc+'</span></span></button>';
   page.innerHTML = backPill('Regresar', "bizScreen='main';renderNegocios()")
     + '<h2>Crear un negocio</h2>'
     + '<p class="muted mt">Primero dinos de qué tipo es tu negocio: de eso depende cómo te ven los clientes y qué vas a administrar en la app.</p>'
     + '<div class="card warn"><b>Versión gratis: solo puedes crear un negocio en SanFerGo. Con el Paquete Premium ($100 al mes) puedes crear más negocios y tu negocio sale destacado, con insignia y sin límites.</b></div>'
     + '<div id="biz-create-gate"></div>'
+    + '<div id="nb-steps-ind" style="margin-top:10px"></div>'
+    + '<div id="nb-step0">'
     + '<label class="mt">¿De qué tipo es tu negocio?</label>'
     + typeCard('entrega','🚚','Vendo productos y quiero entrega a domicilio','Tus productos se venden dentro de la app, con foto y precio. El cliente pide aquí y un mototaxi de SanFerGo lo lleva a su casa.')
     + typeCard('catalogo','📖','Solo quiero mostrar mi catálogo','Tus productos y servicios se ven dentro de la app, con foto y precio. El cliente te contacta con el botón de WhatsApp o de llamada.')
     + typeCard('citas','📅','Trabajo con citas','Para uñas, pestañas, peluquería y servicios por hora: tus servicios se ven aquí con precio y duración, y el cliente reserva su cita en la app.')
     + '<label class="mt">Nombre del negocio</label><input id="nb-name" placeholder="Ej. Tacos El Buen Sabor">'
     + '<label class="mt">Categoría</label><select id="nb-cat">'+BIZ_CATEGORIES.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select>'
+    + '<button class="btn" onclick="nbNext(0)">Siguiente</button>'
+    + '</div>'
+    + '<div id="nb-step1" class="hidden">'
     + '<label class="mt">¿Qué vende o qué hace tu negocio?</label><input id="nb-desc" placeholder="Ej. Tacos de pastor y de bistec, quesadillas y aguas frescas.">'
     + '<label class="mt">WhatsApp del negocio</label><input id="nb-wa" placeholder="Ej. 961 000 0000" inputmode="tel">'
+    + '<button class="btn" onclick="nbNext(1)">Siguiente</button>'
+    + '<button class="btn ghost" onclick="showBizStep(0)">Regresar</button>'
+    + '</div>'
+    + '<div id="nb-step2" class="hidden">'
     + '<label class="mt">¿En qué colonia está tu negocio?</label><select id="nb-colony"><option value="">Elige una colonia…</option>'+bizZoneOptions('')+'</select>'
     + '<label class="mt">Horario</label><input id="nb-schedule" placeholder="Ej. Lunes a sábado, 9 AM a 7 PM">'
-    + (bizCreateType==='entrega' ? '<label class="mt">Costo del envío a domicilio (lo paga el cliente al mototaxista)</label><input id="nb-fee" type="number" min="20" step="5" value="20" inputmode="numeric"><p class="muted mt">De $20 en adelante, de cinco en cinco. El dinero de tus productos es tuyo; el envío es para el mototaxista.</p>' : '')
+    + '<div id="nb-fee-wrap"'+(bizCreateType==='entrega'?'':' class="hidden"')+'><label class="mt">Costo del envío a domicilio (lo paga el cliente al mototaxista)</label><input id="nb-fee" type="number" min="20" step="5" value="20" inputmode="numeric"><p class="muted mt">De $20 en adelante, de cinco en cinco. El dinero de tus productos es tuyo; el envío es para el mototaxista.</p></div>'
+    + '<button class="btn" onclick="nbNext(2)">Siguiente</button>'
+    + '<button class="btn ghost" onclick="showBizStep(1)">Regresar</button>'
+    + '</div>'
+    + '<div id="nb-step3" class="hidden">' 
     + '<div class="photobox"><b>Foto de tu negocio o de tu producto</b><div id="nb-prev"></div>'
     + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'nb-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
-    + '<button class="btn" onclick="submitBusiness()">Enviar la solicitud de mi negocio</button>';
+    + '<button class="btn" onclick="submitBusiness()">Enviar la solicitud de mi negocio</button>'
+    + '<button class="btn ghost" onclick="showBizStep(2)">Regresar</button>'
+    + '</div>';
+  showBizStep(0);
   // Puerta de la versión gratis: con 1 negocio y sin premium/admin, el
   // formulario ni se abre (la caja se muestra encima, y el botón envía a
   // administrar). Se comprueba al cargar.
@@ -4715,6 +4852,42 @@ function renderBizCreateForm(){
       }
     } catch(e){}
   })();
+}
+function showBizStep(n){
+  bizStep = n;
+  for(let i=0;i<4;i++){ const el = document.getElementById('nb-step'+i); if(el) el.classList.toggle('hidden', i!==n); }
+  const ind = document.getElementById('nb-steps-ind'); if(ind) ind.innerHTML = wizSteps(n, 4);
+}
+function nbNext(step){
+  if(!validateBizStep(step)) return;
+  showBizStep(step+1);
+}
+function validateBizStep(step){
+  if(step===0){
+    const name = ($('#nb-name').value||'').trim();
+    if(name.length < 2) return toast('Escribe el nombre de tu negocio.'), false;
+  }
+  if(step===1){
+    const sells = ($('#nb-desc').value||'').trim();
+    const wa = ($('#nb-wa').value||'').replace(/\D/g,'');
+    if(sells.length < 3) return toast('Cuéntanos qué vende o qué hace tu negocio.'), false;
+    if(wa.length < 10) return toast('Escribe tu WhatsApp completo a 10 dígitos.'), false;
+  }
+  if(step===2 && bizCreateType==='entrega'){
+    const feeEl = document.getElementById('nb-fee');
+    const fee = feeEl ? parseInt(feeEl.value, 10) : 20;
+    if(isNaN(fee) || fee < 20 || fee % 5 !== 0) return toast('El costo del envío va de $20 en adelante, de cinco en cinco.'), false;
+  }
+  return true;
+}
+function setBizType(t){
+  bizCreateType = t;
+  ['entrega','catalogo','citas'].forEach(x=>{
+    const b = document.getElementById('nb-type-'+x);
+    if(b) b.classList.toggle('sel', x===t);
+  });
+  const fw = document.getElementById('nb-fee-wrap');
+  if(fw) fw.classList.toggle('hidden', t!=='entrega');
 }
 async function submitBusiness(){
   if(!myAccount){ toast('Primero inicia sesión.'); openLogin('login'); return; }
