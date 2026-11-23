@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.28)
+# SanFerGo — versión pública (v1.4.29)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.29 (2026-11-23) — la tarjeta de credenciales del admin está colapsada
+
+- En el panel de administrador la tarjeta "Administrador" (cambiar usuario y contraseña) ya no ocupa toda la pantalla: por defecto solo se ve una fila compacta de una línea, "🔐 Administrador · Cambiar usuario y contraseña", con su flecha. Al tocarla se abre el mismo formulario de siempre (contraseña actual, nuevo usuario, nueva contraseña y confirmación, con los ojos para verlas y el botón "Guardar cambios"). Al guardar bien se vuelve a colapsar sola y sale el aviso "Credenciales actualizadas."; si falla (contraseña actual incorrecta, confirmación distinta, etc.) se queda abierta con el error. El botón de respaldo de la base de datos, la tarjeta del admin, las secciones del panel y los avisos no cambian; el servidor no cambia.
+- Pruebas: suite completa contra BD limpia: 444 OK, 0 FAIL (440 de antes + 4 nuevos: versión en /api/health y colapsada por defecto/toggle/formulario al expandir/colapso al guardar).
 
 ## v1.4.28 (2026-11-23) — en Negocios las opciones van arriba del anuncio y son compactas
 
