@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.18 en /api/health', h.ok && h.version === '1.4.18', JSON.stringify(h));
+  check('versión 1.4.20 en /api/health', h.ok && h.version === '1.4.20', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.18', h134.ok && h134.version === '1.4.18', JSON.stringify(h134));
+  check('versión 1.4.20', h134.ok && h134.version === '1.4.20', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.18)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.18';") && h.version === '1.4.18', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.20)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.20';") && h.version === '1.4.20', 'health=' + JSON.stringify(h));
   // Aviso de privacidad (v1.4.18): página pública en /privacidad y enlace
   // en el pie de la pantalla de inicio de sesión.
   const privRes = await fetch(B + '/privacidad');
@@ -604,6 +604,67 @@ async function api(path, body) {
   check('GET /privacidad devuelve 200', privRes.status === 200, 'status=' + privRes.status);
   check('el aviso de privacidad es de SanFerGo y explica los datos', /privacidad/i.test(privText) && privText.includes('Aviso de privacidad — SanFerGo') && privText.includes('9614868605') && privText.includes('No vendemos tus datos'));
   check('la pantalla de inicio de sesión enlaza al aviso de privacidad en pestaña nueva', html.includes('Aviso de privacidad') && html.includes('href="/privacidad"') && html.includes('target="_blank"'));
+  // Respaldo de la base de datos (v1.4.19, solo admin): GET con el token
+  // de sesión del admin descarga el SQLite completo; sin token, con
+  // cuenta normal o con token inválido se rechaza con 403 sin bytes.
+  const bkNoTok = await fetch(B + '/api/admin/backup');
+  check('respaldo sin token rechazado (403)', bkNoTok.status === 403, 'status=' + bkNoTok.status);
+  const bkUser = await fetch(B + '/api/admin/backup?token=' + encodeURIComponent(li1.token));
+  check('respaldo con cuenta normal rechazado (403)', bkUser.status === 403, 'status=' + bkUser.status);
+  const bkBad = await fetch(B + '/api/admin/backup?token=token-invalido');
+  check('respaldo con token inválido rechazado (403)', bkBad.status === 403, 'status=' + bkBad.status);
+  const bk = await fetch(B + '/api/admin/backup?token=' + encodeURIComponent(admLogin.token));
+  const bkBuf = Buffer.from(await bk.arrayBuffer());
+  check('respaldo con token de admin devuelve 200 y archivo SQLite', bk.status === 200 && bkBuf.length > 1000 && bkBuf.slice(0, 16).toString('latin1') === 'SQLite format 3\0', 'status=' + bk.status + ' bytes=' + bkBuf.length);
+  check('respaldo se descarga como adjunto con nombre de fecha', /attachment/.test(bk.headers.get('content-disposition') || '') && /sanfergo-\d{4}-\d{2}-\d{2}\.db/.test(bk.headers.get('content-disposition') || ''), 'cd=' + bk.headers.get('content-disposition'));
+  check('el panel de administrador muestra el botón de respaldo', html.includes('Respaldar base de datos') && html.includes('function downloadBackup()') && html.includes('/api/admin/backup?token='));
+  // v1.4.20: el chofer de una cuenta NO aparece en otra. Escenario del
+  // usuario: en un mismo teléfono, la cuenta A (Ana, con chofer enlazado
+  // y en línea) cierra sesión y entra la cuenta B (sin chofer). La
+  // tarjeta "Trabajar como chofer" de B debe ofrecer registrarse como
+  // conductor nuevo, nunca el nombre del chofer de A. Causa: loadMe()
+  // usaba el id de chofer guardado en el teléfono (store.did) aunque
+  // hubiera otra sesión, y doLogout() no lo borraba.
+  console.log('== v1.4.20: el chofer de una cuenta no aparece en otra ==');
+  const accB = await api('/api/register-account', { name: 'Bruno Cuenta', username: 'bruno_' + RUN, phone: '961104' + RUN.slice(0, 4), password: 'secreta123' });
+  check('cuenta B sin chofer creada', accB.ok && accB.account.id, JSON.stringify(accB));
+  const liB = await api('/api/login', { identifier: 'bruno_' + RUN, password: 'secreta123' });
+  check('login de la cuenta B', liB.ok && liB.token, JSON.stringify(liB));
+  const meB = await api('/api/me?token=' + liB.token);
+  check('/api/me de B devuelve driver null (sin chofer enlazado)', meB.ok && meB.driver === null, JSON.stringify(meB));
+  // Simulación del cliente: se extrae loadMe() del index.html y se
+  // ejecuta en una caja con el "teléfono" (store) que todavía guarda el
+  // id del chofer de A — como queda tras cerrar la sesión de A en ese
+  // teléfono.
+  const vm = require('node:vm');
+  const lmStart = html.indexOf('async function loadMe(){');
+  const lmEnd = html.indexOf('\nfunction placeByName(', lmStart);
+  check('loadMe() extraíble del cliente', lmStart > 0 && lmEnd > lmStart, 'start=' + lmStart + ' end=' + lmEnd);
+  const loadMeSrc = html.slice(lmStart, lmEnd);
+  async function runLoadMe(storeState){
+    const sandbox = {
+      myAccount: null, myPassenger: null, myDriver: null,
+      store: { ...storeState },
+      api: async (p, body) => { const r = await fetch(B + p, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}); return r.json(); },
+    };
+    vm.createContext(sandbox);
+    await vm.runInContext(loadMeSrc + '\nloadMe();', sandbox);
+    return sandbox;
+  }
+  const sbB = await runLoadMe({ token: liB.token, did: drvAcc.driver.id, pid: null });
+  check('con sesión de B, loadMe NO carga el chofer de A aunque su id siga en el teléfono', sbB.myDriver === null, JSON.stringify(sbB.myDriver));
+  check('con sesión de B, loadMe borra el id guardado del chofer de A', sbB.store.did == null, 'did=' + sbB.store.did);
+  check('con sesión de B, loadMe carga la cuenta B', sbB.myAccount && sbB.myAccount.username === 'bruno_' + RUN, JSON.stringify(sbB.myAccount));
+  // Control: sin sesión (modo sin cuenta, heredado) el id guardado sí se usa.
+  const sbNoSes = await runLoadMe({ token: null, did: drvAcc.driver.id, pid: null });
+  check('sin sesión, loadMe sigue resolviendo el chofer guardado (modo sin cuenta)', sbNoSes.myDriver && sbNoSes.myDriver.id === drvAcc.driver.id, JSON.stringify(sbNoSes.myDriver));
+  // Estático: la rama sin chofer ofrece registrarse y doLogout limpia los ids.
+  check('sin chofer, el inicio ofrece "Registrarse como conductor" con el formulario de registro', html.includes('Registrarse como conductor') && /openRegistro\(\\?'chofer\\?'\)/.test(html));
+  const loStart = html.indexOf('async function doLogout(){');
+  const loEnd = html.indexOf('\nfunction renderCuenta(', loStart);
+  const logoutSrc = html.slice(loStart, loEnd);
+  check('doLogout() limpia el id del chofer y del pasajero guardados', logoutSrc.includes('store.did = null') && logoutSrc.includes('store.pid = null'), logoutSrc.slice(0, 200));
+  check('loadMe() solo usa el id guardado cuando NO hay sesión (if (!hasSession))', loadMeSrc.includes('if (!hasSession) {') && loadMeSrc.includes('if (!myDriver && store.did)'), loadMeSrc.slice(0, 300));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho

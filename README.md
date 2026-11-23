@@ -1,9 +1,20 @@
-# SanFerGo — versión pública (v1.4.18)
+# SanFerGo — versión pública (v1.4.20)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.20 (2026-11-23) — el chofer de una cuenta no aparece en otra
+
+- Reporte del usuario: en un mismo teléfono, al entrar con otra cuenta (Emiliano, Paulina) la tarjeta "Trabajar como chofer" seguía mostrando el chofer de la cuenta anterior ("Josué Eduardo · En línea"). Causa: `loadMe()` usaba el id de chofer guardado en el teléfono (`store.did`) aunque hubiera otra sesión, y `doLogout()` no lo borraba.
+- Arreglo: con sesión, los perfiles (chofer y pasajero) vienen SOLO de `/api/me`, los enlazados a esa cuenta; el id guardado que no coincida se borra y nunca se usa. El id guardado solo se usa sin sesión (modo sin cuenta, heredado). `doLogout()` ahora limpia también `store.did` y `store.pid`. Sin chofer, el inicio sigue ofreciendo "Registrarse como conductor" con el formulario (solicitud pendiente de aprobación del administrador). Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 326 OK, 0 FAIL (315 de antes + 11 nuevos: `/api/me` de la cuenta B sin chofer, simulación real de `loadMe()` con el id viejo en el teléfono, control sin sesión, rama sin chofer y `doLogout()`). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id` y una BD limpia.
+
+## v1.4.19 (2026-11-23) — respaldo de la base de datos (solo admin)
+
+- El administrador puede descargar una copia completa de la base de datos: nuevo endpoint `GET /api/admin/backup` (solo con token de sesión de administrador; sin él responde 403 y no sale ningún byte) y botón "💾 Respaldar base de datos" en el panel del administrador. Antes de servir el archivo se hace un checkpoint WAL para que la copia sea consistente; el archivo se descarga como `sanfergo-AAAA-MM-DD.db`. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 315 OK, 0 FAIL (309 de antes + 6 nuevos del respaldo). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id` y una BD limpia.
 
 ## v1.4.18 (2026-11-23) — página de Aviso de privacidad
 

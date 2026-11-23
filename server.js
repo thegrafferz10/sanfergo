@@ -660,7 +660,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.18' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.20' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1508,6 +1508,29 @@ async function api(req, res, pathname) {
     const pb = db.prepare(`SELECT COUNT(*) c FROM businesses WHERE status='pendiente'`).get();
     const pendingDrivers = pd ? pd.c : 0, pendingBusinesses = pb ? pb.c : 0;
     return send(res, 200, { ok: true, pending_drivers: pendingDrivers, pending_businesses: pendingBusinesses, pending_total: pendingDrivers + pendingBusinesses });
+  }
+  // Respaldo de la base de datos (v1.4.19, solo admin): descarga una copia
+  // completa del SQLite vivo como archivo adjunto. La autenticación es la
+  // misma de todo el panel: token de sesión (?token= o body.token) y rol
+  // 'admin'; sin él se rechaza con 403 y NO sale ningún byte de la base.
+  // La base vive en modo WAL: antes de servir el archivo se hace un
+  // checkpoint TRUNCATE para que sanfergo.db tenga todos los datos
+  // confirmados; las escrituras que lleguen mientras se descarga van al
+  // WAL y no tocan el archivo, así que lo servido es una foto consistente.
+  if (pathname === '/api/admin/backup') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const dbFile = path.join(DATA_DIR, 'sanfergo.db');
+    try {
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+      const size = fs.statSync(dbFile).size;
+      const fname = 'sanfergo-' + todayStr() + '.db';
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="' + fname + '"', 'Content-Length': size });
+      fs.createReadStream(dbFile).pipe(res);
+      return;
+    } catch (e) {
+      return send(res, 500, { ok: false, error: 'No se pudo crear el respaldo.' });
+    }
   }
 
   if (pathname === '/api/create-request') {
