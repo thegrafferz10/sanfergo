@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.26)
+# SanFerGo — versión pública (v1.4.27)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.27 (2026-11-23) — los tres registros son asistentes por pasos + correcciones del panel de chofer
+
+- Los tres formularios largos de registro ahora son asistentes cortos por pasos, con la misma estructura de la app real: Crear cuenta (3 pasos: nombre y número → usuario y correo → contraseña, botón final "Terminar registro"; la verificación por código de correo sigue como su propio paso después, y el inicio con Google no cambia); Registro de chofer (4 pasos: nombre y teléfono → vehículo y unidad → su foto → foto del vehículo, botón final "Mandar mi solicitud de chofer"); Crear un negocio (4 pasos: tipo, nombre y categoría → qué vende y WhatsApp → colonia, horario y envío → la foto, botón final "Enviar la solicitud de mi negocio"). Cada paso valida lo suyo antes de dejar pasar a "Siguiente", "Regresar" vuelve sin borrar nada, y hay indicador "Paso X de N" con barra de avance. El envío final usa los mismos endpoints y la misma lógica de siempre (choferes nacen PENDIENTE, negocios van a aprobación del admin); la corrección de la fuga de perfiles sigue intacta (sin selectores "Elige tu perfil"). Los negocios ya tenían colonia, horario y envío en la tabla y en el endpoint, así que el servidor no cambió. Nada más cambia.
+- Correcciones del panel de chofer (reporte del usuario en video): (1) "Mi plan y suscripción", "Mis viajes confirmados" e "Historial de viajes" ahora abren su pantalla completa con la pastilla "‹ Regresar" arriba, como la app real — antes el contenido se dibujaba debajo de las cuatro tarjetas, fuera de pantalla en el teléfono, y el toque parecía no hacer nada; (2) "Recibir Viajes" pinta su encabezado + "Cargando…" al instante, antes de las tres llamadas de red, para que el toque nunca se vea muerto con el servidor dormido; (3) el historial del taxímetro ya no muestra "Invalid Date": fmtDateTime tolera fechas ISO que ya terminan en Z (les quitaba la Z y les ponía otra, "...ZZ"); las fechas del servidor en formato SQLite siguen funcionando igual; (4) driverTab ahora resalta bien las tres pestañas en las dos barras inferiores (antes "taximetro" nunca coincidía con "taxi" y la barra del taxímetro no se actualizaba).
+- Pruebas: suite completa contra BD limpia: 435 OK, 0 FAIL (422 de antes + 13 nuevos: 8 del asistente por pasos — versiones, 3 asistentes con pasos/botones/validación, sin selectores de perfil, y los 3 endpoints de punta a punta — y 5 del panel de chofer — pantalla completa con Regresar, pintura síncrona del inbox, fmtDateTime con Z en estático y en vivo con ISO y SQLite, y el resaltado de las tres pestañas en ambas barras).
 
 ## v1.4.26 (2026-11-23) — el admin ve cuántos usuarios nuevos se registraron
 

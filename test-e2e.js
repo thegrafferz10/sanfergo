@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.26 en /api/health', h.ok && h.version === '1.4.26', JSON.stringify(h));
+  check('versión 1.4.27 en /api/health', h.ok && h.version === '1.4.27', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.26', h134.ok && h134.version === '1.4.26', JSON.stringify(h134));
+  check('versión 1.4.27', h134.ok && h134.version === '1.4.27', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.26)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.26';") && h.version === '1.4.26', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.27)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.27';") && h.version === '1.4.27', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1368,6 +1368,53 @@ async function api(path, body) {
   // el cliente; el aviso de solicitudes sigue intacto. (En index.html el
   // onclick va con comillas escapadas \' dentro de la cadena JS.)
   check('el aviso de usuarios nuevos existe en el cliente (línea, botón Ver pasajeros, badge y llamada a mark-users-seen)', html.includes("Se registraron '+u+' usuario") && html.includes("adminScreen=\\'pasajeros\\'") && html.includes("'cnt-pasajeros'") && html.includes("api('/api/admin/mark-users-seen'") && html.includes('Ver pasajeros') && html.includes('Tienes ') && html.includes('por revisar'));
+
+  // v1.4.27: los tres registros son asistentes por pasos (crear cuenta,
+  // chofer y negocio), con la misma estructura de pasos que la app real.
+  // El envío final usa los mismos endpoints de siempre: aquí se verifica
+  // que los asistentes existen en el cliente con sus pasos, sus botones
+  // Siguiente/Regresar y su validación por paso, y que los endpoints
+  // siguen funcionando de punta a punta.
+  console.log('== v1.4.27: formularios de registro por pasos ==');
+  const h27 = await api('/api/health');
+  check('versión 1.4.27 en /api/health (sección)', h27.ok && h27.version === '1.4.27', JSON.stringify(h27));
+  check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
+  check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
+  check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
+  check('sin selector de perfiles en los formularios (corrección v1.4.21 intacta)', !html.includes('Elige tu perfil') && !html.includes('pickRegDriver') && !html.includes('pickRegPassenger'));
+  const wizAcc = await api('/api/register-account', { name: 'Wiz Cuenta', username: 'wiz_' + RUN, phone: '961114' + RUN.slice(0, 4), password: 'secreta123' });
+  check('endpoint de crear cuenta sigue funcionando', wizAcc.ok && wizAcc.account && wizAcc.account.username === 'wiz_' + RUN, JSON.stringify(wizAcc));
+  const wizDrv = await api('/api/register-driver', { name: 'Wiz Chofer', phone: '961115' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'W-' + RUN, selfie: PHOTO, vehicle_photo: PHOTO });
+  check('endpoint de registro de chofer sigue funcionando (nace pendiente)', wizDrv.ok && wizDrv.driver && wizDrv.driver.status === 'pendiente', JSON.stringify(wizDrv));
+  const wizBiz = await api('/api/request-business', { token: wizAcc.token, name: 'Wiz Negocio ' + RUN, type: 'entrega', whatsapp: '961116' + RUN.slice(0, 4), category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 25, description: 'Prueba del asistente' });
+  check('endpoint de crear negocio sigue funcionando (colonia, horario y envío guardados)', wizBiz.ok && wizBiz.business && wizBiz.business.colony === 'Centro' && wizBiz.business.schedule === 'Lunes a sábado, 9 AM a 7 PM' && wizBiz.business.delivery_fee === 25, JSON.stringify(wizBiz));
+
+  // v1.4.27 (correcciones del panel de chofer): las secciones del inicio
+  // del chofer son pantallas completas (como la app real), Recibir Viajes
+  // pinta su encabezado al instante, y fmtDateTime ya no da Invalid Date
+  // con fechas ISO que terminan en Z (historial del taxímetro).
+  console.log('== v1.4.27: panel de chofer (pantallas completas, inbox, fechas) ==');
+  const rdh = html.indexOf('function renderDriverHome()');
+  const rdhBody = html.slice(rdh, html.indexOf('function driverHomeExpand', rdh));
+  check('inicio de chofer: al expandir una sección se muestra SOLO esa pantalla con su Regresar (como la app real)', rdhBody.includes('if(driverHomeExpanded){') && rdhBody.includes('p.innerHTML = \'<div id="driver-home-expanded"></div>\';') && rdhBody.includes('renderDriverExpanded();'));
+  const ri = html.indexOf('async function renderDriverInbox()');
+  const riPaint = html.indexOf("p.innerHTML = '<h2>Recibir Viajes</h2>", ri);
+  const riAwait = html.indexOf('await driverCounts()', ri);
+  check('Recibir Viajes: el encabezado + Cargando… se pinta ANTES de las llamadas de red', riPaint !== -1 && riAwait !== -1 && riPaint < riAwait);
+  const fmtLine = html.split('\n').find(l=>l.startsWith('function fmtDateTime'));
+  check('fmtDateTime tolera una fecha ISO que ya termina en Z', !!fmtLine && fmtLine.includes(".replace(/Z$/,'')"));
+  // En vivo: evaluar la función tal como está en el cliente con los dos
+  // tipos de entrada que usa la app (ISO con Z del taxímetro y texto
+  // SQLite del servidor) y comprobar que la fecha es válida.
+  let fmtOk = false, fmtIso = '', fmtSql = '';
+  try {
+    const fmtFn = eval(fmtLine.replace('function fmtDateTime(iso)', '(function(iso)') + ')');
+    fmtIso = fmtFn(new Date().toISOString());
+    fmtSql = fmtFn('2026-11-23 12:34:56');
+    fmtOk = !!fmtIso && !fmtIso.includes('Invalid Date') && !!fmtSql && !fmtSql.includes('Invalid Date');
+  } catch(e){ fmtOk = false; }
+  check('fmtDateTime en vivo: ISO con Z y texto SQLite dan fecha válida (nada de Invalid Date)', fmtOk, 'iso=' + fmtIso + ' sql=' + fmtSql);
+  check('driverTab resalta las tres pestañas en las dos barras (inicio/taximetro/recibir)', html.includes("const suf = tab==='taximetro' ? 'taxi' : tab;") && html.includes("document.getElementById('txb-'+t)"));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
