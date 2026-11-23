@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.28'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.29'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4029,14 +4029,14 @@ async function driverRejectCounter(rid, oid){
    iniciar sesión; la retícula tiene las siete opciones en tarjetas
    uniformes; CADA opción abre SU PROPIA PANTALLA con su título y botón
    'Regresar' arriba, ya no se dibuja el contenido abajo de la retícula) ===== */
-let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null;
+let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;
 async function renderAdmin(){
   const page = $('#admin-page');
   if(!myAccount || myAccount.role!=='admin'){
     page.innerHTML = backPill('Regresar', "go('cuenta')") + '<p class="muted mt">Solo el administrador de SanFerGo puede ver esto. Inicia sesión con la cuenta de administrador.</p>';
     return;
   }
-  if(!adminScreen){ renderAdminGrid(); return; }
+  if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }
   if(adminPoll){ clearInterval(adminPoll); adminPoll = null; }
   if(adminScreen==='sol-choferes') return renderAdminDriverRequests();
   if(adminScreen==='sol-negocios') return renderAdminBusinessRequests();
@@ -4061,13 +4061,18 @@ function renderAdminGrid(){
     + '<span class="chip" style="background:#991b1b;color:#fff">ADMINISTRADOR</span></div></div>'
     + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
     + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
-    + '<div class="card white mt"><h3 style="margin:0 0 4px">Administrador</h3>'
+    + '<div class="card white mt" style="padding:10px 12px">'
+    + '<button style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:none;border:none;padding:2px 0;cursor:pointer;text-align:left" onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()">'
+    + '<span style="font-size:14px"><b>🔐 Administrador</b> <span class="muted">· Cambiar usuario y contraseña</span></span>'
+    + '<span style="font-size:20px;color:var(--green);flex-shrink:0">'+(adminCredsOpen?'⌄':'›')+'</span></button>'
+    + (adminCredsOpen ? '<div id="admin-creds-form">'
     + '<p class="muted" style="font-size:12px">Cambia el usuario y la contraseña con los que entras como administrador. Puedes cambiar solo uno de los dos; el cambio no te cierra la sesión.</p>'
     + '<label class="mt">Contraseña actual</label>' + pwInput('adm-cur-pass', 'Tu contraseña actual', 'current-password')
     + '<label class="mt">Nuevo usuario</label><input id="adm-new-user" type="text" autocomplete="off" value="'+esc(a.username)+'">'
     + '<label class="mt">Nueva contraseña</label>' + pwInput('adm-new-pass', 'Mínimo 6 caracteres (vacía si no la cambias)', 'new-password')
     + '<label class="mt">Confirmar nueva contraseña</label>' + pwInput('adm-new-pass2', 'Repite la contraseña nueva', 'new-password')
-    + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>'
+    + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>' : '')
+    + '</div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -4109,6 +4114,7 @@ async function saveAdminCredentials(){
     const j = await api('/api/admin/change-credentials', { token: store.token, current_password: cur, new_username: un || undefined, new_password: pw || undefined });
     myAccount.username = j.username;
     $('#adm-cur-pass').value = ''; $('#adm-new-pass').value = ''; $('#adm-new-pass2').value = '';
+    adminCredsOpen = false; // v1.4.29: tras guardar bien, la tarjeta se vuelve a colapsar
     renderAdminGrid();
     toast('Credenciales actualizadas.');
   } catch(e){ toast(e.message); }
