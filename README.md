@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.31)
+# SanFerGo — versión pública (v1.4.32)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.32 (2026-11-23) — Mandados 'Enviar': ubicación de WhatsApp en el paso de entrega
+
+- El paso 2 de 5 de 'Enviar un mandado' ("¿Dónde se entrega?") solo tenía el buscador de lugares: ahora trae la misma caja **Ubicación por WhatsApp** que ya existía en el paso 3, en este mismo paso: campo **Pegar ubicación de WhatsApp** (enlace de Google Maps, `geo:` o coordenadas escritas) que marca el punto exacto de entrega con `mdResolveWaDest()` y `/api/resolve-location` (el mismo parseo del paso 3: coordenadas decimales, DMS, `?q=lat,lng`, `@lat,lng`, `!3d/!4d`; sin cambios de servidor), con el punto resuelto a la vista ("📍 Punto marcado: lat, lng") y error en línea (`md-wa-err2`) si el texto no trae coordenadas; y botón **Pedir ubicación por WhatsApp** (abre `wa.me` con el mensaje ya escrito) con el campo del número de quien recibe en este mismo paso, porque el flujo lo pedía hasta el paso 3. El buscador y la "Calle o referencia (opcional)" quedan como estaban — la referencia se puede añadir también a un punto pegado de WhatsApp. Elegir un lugar del buscador sustituye un punto pegado (`md.waDest = null` en `mdChooseDestPlace`). El punto pegado es el mismo `md.dest` del resto del flujo: precio y publicación sin cambios.
+- Pruebas: suite completa contra BD limpia: 498 OK, 0 FAIL (492 de antes + 6 nuevas: 3 de parseo de enlaces `?q=`/`geo:` y 3 estáticas del paso 2).
 
 ## v1.4.31 (2026-11-23) — Formulario Subir anuncio: layout arreglado (sin tocar campos ni lógica)
 
