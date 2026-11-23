@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.25'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.26'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3954,7 +3954,7 @@ function renderAdminGrid(){
     + card('sol-choferes','🛺','Solicitudes de choferes','Choferes nuevos por revisar y aceptar.','cnt-sol-choferes')
     + card('sol-negocios','🏪','Solicitudes de negocio','Negocios nuevos por revisar y activar.','cnt-sol-negocios')
     + card('choferes','👤','Administrar choferes','Su ficha: viajes, suscripción, bloquear o eliminar.')
-    + card('pasajeros','🧑‍🤝‍🧑','Administrar pasajeros','Pasajeros registrados en SanFerGo.')
+    + card('pasajeros','🧑‍🤝‍🧑','Administrar pasajeros','Pasajeros registrados en SanFerGo.','cnt-pasajeros')
     + card('cuentas','🔑','Cuentas','Cuentas de acceso de la app.')
     + card('anuncios','📣','Anuncios','El flotante que sale al entrar a Viajes, Negocios o Mandados.')
     + card('tiendas','🛒','Tiendas','El catálogo de tiendas de SanFerGo.')
@@ -3998,18 +3998,24 @@ async function loadAdminOverview(){
     const j = await api('/api/admin-overview?token=' + encodeURIComponent(store.token));
     const box = $('#admin-notice'); if(!box) return;
     const n = j.pending_total || 0;
+    const u = j.new_users || 0; // v1.4.26: usuarios nuevos registrados
     const setCnt = (id, v)=>{
       const e = document.getElementById(id);
       if(e){ e.textContent = v; e.classList.toggle('hidden', !v); }
-      const ic = document.getElementById('ic-'+(id==='cnt-sol-choferes'?'sol-choferes':'sol-negocios'));
+      const ic = document.getElementById('ic-'+(id==='cnt-sol-choferes'?'sol-choferes':(id==='cnt-pasajeros'?'pasajeros':'sol-negocios')));
       if(ic) ic.style.background = v ? '#f59e0b' : '#14532d';
     };
     setCnt('cnt-sol-choferes', j.pending_drivers);
     setCnt('cnt-sol-negocios', j.pending_businesses);
-    if(!n){ box.innerHTML = ''; return; }
-    box.innerHTML = '<div class="card warn"><b>Tienes '+n+' solicitud'+(n>1?'es':'')+' nueva'+(n>1?'s':'')+' por revisar</b>'
+    setCnt('cnt-pasajeros', u);
+    if(!n && !u){ box.innerHTML = ''; return; }
+    let html = '';
+    if(n){ html += '<div class="card warn"><b>Tienes '+n+' solicitud'+(n>1?'es':'')+' nueva'+(n>1?'s':'')+' por revisar</b>'
       + '<div class="btnrow"><button class="btn small" style="background:#78350f;color:#fff" onclick="adminScreen=\'sol-choferes\';renderAdmin()">Revisar solicitudes de choferes ('+j.pending_drivers+')</button>'
-      + '<button class="btn small" style="background:#78350f;color:#fff" onclick="adminScreen=\'sol-negocios\';renderAdmin()">Revisar solicitudes de negocio ('+j.pending_businesses+')</button></div></div>';
+      + '<button class="btn small" style="background:#78350f;color:#fff" onclick="adminScreen=\'sol-negocios\';renderAdmin()">Revisar solicitudes de negocio ('+j.pending_businesses+')</button></div></div>'; }
+    if(u){ html += '<div class="card warn"><b>Se registraron '+u+' usuario'+(u>1?'s':'')+' nuevo'+(u>1?'s':'')+'</b>'
+      + '<div class="btnrow"><button class="btn small" style="background:#78350f;color:#fff" onclick="adminScreen=\'pasajeros\';renderAdmin()">Ver pasajeros ('+u+')</button></div></div>'; }
+    box.innerHTML = html;
   } catch(e){}
 }
 function adminBack(title){
@@ -4207,6 +4213,10 @@ async function renderAdminPassengers(){
       + '<div class="flex1"><b>'+esc(p.name)+'</b><div class="muted">'+esc(p.phone)+'</div></div>'
       + '<span class="muted">'+fmtDateTime(p.created_at)+'</span></div></div>').join('')
       : '<p class="muted center mt">No hay pasajeros registrados.</p>';
+    // v1.4.26: el admin ya revisó la lista, así que los usuarios nuevos
+    // se marcan como vistos y el aviso + el badge se limpian.
+    try { await api('/api/admin/mark-users-seen', { token: store.token }); } catch(e){}
+    loadAdminOverview();
   } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
 }
 /* --- Cuentas --- */
