@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.16'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.17'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1286,28 +1286,136 @@ function renderLogin(){
       + '<div class="err hidden" id="li-err"></div><div id="li-claim"></div>'
       + '<button class="btn" onclick="doLogin()">Iniciar sesión</button>'
       + '<div style="display:flex;align-items:center;gap:10px;margin-top:16px"><span style="flex:1;border-top:1px solid var(--line)"></span><span class="muted">o</span><span style="flex:1;border-top:1px solid var(--line)"></span></div>'
-      + '<button class="btn ghost" style="display:flex;align-items:center;justify-content:center;gap:10px" onclick="toggleGoogleNote()"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>Continuar con Google</button>'
-      + '<div id="google-note" class="card warn hidden"><b>Entrar con Google llega en cuanto SanFerGo tenga su enlace permanente: Google pide una dirección fija de la app para autorizarlo. Por ahora entra con tu usuario y contraseña, o crea tu cuenta aquí mismo con tu número o tu correo.</b></div>'
+      + '<div id="google-btn-wrap"><button class="btn ghost" style="display:flex;align-items:center;justify-content:center;gap:10px" onclick="toggleGoogleNote()"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>Continuar con Google</button></div>'
+      + '<div id="google-note" class="card warn hidden"><b>Entrar con Google aún no está activado: falta conectar la cuenta de Google de SanFerGo. Por ahora entra con tu usuario y contraseña, o crea tu cuenta aquí mismo con tu número o tu correo.</b></div>'
       + '<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:4px"><button class="btn amber" onclick="loginTab=\'create\';renderLogin()">Crear cuenta nueva</button></div></div>';
   } else {
     p.innerHTML = hero
-      + '<div class="card white" style="margin-top:16px"><h1>Crear tu cuenta</h1>'
+      + '<div class="card white" id="rc-card" style="margin-top:16px"><h1>Crear tu cuenta</h1>'
       + '<label class="mt">Nombre completo</label><input id="rc-name" placeholder="Ej. María Hernández">'
       + '<label class="mt">Nombre de usuario</label><input id="rc-user" placeholder="Ej. maria.hernandez" autocomplete="username">'
       + '<label class="mt">Número de teléfono / WhatsApp</label><input id="rc-phone" placeholder="Ej. 961 000 0000" inputmode="tel">'
       + '<label class="mt">Correo electrónico (si no usas tu número)</label><input id="rc-email" placeholder="Ej. tu@correo.com" inputmode="email">'
+      + '<div id="rc-email-note" class="muted" style="margin-top:6px"></div>'
       + '<label class="mt">Contraseña</label>' + pwInput('rc-pass','Mínimo 6 caracteres','new-password')
       + '<label class="mt">Confirmar contraseña</label>' + pwInput('rc-pass2','Escribe la misma contraseña','new-password')
       + '<div class="err hidden" id="rc-err"></div><div id="rc-dup"></div>'
       + '<button class="btn" id="rc-submit" onclick="doRegister()">Registrarme</button>'
       + '<div class="center" style="margin-top:14px"><button class="linklike" onclick="loginTab=\'login\';renderLogin()">¿Ya tienes cuenta? Inicia sesión</button></div></div>';
   }
+  afterRenderLogin();
 }
 function toggleGoogleNote(){
   const n = document.getElementById('google-note');
   if(n) n.classList.toggle('hidden');
 }
 function googleSoon(){ toggleGoogleNote(); } // compatibilidad: el aviso de Google ya vive en la tarjeta de login
+/* ===== Código por correo + entrar con Google (v1.4.17) ===== */
+let APP_CONFIG = null;
+async function loadAppConfig(){
+  if(APP_CONFIG) return APP_CONFIG;
+  try { const j = await api('/api/config'); APP_CONFIG = { googleClientId: j.googleClientId || null, emailCode: !!j.emailCode }; }
+  catch(e){ APP_CONFIG = { googleClientId: null, emailCode: false }; }
+  return APP_CONFIG;
+}
+function afterRenderLogin(){
+  loadAppConfig().then(cfg=>{
+    if(loginTab==='login'){ if(cfg.googleClientId) setupGoogleSignIn(); }
+    else { const n = document.getElementById('rc-email-note'); if(n && cfg.emailCode) n.textContent = 'Te enviaremos un código de 6 dígitos a ese correo para verificar tu cuenta.'; }
+  });
+}
+let __gsiLoaded = null;
+function loadGsi(){
+  if(window.google && window.google.accounts) return Promise.resolve(true);
+  if(__gsiLoaded) return __gsiLoaded;
+  __gsiLoaded = new Promise((resolve)=>{
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = ()=>resolve(true);
+    s.onerror = ()=>resolve(false);
+    document.head.appendChild(s);
+  });
+  return __gsiLoaded;
+}
+async function setupGoogleSignIn(){
+  const cfg = await loadAppConfig();
+  const wrap = document.getElementById('google-btn-wrap');
+  if(!wrap || !cfg.googleClientId) return;
+  const ok = await loadGsi();
+  if(!ok || !window.google || !window.google.accounts) return; // se queda el botón con el aviso
+  wrap.innerHTML = '<div id="g_id_signin" style="display:flex;justify-content:center;margin-top:16px"></div>';
+  const note = document.getElementById('google-note'); if(note) note.classList.add('hidden');
+  try {
+    window.google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogleSignIn, auto_select: false });
+    window.google.accounts.id.renderButton(document.getElementById('g_id_signin'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with', locale: 'es' });
+  } catch(e){ /* se queda el botón con el aviso */ }
+}
+async function onGoogleSignIn(resp){
+  const cred = resp && resp.credential;
+  if(!cred) return showErr('#li-err', 'Google no devolvió tu cuenta. Inténtalo de nuevo.');
+  try {
+    const j = await api('/api/auth/google', { id_token: cred });
+    if(!j.account) throw new Error('No se pudo iniciar sesión con Google.');
+    applySession(j);
+    toast('¡Hola, ' + j.account.name + '!');
+    goAfterLogin();
+  } catch(e){ showErr('#li-err', e.message); }
+}
+// Registro con correo verificado: los datos quedan en memoria mientras el
+// usuario escribe el código; la cuenta se crea solo después de verificarlo.
+let pendingReg = null;
+let ecResendUntil = 0, ecResendTimer = null;
+function showEmailCodeStep(email){
+  const card = document.getElementById('rc-card');
+  if(!card) return;
+  card.innerHTML = '<h1>Revisa tu correo</h1>'
+    + '<p class="muted mt">Te enviamos un código de 6 dígitos a <b>' + esc(email) + '</b>. Escríbelo aquí para crear tu cuenta. El código vence en 10 minutos.</p>'
+    + '<label class="mt">Código de 6 dígitos</label><input id="ec-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code">'
+    + '<div class="err hidden" id="ec-err"></div>'
+    + '<button class="btn" id="ec-submit" onclick="doVerifyEmailCode()">Verificar y crear mi cuenta</button>'
+    + '<button class="btn ghost" id="ec-resend" onclick="resendEmailCode()">Reenviar código</button>'
+    + '<div class="center" style="margin-top:14px"><button class="linklike" onclick="pendingReg=null;renderLogin()">Cambiar correo o datos</button></div>';
+  ecResendUntil = Date.now() + 60000;
+  updateResendBtn();
+  const c = document.getElementById('ec-code'); if(c) c.focus();
+}
+function updateResendBtn(){
+  const b = document.getElementById('ec-resend'); if(!b) return;
+  clearInterval(ecResendTimer);
+  const tick = ()=>{
+    const left = Math.ceil((ecResendUntil - Date.now()) / 1000);
+    if(left <= 0){ b.disabled = false; b.textContent = 'Reenviar código'; clearInterval(ecResendTimer); }
+    else { b.disabled = true; b.textContent = 'Reenviar en ' + left + ' s'; }
+  };
+  tick(); ecResendTimer = setInterval(tick, 1000);
+}
+async function resendEmailCode(){
+  if(!pendingReg) return;
+  try {
+    await api('/api/request-email-code', { email: pendingReg.email });
+    ecResendUntil = Date.now() + 60000;
+    updateResendBtn();
+    toast('Código reenviado a ' + pendingReg.email + '.');
+  } catch(e){ showErr('#ec-err', e.message); }
+}
+async function doVerifyEmailCode(){
+  const code = ($('#ec-code').value || '').trim();
+  if(!/^\d{6}$/.test(code)) return showErr('#ec-err', 'Pon el código de 6 dígitos que llegó a tu correo.');
+  if(!pendingReg) return showErr('#ec-err', 'Vuelve a registrarte: se perdieron tus datos.');
+  const btn = document.getElementById('ec-submit'); if(btn){ btn.disabled = true; btn.textContent = 'Verificando…'; }
+  try {
+    const v = await api('/api/verify-email-code', { email: pendingReg.email, code });
+    const j = await api('/api/register-account', { name: pendingReg.name, username: pendingReg.username, phone: pendingReg.phone, email: pendingReg.email, password: pendingReg.password, email_code_token: v.verification_token });
+    pendingReg = null;
+    applySession(j);
+    toast('¡Cuenta creada! Ya puedes pedir viajes.');
+    goAfterLogin();
+  } catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Verificar y crear mi cuenta'; }
+    showErr('#ec-err', e.message);
+  }
+}
 function showErr(id, msg){ const e = $(id); if(e){ e.textContent = msg; e.classList.toggle('hidden', !msg); } }
 async function doLogin(){
   const id = $('#li-id').value.trim(), pw = $('#li-pass').value;
@@ -1352,6 +1460,22 @@ async function doRegister(){
   if(pw.length < 6) return showErr('#rc-err', 'La contraseña debe tener al menos 6 caracteres.');
   if(pw !== pw2) return showErr('#rc-err', 'Las contraseñas no coinciden.');
   const btn = document.getElementById('rc-submit'); if(btn){ btn.disabled = true; btn.textContent = 'Creando tu cuenta…'; }
+  // Con correo y el código activado, primero va el código y la cuenta se
+  // crea solo después de verificarlo; solo con número el registro es directo.
+  if(email){
+    const cfg = await loadAppConfig();
+    if(cfg.emailCode){
+      try {
+        await api('/api/request-email-code', { email });
+        pendingReg = { name, username: user, phone: phone||null, email, password: pw };
+        showEmailCodeStep(email);
+      } catch(e){
+        if(btn){ btn.disabled = false; btn.textContent = 'Registrarme'; }
+        showErr('#rc-err', e.message);
+      }
+      return;
+    }
+  }
   try {
     const j = await api('/api/register-account', { name, username: user, phone: phone||null, email: email||null, password: pw });
     applySession(j);
