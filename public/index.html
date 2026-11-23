@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.27'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.28'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4479,11 +4479,11 @@ async function renderBizMain(){
   try { const j = await api('/api/businesses'); list = j.businesses || []; } catch(e){}
   const cats = [...new Set(list.map(b=>b.category).filter(Boolean))];
   const filtered = bizCatFilter==='Todas' ? list : list.filter(b=>b.category===bizCatFilter);
-  box.innerHTML = '<div id="biz-ads-carousel"></div>'
-    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">'
-    + '<button style="height:72px;background:#f59e0b;color:#fff;border:none;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\''+(mine.length?'mine':'create')+'\';renderNegocios()">'+(mine.length?'Administrar negocio':'Crear un negocio')+'</button>'
-    + '<button style="height:72px;background:#fff;color:#5b21b6;border:2px solid #5b21b6;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\'my-appts\';renderNegocios()">Ver mi cita</button>'
-    + '<button style="height:72px;background:#fff;color:#14532d;border:2px solid #14532d;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer" onclick="bizScreen=\'my-orders\';renderNegocios()">Ver mi pedido</button></div>'
+  box.innerHTML = '<div id="biz-options-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'
+    + '<button style="height:42px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\''+(mine.length?'mine':'create')+'\';renderNegocios()">'+(mine.length?'Administrar':'Crear')+'</button>'
+    + '<button style="height:42px;background:#fff;color:#5b21b6;border:2px solid #5b21b6;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\'my-appts\';renderNegocios()">Ver mi cita</button>'
+    + '<button style="height:42px;background:#fff;color:#14532d;border:2px solid #14532d;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\'my-orders\';renderNegocios()">Ver mi pedido</button></div>'
+    + '<div id="biz-ads-carousel"></div>'
     + (cats.length>2 ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'
       + ['Todas',...cats].map(c=>'<button class="cat-pill'+(bizCatFilter===c?' sel':'')+'" onclick="bizCatFilter=\''+esc(c)+'\';renderBizMain()">'+esc(c)+'</button>').join('') + '</div>' : '')
     + (filtered.length ? filtered.map(b=>'<div class="card white" style="padding:0;overflow:hidden">'
