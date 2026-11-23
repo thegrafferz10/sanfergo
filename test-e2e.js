@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.30 en /api/health', h.ok && h.version === '1.4.30', JSON.stringify(h));
+  check('versión 1.4.31 en /api/health', h.ok && h.version === '1.4.31', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.30', h134.ok && h134.version === '1.4.30', JSON.stringify(h134));
+  check('versión 1.4.31', h134.ok && h134.version === '1.4.31', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.30)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.30';") && h.version === '1.4.30', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.31)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.31';") && h.version === '1.4.31', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1381,7 +1381,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.30 en /api/health (sección)', h27.ok && h27.version === '1.4.30', JSON.stringify(h27));
+  check('versión 1.4.31 en /api/health (sección)', h27.ok && h27.version === '1.4.31', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1426,7 +1426,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.30 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.30', JSON.stringify(h28));
+  check('versión 1.4.31 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.31', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1440,7 +1440,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.30 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.30', JSON.stringify(h29));
+  check('versión 1.4.31 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.31', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1449,7 +1449,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.30 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.30', JSON.stringify(h30));
+  check('versión 1.4.31 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.31', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1544,7 +1544,7 @@ async function api(path, body) {
   check('Anuncios: menú con Ver anuncios y Subir anuncio', adsSec.includes("adScreen=\\'ver\\'") && adsSec.includes('Ver anuncios') && adsSec.includes("adScreen=\\'subir\\'") && adsSec.includes('Subir anuncio'));
   check('Subir anuncio: menú Libre y De un negocio (sin toggle de tipo)', adsSec.includes('Subir anuncio Libre') && adsSec.includes('Subir anuncio de un negocio') && !adsSec.includes('Anuncio libre</button>') && !adsSec.includes('De un negocio</button>'));
   check('Ver anuncios: activos y ocultos separados, con rótulo Flotante/Panel/Ambos y las dos imágenes', adsSec.includes('Anuncios activos') && adsSec.includes('Anuncios ocultos') && adsSec.includes("'Ambos'") && adsSec.includes("'Panel'") && adsSec.includes("'Flotante'") && adsSec.includes('Vertical · flotante') && adsSec.includes('Horizontal · panel'));
-  check('formulario: ubicación flotante (vertical) o panel (horizontal)', adsSec.includes('¿Dónde se muestra?') && adsSec.includes('Anuncio flotante') && adsSec.includes('Anuncio en el panel de Negocios') && adsSec.includes('Imagen vertical del anuncio') && adsSec.includes('Imagen horizontal del anuncio'));
+  check('formulario: ubicación flotante (vertical) o panel (horizontal)', adsSec.includes('¿Dónde se muestra?') && adsSec.includes('Anuncio flotante') && adsSec.includes('Anuncio en el panel') && adsSec.includes('Imagen vertical del anuncio') && adsSec.includes('Imagen horizontal del anuncio'));
   const carSec = html.slice(html.indexOf('async function renderBizAdsCarousel(){'), html.indexOf('async function renderBizDetail(){'));
   check('carrusel Negocios: solo anuncios con banner_image, y la foto es el banner', carSec.includes("filter(a=>a.banner_image)") && carSec.includes("<img src=\"'+a.banner_image+'\""));
   const paxSec = html.slice(html.indexOf('function renderPaxList(){'), html.indexOf('async function renderAdminPassengers(){'));
@@ -1553,6 +1553,14 @@ async function api(path, body) {
   check('suspender pide motivo opcional y la fila lo muestra', html.includes("prompt('Motivo de la suspensión") && html.includes('suspend_reason') && paxSec.includes('Motivo: '));
   const lmSec = html.slice(html.indexOf('async function loadMe(){'), html.indexOf('function placeByName'));
   check('sesión suspendida/bloqueada: /api/me 403 muestra el aviso y cierra la sesión', lmSec.includes('/suspendida|bloqueada/') && lmSec.includes('toast(e.message)'));
+  // --- v1.4.31: layout del formulario Subir anuncio (estático) ---
+  console.log('== v1.4.31: formulario Subir anuncio (layout) ==');
+  check('v1.4.31: ubicación con dos opciones apiladas, títulos cortos y subtítulo en una línea', adsSec.includes('class="adplace') && adsSec.includes('<b>Anuncio flotante</b>') && adsSec.includes('<b>Anuncio en el panel</b>') && adsSec.includes('Vertical · al entrar a Viajes, Negocios o Mandados') && adsSec.includes('Horizontal · arriba en Negocios') && !adsSec.includes('Anuncio en el panel de Negocios'));
+  check('v1.4.31: entradas con la casilla a la izquierda y la etiqueta corta al lado', adsSec.includes('ad-entry') && adsSec.includes('id="ad-e-viajes"') && adsSec.includes('id="ad-e-negocios"') && adsSec.includes('id="ad-e-mandados"') && adsSec.includes('<b>Viajes</b>') && adsSec.includes('<b>Negocios</b>') && adsSec.includes('<b>Mandados</b>') && !adsSec.includes('Viajes (al pedir un viaje)</label>'));
+  check('v1.4.31: elegir imagen con botón propio y nombre del archivo', adsSec.includes('Elegir imagen') && adsSec.includes('adPickFile') && adsSec.includes('id="ad-filename"') && adsSec.includes('Sin imagen elegida') && adsSec.includes('adFileName'));
+  check('v1.4.31: ayuda de la imagen vertical en una sola línea corta', adsSec.includes('Formato VERTICAL, como las historias.') && !adsSec.includes('En la página principal no sale.'));
+  check('v1.4.31: CSS del formulario (adplace y casilla sin width:100%)', html.includes('.adplace{') && html.includes('.ad-entry input[type=checkbox]{width:auto'));
+  check('v1.4.31: regla global de casillas (ninguna hereda width:100%)', html.includes('input[type=checkbox]{width:auto') && !html.includes('input[type=checkbox].chk{width:auto'));
   // Limpieza: los dos anuncios de la prueba se borran (quedan los de otras secciones).
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adF.ad.id });
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adP.ad.id });

@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.30)
+# SanFerGo — versión pública (v1.4.31)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.31 (2026-11-23) — Formulario Subir anuncio: layout arreglado (sin tocar campos ni lógica)
+
+- El formulario de Subir anuncio (Libre y De un negocio, es el mismo) se veía feo en el teléfono: las casillas de entradas empujaban su etiqueta al borde derecho y se cortaba el texto. Causa: el `width:100%` global de los `input` estiraba la casilla dentro de la fila flex. Ahora las filas usan `.ad-entry` (casilla con `width:auto`, etiqueta corta al lado: **Viajes**, **Negocios**, **Mandados**, con la pista entre paréntesis en gris). El selector de archivo nativo mostraba "ningún…ccionado" truncado: ahora es un botón **Elegir imagen** y el nombre del archivo se muestra debajo (con puntos suspensivos si es largo) o "Sin imagen elegida" si no hay. El selector "¿Dónde se muestra?" era desigual (una verde, la otra azul con el texto en 3 líneas): ahora son dos opciones apiladas a lo ancho, misma altura, seleccionada en verde, con título corto ("Anuncio flotante" / "Anuncio en el panel") y subtítulo en una línea ("Vertical · al entrar a Viajes, Negocios o Mandados" / "Horizontal · arriba en Negocios"). La ayuda de la imagen vertical quedó en una línea: "Formato VERTICAL, como las historias.". Solo layout y texto de ayuda: los campos, la validación (imagen obligatoria), el endpoint, los slots y las entradas se guardan exactamente igual.
+- Pruebas: suite completa contra BD limpia: 491 OK, 0 FAIL (486 de antes + 5 estáticos nuevos del formulario).
 
 ## v1.4.30 (2026-11-23) — Anuncios: menú con dos imágenes por anuncio + Administrar pasajeros con suspender/bloquear/eliminar/reactivar
 
