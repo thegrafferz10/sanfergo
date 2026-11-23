@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.24'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.25'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3941,6 +3941,13 @@ function renderAdminGrid(){
     + '<span class="chip" style="background:#991b1b;color:#fff">ADMINISTRADOR</span></div></div>'
     + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
     + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
+    + '<div class="card white mt"><h3 style="margin:0 0 4px">Administrador</h3>'
+    + '<p class="muted" style="font-size:12px">Cambia el usuario y la contraseña con los que entras como administrador. Puedes cambiar solo uno de los dos; el cambio no te cierra la sesión.</p>'
+    + '<label class="mt">Contraseña actual</label>' + pwInput('adm-cur-pass', 'Tu contraseña actual', 'current-password')
+    + '<label class="mt">Nuevo usuario</label><input id="adm-new-user" type="text" autocomplete="off" value="'+esc(a.username)+'">'
+    + '<label class="mt">Nueva contraseña</label>' + pwInput('adm-new-pass', 'Mínimo 6 caracteres (vacía si no la cambias)', 'new-password')
+    + '<label class="mt">Confirmar nueva contraseña</label>' + pwInput('adm-new-pass2', 'Repite la contraseña nueva', 'new-password')
+    + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -3965,6 +3972,26 @@ function downloadBackup(){
   a.download = '';
   document.body.appendChild(a); a.click(); a.remove();
   toast('Descargando el respaldo de la base de datos…');
+}
+// Cambiar las credenciales del administrador (v1.4.25): usuario y/o
+// contraseña desde el panel. La sesión no depende de la contraseña,
+// así que el cambio no cierra la sesión.
+async function saveAdminCredentials(){
+  const cur = ($('#adm-cur-pass').value||'');
+  const un = ($('#adm-new-user').value||'').trim().toLowerCase();
+  const pw = ($('#adm-new-pass').value||'');
+  const pw2 = ($('#adm-new-pass2').value||'');
+  if(!cur) return toast('Escribe tu contraseña actual.');
+  if(pw && pw.length < 6) return toast('La contraseña nueva debe tener al menos 6 caracteres.');
+  if(pw && pw !== pw2) return toast('La contraseña nueva no coincide con la confirmación.');
+  if(!un && !pw) return toast('Escribe un usuario nuevo o una contraseña nueva.');
+  try {
+    const j = await api('/api/admin/change-credentials', { token: store.token, current_password: cur, new_username: un || undefined, new_password: pw || undefined });
+    myAccount.username = j.username;
+    $('#adm-cur-pass').value = ''; $('#adm-new-pass').value = ''; $('#adm-new-pass2').value = '';
+    renderAdminGrid();
+    toast('Credenciales actualizadas.');
+  } catch(e){ toast(e.message); }
 }
 async function loadAdminOverview(){
   try {
