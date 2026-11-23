@@ -2,7 +2,10 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.15: detalles sin aplastar + encuadre del mapa en vivo del chofer por etapa; v1.4.14: banner de viaje activo en Inicio (chofer y pasajero); v1.4.13: el paso de destino "¿A dónde vas?"
+// Estado del spec: 2026-11-23 (v1.4.17: registro con código de 6 dígitos por
+// correo (Resend, sin SMS) + entrar con Google (Google Identity Services;
+// el servidor verifica el id_token con tokeninfo); v1.4.16: carrusel de
+// anuncios en Negocios; v1.4.15: detalles sin aplastar + encuadre del mapa en vivo del chofer por etapa; v1.4.14: banner de viaje activo en Inicio (chofer y pasajero); v1.4.13: el paso de destino "¿A dónde vas?"
 // va igual que en la app real (fila Regresar + píldora de origen con Cambiar,
 // tarjeta de búsqueda aparte, tiras transparentes) y el anuncio flotante
 // lleva la geometría exacta de la app (tarjeta 340 px, imagen a todo lo
@@ -65,8 +68,8 @@
 // Tarifa: $10 de salida + $2.50 cada 300 m; espera $1.25/min (parado, < ~5 km/h);
 // mínimo por viaje $20; cada parada extra de mandado +$10.
 // Cuentas: nombre, usuario, número y/o correo, contraseña con hash scrypt.
-// Panel de administrador: solo entrando con la cuenta admin (temporal admin/admin).
-// Sin código de verificación (no hay canal de SMS ni correo).
+// Registro con correo verificado por código de 6 dígitos (Resend, v1.4.17)
+// y entrar con Google (v1.4.17); sin SMS.
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -75,6 +78,13 @@ const { DatabaseSync } = require('node:sqlite');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+// v1.4.17: código por correo (Resend) y entrar con Google. Sin estas
+// variables el servidor sigue funcionando como antes: el código por correo
+// queda desactivado (el registro con correo no pide código) y el botón de
+// Google muestra su aviso de siempre, sin romperse nada.
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM = process.env.RESEND_FROM || 'SanFerGo <onboarding@resend.dev>';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -140,6 +150,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email ON accounts (email);
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY, account_id INTEGER NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
+);
+-- Verificación por correo (v1.4.17): el código va hasheado, vence en 10
+-- minutos y se agota a los 5 intentos; verified_token es el pase de un solo
+-- uso que el registro con correo debe presentar (vale 15 minutos).
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL,
+  used INTEGER DEFAULT 0,
+  verified_token TEXT,
+  verified_at TEXT
 );
 CREATE TABLE IF NOT EXISTS ads (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -238,6 +262,9 @@ addCol('business_orders', 'delivery_zone', 'TEXT');
 addCol('business_orders', 'delivery_address', 'TEXT');
 addCol('business_orders', 'payment_method', 'TEXT');
 addCol('business_orders', 'note', 'TEXT');
+// Correo verificado (v1.4.17): 1 si la cuenta llegó por código de correo o
+// por Google; las cuentas viejas quedan en 0 (su correo no se verificó).
+addCol('accounts', 'email_verified', 'INTEGER DEFAULT 0');
 
 // ---- Cuentas e inicio de sesión (desde v1.2.0) ----
 // Contraseñas con scrypt (nunca en texto plano). La sesión es un token
@@ -262,7 +289,7 @@ function cleanEmail(e) { return String(e || '').trim().toLowerCase(); }
 function cleanUsername(u) { return String(u || '').trim().toLowerCase(); }
 function publicAccount(a) {
   if (!a) return null;
-  return { id: a.id, name: a.name, username: a.username, phone: a.phone, email: a.email, role: a.role, passenger_id: a.passenger_id, driver_id: a.driver_id, created_at: a.created_at };
+  return { id: a.id, name: a.name, username: a.username, phone: a.phone, email: a.email, email_verified: a.email_verified ? 1 : 0, role: a.role, passenger_id: a.passenger_id, driver_id: a.driver_id, created_at: a.created_at };
 }
 function accountFromToken(token) {
   if (!token) return null;
@@ -287,6 +314,30 @@ function newSession(accountId) {
   db.prepare('INSERT INTO sessions (token, account_id) VALUES (?,?)').run(token, accountId);
   return token;
 }
+// ---- Verificación por correo (v1.4.17) ----
+// El código es de 6 dígitos, se guarda solo su hash SHA-256, vence en 10
+// minutos y se agota a los 5 intentos fallidos. Se manda con la API HTTP de
+// Resend (fetch global, sin dependencias nuevas). Costura de pruebas: con
+// RESEND_API_KEY='test' no sale ningún correo real y el endpoint devuelve
+// el código en test_code para que la suite lo verifique; con una llave real
+// (re_...) ese campo nunca aparece.
+function hashEmailCode(code) { return crypto.createHash('sha256').update(String(code)).digest('hex'); }
+async function sendEmailCode(email, code) {
+  if (RESEND_API_KEY === 'test') return { ok: true, test: true };
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: RESEND_FROM,
+      to: [email],
+      subject: 'Tu código de SanFerGo: ' + code,
+      html: '<p>Tu código de verificación de SanFerGo es:</p><p style="font-size:28px;font-weight:800;letter-spacing:4px">' + code + '</p><p>Es válido por 10 minutos. Si no pediste este código, ignora este correo.</p>'
+    })
+  });
+  if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('Resend ' + r.status + ' ' + t.slice(0, 120)); }
+  return { ok: true };
+}
+function emailCodeEnabled() { return !!RESEND_API_KEY; }
 // Cuenta de administrador pre-registrada (temporal: admin / admin).
 // El dueño la usa para entrar al panel y hacer pruebas; luego se cambia
 // por una contraseña segura.
@@ -609,7 +660,11 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.16' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.17' });
+  // Config pública para el cliente (v1.4.17): el client ID de Google es un
+  // identificador público (no un secreto) y emailCode dice si el código por
+  // correo está activado; el cliente esconde o muestra cada opción según esto.
+  if (pathname === '/api/config') return send(res, 200, { ok: true, googleClientId: GOOGLE_CLIENT_ID || null, emailCode: emailCodeEnabled() });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -727,6 +782,19 @@ async function api(req, res, pathname) {
       const byEmail = db.prepare('SELECT * FROM accounts WHERE email=?').get(em);
       if (byEmail) return send(res, 409, { ok: false, error: 'Ese correo ya tiene cuenta.', exists: true, existing_name: byEmail.name, field: 'email', identifier: em });
     }
+    // Con el código por correo activado (v1.4.17), registrarse con correo
+    // exige el pase de un solo uso de /api/verify-email-code (vale 15
+    // minutos). Sin la llave de Resend configurada el registro sigue como
+    // antes, sin código. Solo con número no hay código posible.
+    let emailVerified = 0;
+    if (em && emailCodeEnabled()) {
+      const tok = String(body.email_code_token || '').trim();
+      if (!tok) return send(res, 400, { ok: false, error: 'Falta verificar tu correo: pide el código y escríbelo para crear tu cuenta.', needs_email_code: true });
+      const v = db.prepare(`SELECT * FROM email_verifications WHERE email=? AND verified_token=? AND used=1 AND verified_at >= datetime('now','-15 minutes')`).get(em, tok);
+      if (!v) return send(res, 400, { ok: false, error: 'Ese código ya no es válido. Pide uno nuevo y verifícalo.', needs_email_code: true });
+      db.prepare('UPDATE email_verifications SET verified_token=NULL WHERE id=?').run(v.id);
+      emailVerified = 1;
+    }
     // Al registrarse se crea o se enlaza SOLO el perfil de pasajero (sin chofer).
     let passenger = null;
     if (ph) passenger = db.prepare('SELECT * FROM passengers WHERE phone=?').get(ph);
@@ -735,8 +803,8 @@ async function api(req, res, pathname) {
       passenger = db.prepare('SELECT * FROM passengers WHERE id=?').get(r.lastInsertRowid);
     }
     const { salt, hash } = hashPassword(pw);
-    const r = db.prepare(`INSERT INTO accounts (name, username, phone, email, password_salt, password_hash, role, passenger_id, driver_id)
-      VALUES (?,?,?,?,?,?,'user',?,NULL)`).run(nm, un, ph, em, salt, hash, passenger.id);
+    const r = db.prepare(`INSERT INTO accounts (name, username, phone, email, password_salt, password_hash, role, passenger_id, driver_id, email_verified)
+      VALUES (?,?,?,?,?,?,'user',?,NULL,?)`).run(nm, un, ph, em, salt, hash, passenger.id, emailVerified);
     const account = db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid);
     const token = newSession(account.id);
     return send(res, 200, { ok: true, account: publicAccount(account), token, passenger });
@@ -760,6 +828,102 @@ async function api(req, res, pathname) {
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
     return send(res, 200, { ok: true, account: publicAccount(a), token, passenger, driver: driver ? publicDriver(driver) : null });
+  }
+  // ---- Código por correo (v1.4.17) ----
+  if (pathname === '/api/request-email-code') {
+    const em = cleanEmail(body.email);
+    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return send(res, 400, { ok: false, error: 'Pon un correo válido.' });
+    if (!emailCodeEnabled()) return send(res, 400, { ok: false, error: 'El código por correo aún no está activado en SanFerGo. Regístrate con tu número o avísanos.', email_code_unavailable: true });
+    // Máximo 3 envíos por hora por correo (anti-spam) y 60 s entre envíos.
+    const recent = db.prepare(`SELECT COUNT(*) c FROM email_verifications WHERE email=? AND created_at >= datetime('now','-1 hour')`).get(em).c;
+    if (recent >= 3) return send(res, 429, { ok: false, error: 'Ya pediste 3 códigos en la última hora. Espera un poco e inténtalo de nuevo.' });
+    const last = db.prepare('SELECT created_at FROM email_verifications WHERE email=? ORDER BY id DESC LIMIT 1').get(em);
+    if (last) {
+      const wait = 60 - Math.floor((Date.now() - new Date(last.created_at.replace(' ', 'T') + 'Z').getTime()) / 1000);
+      if (wait > 0) return send(res, 429, { ok: false, error: 'Espera ' + wait + ' segundos para pedir otro código.', retry_after: wait });
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    db.prepare(`INSERT INTO email_verifications (email, code_hash, expires_at) VALUES (?,?,?)`).run(em, hashEmailCode(code), expires);
+    try { await sendEmailCode(em, code); }
+    catch (e) { return send(res, 502, { ok: false, error: 'No se pudo enviar el correo. Inténtalo de nuevo.' }); }
+    const out = { ok: true, email: em, expires_in: 600 };
+    if (RESEND_API_KEY === 'test') out.test_code = code; // solo en modo de pruebas
+    return send(res, 200, out);
+  }
+  if (pathname === '/api/verify-email-code') {
+    const em = cleanEmail(body.email);
+    const code = String(body.code || '').trim();
+    if (!em || !/^\d{6}$/.test(code)) return send(res, 400, { ok: false, error: 'Pon el código de 6 dígitos que llegó a tu correo.' });
+    const row = db.prepare(`SELECT * FROM email_verifications WHERE email=? AND used=0 ORDER BY id DESC LIMIT 1`).get(em);
+    if (!row) return send(res, 400, { ok: false, error: 'No hay ningún código pendiente para ese correo. Pídelo de nuevo.' });
+    // expires_at puede venir en ISO con Z (lo que guarda el servidor) o en
+    // formato SQLite 'YYYY-MM-DD HH:MM:SS' (UTC, sin zona): en ese caso se
+    // lee como UTC, nunca como hora local, o el código valdría 6 h de más.
+    const expStr = String(row.expires_at);
+    const expMs = Date.parse(expStr.endsWith('Z') ? expStr : expStr.replace(' ', 'T') + 'Z');
+    if (expMs < Date.now()) {
+      db.prepare('UPDATE email_verifications SET used=1 WHERE id=?').run(row.id);
+      return send(res, 400, { ok: false, error: 'Ese código ya venció. Pide uno nuevo.' });
+    }
+    if (row.attempts >= 5) {
+      db.prepare('UPDATE email_verifications SET used=1 WHERE id=?').run(row.id);
+      return send(res, 400, { ok: false, error: 'Demasiados intentos. Pide un código nuevo.' });
+    }
+    if (hashEmailCode(code) !== row.code_hash) {
+      const attempts = row.attempts + 1;
+      db.prepare('UPDATE email_verifications SET attempts=? WHERE id=?').run(attempts, row.id);
+      if (attempts >= 5) db.prepare('UPDATE email_verifications SET used=1 WHERE id=?').run(row.id);
+      return send(res, 400, { ok: false, error: attempts >= 5 ? 'Código incorrecto. Pide un código nuevo.' : 'Código incorrecto. Te quedan ' + (5 - attempts) + ' intentos.' });
+    }
+    // Código correcto: se consume y se entrega el pase de un solo uso que
+    // el registro debe presentar (vale 15 minutos).
+    const vtoken = crypto.randomBytes(24).toString('hex');
+    db.prepare(`UPDATE email_verifications SET used=1, verified_token=?, verified_at=datetime('now') WHERE id=?`).run(vtoken, row.id);
+    return send(res, 200, { ok: true, email: em, verification_token: vtoken });
+  }
+  // ---- Entrar con Google (v1.4.17) ----
+  if (pathname === '/api/auth/google') {
+    const idToken = String(body.id_token || body.credential || '').trim();
+    if (!idToken) return send(res, 400, { ok: false, error: 'Falta el token de Google.' });
+    if (!GOOGLE_CLIENT_ID) return send(res, 400, { ok: false, error: 'Entrar con Google aún no está activado en SanFerGo.', google_unavailable: true });
+    let info;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken), { signal: ctrl.signal });
+      clearTimeout(timer);
+      info = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error('tokeninfo ' + r.status);
+    } catch (e) { return send(res, 502, { ok: false, error: 'No se pudo verificar tu cuenta de Google. Inténtalo de nuevo.' }); }
+    if (info.aud !== GOOGLE_CLIENT_ID || !info.email || info.email_verified !== 'true' || (info.exp && Number(info.exp) * 1000 < Date.now()))
+      return send(res, 401, { ok: false, error: 'Esa cuenta de Google no se pudo verificar. Inténtalo de nuevo.' });
+    const em = cleanEmail(info.email);
+    let account = db.prepare('SELECT * FROM accounts WHERE email=?').get(em);
+    if (account) {
+      // El correo ya tiene cuenta (con contraseña o de Google): se enlaza,
+      // no se crea otra. El correo queda marcado verificado por Google.
+      db.prepare('UPDATE accounts SET email_verified=1 WHERE id=?').run(account.id);
+      account = db.prepare('SELECT * FROM accounts WHERE id=?').get(account.id);
+    } else {
+      const nm = String(info.name || em.split('@')[0] || 'Usuario').trim().slice(0, 60);
+      let base = cleanUsername(em.split('@')[0]).replace(/[^a-z0-9_]/g, '');
+      if (base.length < 3) base = 'user_' + base;
+      base = base.slice(0, 18);
+      let un = base, n = 1;
+      while (db.prepare('SELECT id FROM accounts WHERE username=?').get(un)) { n++; un = (base + n).slice(0, 20); }
+      // Contraseña aleatoria que nadie conoce: la cuenta entra con Google.
+      const { salt, hash } = hashPassword(crypto.randomBytes(32).toString('hex'));
+      const pr = db.prepare('INSERT INTO passengers (name, phone, face_photo) VALUES (?,?,NULL)').run(nm, '');
+      const passenger = db.prepare('SELECT * FROM passengers WHERE id=?').get(pr.lastInsertRowid);
+      const r = db.prepare(`INSERT INTO accounts (name, username, phone, email, password_salt, password_hash, role, passenger_id, driver_id, email_verified)
+        VALUES (?,?,NULL,?,?,?,'user',?,NULL,1)`).run(nm, un, em, salt, hash, passenger.id);
+      account = db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid);
+    }
+    const token = newSession(account.id);
+    const passenger = account.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(account.passenger_id) : null;
+    const driver = account.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(account.driver_id) : null;
+    return send(res, 200, { ok: true, account: publicAccount(account), token, passenger, driver: driver ? publicDriver(driver) : null });
   }
   if (pathname === '/api/claim-account') {
     const { phone, password, username, name } = body;

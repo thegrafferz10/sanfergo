@@ -50,6 +50,24 @@ Notas:
   `node server.js` con `systemd` o `pm2`, y abrir el puerto. Aquí sí hay
   costo mensual.
 
+## Variables de entorno (v1.4.17)
+
+Sin estas variables la app funciona igual que antes: el registro con
+correo no pide código y el botón de Google muestra su aviso. Para activar
+las dos cosas, en Railway (Variables del servicio):
+
+- `RESEND_API_KEY`: llave de Resend (https://resend.com, plan gratis:
+  100 correos al día) para mandar el código de 6 dígitos por correo.
+- `RESEND_FROM`: remitente del correo, por ejemplo
+  `SanFerGo <hola@sanfergo.app>` (el dominio debe estar verificado en
+  Resend; si no se pone, usa `onboarding@resend.dev`, que solo manda al
+  correo del dueño de la cuenta de Resend).
+- `GOOGLE_CLIENT_ID`: ID de cliente OAuth de Google Cloud (consola de
+  Google Cloud → Credenciales → ID de cliente OAuth → tipo "Aplicación
+  web", con el origen autorizado
+  `https://sanfergo-production.up.railway.app` y luego el dominio propio
+  cuando se compre).
+
 ## Qué NO funciona como lanzamiento
 
 - El enlace del prototipo viejo (solo datos locales por teléfono).

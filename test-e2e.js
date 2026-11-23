@@ -199,8 +199,15 @@ async function api(path, body) {
   check('login con contraseña incorrecta rechazado', !liBad.ok, JSON.stringify(liBad));
   const liNone = await api('/api/login', { identifier: 'nadie_' + RUN, password: 'secreta123' });
   check('login con usuario inexistente rechazado', !liNone.ok && !liNone.needs_claim, JSON.stringify(liNone));
-  const accMail = await api('/api/register-account', { name: 'Beto Correo', username: 'beto_' + RUN, email: 'beto' + RUN + '@prueba.mx', password: 'secreta123' });
-  check('crear cuenta solo con correo (crea perfil de pasajero)', accMail.ok && accMail.account.email === 'beto' + RUN + '@prueba.mx' && !!accMail.passenger, JSON.stringify(accMail));
+  // v1.4.17: con el código por correo activado, registrarse con correo exige
+  // verificar el código primero; la suite corre con RESEND_API_KEY=test, así
+  // que el código llega en test_code (sin salir ningún correo real).
+  const mailCode = await api('/api/request-email-code', { email: 'beto' + RUN + '@prueba.mx' });
+  check('pedir código para el correo (modo de pruebas, sin correo real)', mailCode.ok && /^\d{6}$/.test(mailCode.test_code || ''), JSON.stringify(mailCode));
+  const mailVer = await api('/api/verify-email-code', { email: 'beto' + RUN + '@prueba.mx', code: mailCode.test_code });
+  check('verificar el código entrega el pase de un solo uso', mailVer.ok && !!mailVer.verification_token, JSON.stringify(mailVer));
+  const accMail = await api('/api/register-account', { name: 'Beto Correo', username: 'beto_' + RUN, email: 'beto' + RUN + '@prueba.mx', password: 'secreta123', email_code_token: mailVer.verification_token });
+  check('crear cuenta solo con correo (crea perfil de pasajero, correo verificado)', accMail.ok && accMail.account.email === 'beto' + RUN + '@prueba.mx' && !!accMail.passenger && accMail.account.email_verified === 1, JSON.stringify(accMail));
   const dupMail = await api('/api/register-account', { name: 'Otro Beto', username: 'otrob_' + RUN, email: 'beto' + RUN + '@prueba.mx', password: 'secreta123' });
   check('correo duplicado no crea otra cuenta: avisa a nombre de quién está', !dupMail.ok && dupMail.exists === true && dupMail.existing_name === 'Beto Correo' && dupMail.field === 'email', JSON.stringify(dupMail));
   const liMail = await api('/api/login', { identifier: 'beto' + RUN + '@prueba.mx', password: 'secreta123' });
@@ -326,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.16 en /api/health', h.ok && h.version === '1.4.16', JSON.stringify(h));
+  check('versión 1.4.17 en /api/health', h.ok && h.version === '1.4.17', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -427,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.16', h134.ok && h134.version === '1.4.16', JSON.stringify(h134));
+  check('versión 1.4.17', h134.ok && h134.version === '1.4.17', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -443,7 +450,11 @@ async function api(path, body) {
   const srv = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
   check('ojo para ver contraseña en los 4 campos (login, registro x2, reclamo)', ['li-pass', 'rc-pass', 'rc-pass2', 'cl-pass'].every(id => html.includes("pwInput('" + id + "'")) && html.includes('function togglePw'));
   check('el cliente pinta rótulos de lugares en el mapa de marcar punto', html.includes('drawPlaceLabels') && html.includes('LANDMARKS') && html.includes('place-label'));
-  check('mapas sin llave en cliente y servidor (nada de MapTiler ni api_key)', !/maptiler/i.test(html + srv) && !/api[_-]?key/i.test(html + srv));
+  // Mapas sin llave: las tres fuentes del mapa (estilo Meta, OSM, Esri) no
+  // llevan ningún parámetro de llave. Antes el check buscaba "api_key" en
+  // todo el código, pero v1.4.17 usa una llave de Resend para el correo
+  // (no es del mapa), así que el check ahora mira solo las rutas del mapa.
+  check('mapas sin llave en cliente y servidor (nada de MapTiler ni llave en las rutas del mapa)', !/maptiler/i.test(html + srv) && !/META_STYLE_URL = '[^']*[?&]key=/i.test(html) && !/LIGHT_TILES = '[^']*[?&]key=/i.test(html) && !/ESRI_TILES = '[^']*[?&]key=/i.test(html));
   // Corrección del orden del viaje activo (v1.3.4): el aviso verde ya NO va
   // arriba; va en la columna de abajo, debajo de Cancelar, sobre la tarjeta.
   check('orden corregido del viaje activo: aviso verde en la columna de abajo, no arriba', html.includes('.strip.bottom.paxbot .arrive') && !html.includes('.strip.top.paxcol .arrive') && !/top\.innerHTML = \(showArrive/.test(html));
@@ -585,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.16)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.16';") && h.version === '1.4.16', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.17)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.17';") && h.version === '1.4.17', 'health=' + JSON.stringify(h));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
@@ -883,6 +894,111 @@ async function api(path, body) {
   check('mandado "enviar" guarda vehicle=mototaxi y WhatsApp de quien recibe', manEnv.ok && manEnv.request.vehicle === 'mototaxi' && manEnv.request.recipient_phone === '9614444444', JSON.stringify(manEnv.request));
   const envNo = await api('/api/driver-respond', { driver_id: drvM.driver.id, request_id: manEnv.request.id, kind: 'acepta', price: 30 });
   check('moto no toma mandado "enviar" en mototaxi', !envNo.ok, JSON.stringify(envNo));
+
+  console.log('== v1.4.17: código por correo + entrar con Google ==');
+  // /api/config: qué opciones están activadas (la suite corre con
+  // RESEND_API_KEY=test y GOOGLE_CLIENT_ID=test-client-id).
+  const cfg = await api('/api/config');
+  check('config: dice si el código por correo y Google están activados', cfg.ok && cfg.emailCode === true && cfg.googleClientId === 'test-client-id', JSON.stringify(cfg));
+  // Sin Resend ni Google configurados: el código devuelve un error claro
+  // (no se rompe nada) y Google también. Se levanta un segundo servidor
+  // limpio en otro puerto, sin variables, solo para este caso.
+  const { spawn } = require('node:child_process');
+  const noKeyDir = '/tmp/sfg-nokey-' + RUN;
+  const noKey = spawn(process.execPath, ['server.js'], { cwd: __dirname, env: { ...process.env, PORT: '3101', DATA_DIR: noKeyDir, RESEND_API_KEY: '', GOOGLE_CLIENT_ID: '' }, stdio: 'ignore' });
+  async function waitHealth(base, tries) {
+    for (let i = 0; i < (tries || 20); i++) {
+      try { const r = await fetch(base + '/api/health'); const j = await r.json(); if (j.ok) return true; } catch (e) {}
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return false;
+  }
+  const noKeyUp = await waitHealth('http://localhost:3101');
+  check('segundo servidor sin llaves levanta para probar el caso desactivado', noKeyUp);
+  if (noKeyUp) {
+    const cfgOff = await (await fetch('http://localhost:3101/api/config')).json();
+    check('config sin llaves: código por correo y Google desactivados', cfgOff.ok && cfgOff.emailCode === false && cfgOff.googleClientId == null, JSON.stringify(cfgOff));
+    const codeOff = await (await fetch('http://localhost:3101/api/request-email-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'nadie@prueba.mx' }) })).json();
+    check('pedir código sin Resend devuelve error claro, sin romperse', !codeOff.ok && /aún no está activado/.test(codeOff.error || '') && codeOff.email_code_unavailable === true, JSON.stringify(codeOff));
+    const gOff = await (await fetch('http://localhost:3101/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: 'token-falso' }) })).json();
+    check('Google sin client ID devuelve error claro, sin romperse', !gOff.ok && /aún no está activado/.test(gOff.error || '') && gOff.google_unavailable === true, JSON.stringify(gOff));
+  }
+  noKey.kill('SIGKILL');
+  try { fs.rmSync(noKeyDir, { recursive: true, force: true }); } catch (e) {}
+  // Flujo completo del código (servidor principal, RESEND_API_KEY=test).
+  const emV = 'verif' + RUN + '@prueba.mx';
+  const reqV = await api('/api/request-email-code', { email: emV });
+  check('pedir código: llega el código en modo de pruebas', reqV.ok && /^\d{6}$/.test(reqV.test_code || '') && reqV.expires_in === 600, JSON.stringify(reqV));
+  const wrongV = await api('/api/verify-email-code', { email: emV, code: '000000' });
+  check('código incorrecto rechazado (quedan intentos)', !wrongV.ok && /quedan/.test(wrongV.error || ''), JSON.stringify(wrongV));
+  const regNoTok = await api('/api/register-account', { name: 'Sin Token', username: 'sintok_' + RUN, email: emV, password: 'secreta123' });
+  check('registrarse con correo sin verificar el código rechazado', !regNoTok.ok && regNoTok.needs_email_code === true, JSON.stringify(regNoTok));
+  const verV = await api('/api/verify-email-code', { email: emV, code: reqV.test_code });
+  check('código correcto verificado: entrega el pase', verV.ok && !!verV.verification_token, JSON.stringify(verV));
+  const regV = await api('/api/register-account', { name: 'Verif Correo', username: 'verif_' + RUN, email: emV, password: 'secreta123', email_code_token: verV.verification_token });
+  check('con el pase, la cuenta se crea con el correo verificado', regV.ok && regV.account.email_verified === 1 && !!regV.token, JSON.stringify(regV));
+  const reuseV = await api('/api/register-account', { name: 'Reuso', username: 'reuso_' + RUN, email: 'otro' + RUN + '@prueba.mx', password: 'secreta123', email_code_token: verV.verification_token });
+  check('el pase es de un solo uso: con otro correo ya no sirve', !reuseV.ok && reuseV.needs_email_code === true, JSON.stringify(reuseV));
+  const meV = await api('/api/me?token=' + regV.token);
+  check('/api/me muestra el correo verificado', meV.ok && meV.account.email_verified === 1, JSON.stringify(meV));
+  // Bloqueo por intentos: 5 códigos malos agotan el código.
+  const emL = 'bloq' + RUN + '@prueba.mx';
+  const reqL = await api('/api/request-email-code', { email: emL });
+  check('código para probar el bloqueo por intentos', reqL.ok && /^\d{6}$/.test(reqL.test_code || ''));
+  for (let i = 0; i < 5; i++) {
+    const w = await api('/api/verify-email-code', { email: emL, code: '000000' });
+    if (i < 4) check('intento fallido ' + (i + 1) + ' de 5 rechazado con intentos restantes', !w.ok && /quedan/.test(w.error || ''), JSON.stringify(w));
+    else check('al 5.º intento fallido el código se agota', !w.ok && /Pide un código nuevo/.test(w.error || ''), JSON.stringify(w));
+  }
+  const verL = await api('/api/verify-email-code', { email: emL, code: reqL.test_code });
+  check('tras agotar los intentos, ni el código correcto sirve', !verL.ok, JSON.stringify(verL));
+  // Vencimiento: se atrasa expires_at directo en la BD (la suite tiene
+  // acceso al archivo) y el código correcto ya no sirve.
+  const emX = 'venc' + RUN + '@prueba.mx';
+  const reqX = await api('/api/request-email-code', { email: emX });
+  check('código para probar el vencimiento', reqX.ok && /^\d{6}$/.test(reqX.test_code || ''));
+  {
+    const { DatabaseSync } = require('node:sqlite');
+    const dbPath = path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'sanfergo.db');
+    const tdb = new DatabaseSync(dbPath);
+    tdb.prepare(`UPDATE email_verifications SET expires_at=datetime('now','-1 minute') WHERE email=?`).run(emX);
+    tdb.close();
+  }
+  const verX = await api('/api/verify-email-code', { email: emX, code: reqX.test_code });
+  check('código vencido rechazado (pide uno nuevo)', !verX.ok && /venció/.test(verX.error || ''), JSON.stringify(verX));
+  // Límites de envío: 60 s entre códigos y máximo 3 por hora por correo.
+  // Se atrasa created_at en la BD para no esperar 60 s reales entre envíos.
+  const emR = 'tasa' + RUN + '@prueba.mx';
+  async function backdateLatest(email) {
+    const { DatabaseSync } = require('node:sqlite');
+    const dbPath = path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'sanfergo.db');
+    const tdb = new DatabaseSync(dbPath);
+    tdb.prepare(`UPDATE email_verifications SET created_at=datetime('now','-61 seconds') WHERE id=(SELECT id FROM email_verifications WHERE email=? ORDER BY id DESC LIMIT 1)`).run(email);
+    tdb.close();
+  }
+  const rate1 = await api('/api/request-email-code', { email: emR });
+  check('tasa: 1.er código', rate1.ok);
+  const rSoon = await api('/api/request-email-code', { email: emR });
+  check('tasa: reenvío inmediato rechazado (espera 60 s)', !rSoon.ok && /Espera/.test(rSoon.error || '') && typeof rSoon.retry_after === 'number', JSON.stringify(rSoon));
+  await backdateLatest(emR);
+  const rate2 = await api('/api/request-email-code', { email: emR });
+  check('tasa: 2.º código tras 60 s', rate2.ok);
+  await backdateLatest(emR);
+  const rate3 = await api('/api/request-email-code', { email: emR });
+  check('tasa: 3.er código tras 60 s', rate3.ok);
+  await backdateLatest(emR);
+  const rate4 = await api('/api/request-email-code', { email: emR });
+  check('tasa: 4.º código en una hora rechazado (máximo 3)', !rate4.ok && /3 códigos/.test(rate4.error || ''), JSON.stringify(rate4));
+  // Google: token inválido y sin token, rechazados.
+  const gBad = await api('/api/auth/google', { id_token: 'token-falso-' + RUN });
+  check('Google con token inválido rechazado', !gBad.ok && typeof gBad.error === 'string' && gBad.error.length > 0, JSON.stringify(gBad));
+  const gNone = await api('/api/auth/google', {});
+  check('Google sin token rechazado', !gNone.ok && /Falta el token/.test(gNone.error || ''), JSON.stringify(gNone));
+  // Cliente: botón de Google real (GSI) y paso del código en el registro.
+  check('cliente: carga Google Identity Services y usa el client ID de /api/config (v1.4.17)', html.includes("s.src = 'https://accounts.google.com/gsi/client'") && html.includes("window.google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogleSignIn") && html.includes("api('/api/config')") && html.includes('function onGoogleSignIn(resp)') && html.includes("api('/api/auth/google', { id_token: cred })"));
+  check('cliente: el registro con correo pide el código y muestra el paso "Revisa tu correo" (v1.4.17)', html.includes("api('/api/request-email-code', { email })") && html.includes('function showEmailCodeStep(email)') && html.includes('Revisa tu correo') && html.includes('function doVerifyEmailCode()') && html.includes("api('/api/verify-email-code'") && html.includes("email_code_token: v.verification_token") && html.includes('function resendEmailCode()'));
+  check('cliente: el botón de Google se reemplaza por el real solo si hay client ID; si no, queda el aviso (v1.4.17)', html.includes('id="google-btn-wrap"') && html.includes("if(cfg.googleClientId) setupGoogleSignIn()") && html.includes("if(!wrap || !cfg.googleClientId) return;"));
+  check('cliente: solo con número el registro sigue directo, sin código (v1.4.17)', html.includes("if(email){") && html.includes('Con correo y el código activado, primero va el código'));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

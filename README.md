@@ -1,9 +1,21 @@
-# SanFerGo — versión pública (v1.4.15)
+# SanFerGo — versión pública (v1.4.17)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.17 (2026-11-23) — registro con código por correo + entrar con Google
+
+- Petición del usuario: ahora que la app está alojada, al registrarse se puede pedir un código por correo o entrar con Google (antes no había código y el botón de Google era solo un aviso).
+- Código por correo: al registrarse con correo, el servidor manda un código de 6 dígitos por correo (API HTTP de Resend, sin dependencias nuevas) y la cuenta se crea solo después de escribirlo. El código va hasheado (SHA-256), vence en 10 minutos, se agota a los 5 intentos fallidos; máximo 3 envíos por hora y 60 s entre envíos por correo. La pantalla "Revisa tu correo" tiene reenvío con cuenta atrás y "Cambiar correo o datos". Solo con número el registro sigue directo, sin código, como antes.
+- Entrar con Google: botón real de Google (Google Identity Services) en el inicio de sesión; el servidor verifica el token con Google (tokeninfo: aud, correo verificado, expiración) y crea la cuenta o enlaza la que ya tenga ese correo (con su pasajero). El client ID llega al cliente por `/api/config` (es un identificador público, no un secreto).
+- Sin las variables configuradas (`RESEND_API_KEY`, `RESEND_FROM`, `GOOGLE_CLIENT_ID`) la app sigue funcionando como antes: el código por correo queda desactivado y el botón de Google muestra su aviso, sin romperse nada. Cuentas viejas, viajes, tarifa, mapa y anuncios sin cambios.
+- Pruebas: suite completa contra BD limpia: 306 OK, 0 FAIL (272 de antes + 34 nuevos: flujo del código, límites, vencimiento, bloqueo por intentos, Google rechazado y cliente), más 13 OK, 0 FAIL en jsdom para la pantalla de login (botón de Google real y paso del código). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id` y una BD limpia; el envío real de correos no se prueba (no sale ningún correo).
+
+## v1.4.16 (2026-11-23) — carrusel de anuncios en Negocios
+
+- Petición del usuario con captura de referencia (como el inicio de la app de la captura): en Negocios, arriba van los anuncios en formato horizontal y abajo las tarjetas de negocios. Carrusel con los anuncios activos que rotan en Negocios (los mismos de `/api/ads` que el flotante de entrada), banners de 210 px con swipe (scroll-snap), puntos abajo, auto-avance cada 5 s que se pausa al tocar; tocar un anuncio vinculado abre su negocio, el libre no hace nada; sin anuncios activos no se muestra nada. Los tres botones y las tarjetas de negocios quedan exactos. El anuncio flotante de entrada no cambia.
 
 ## v1.4.15 (2026-11-22) — paso de detalles sin aplastar + mapa en vivo del chofer encuadrado por etapa
 
