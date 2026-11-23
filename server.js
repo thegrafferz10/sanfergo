@@ -260,6 +260,9 @@ addCol('ads', 'entries', 'TEXT');
 // quedan aprobados; solo los nuevos nacen PENDIENTES.
 db.exec(`UPDATE drivers SET status='aprobado' WHERE status IS NULL OR status=''`);
 addCol('requests', 'recipient_phone', 'TEXT');
+addCol('requests', 'recipient_name', 'TEXT'); // v1.4.34: nombre de quien recibe (Enviar)
+addCol('requests', 'order_payment', 'TEXT'); // v1.4.34: 'pagado' | 'por_pagar' (Enviar)
+addCol('requests', 'order_amount', 'REAL DEFAULT 0'); // v1.4.34: efectivo que el chofer lleva para recoger el mandado
 addCol('requests', 'items_json', 'TEXT');
 addCol('requests', 'stops_json', 'TEXT');
 addCol('requests', 'extra_stops', 'INTEGER DEFAULT 0');
@@ -687,7 +690,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.33' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.34' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1757,7 +1760,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/create-request') {
     const { passenger_id, passenger_name, passenger_phone, kind, origin_zone, origin_detail, origin_lat, origin_lng,
       dest_zone, dest_detail, dest_lat, dest_lng, distance_km, eta_minutes, price, payment_method, description,
-      recipient_phone, items, stops, extra_stops, vehicle } = body;
+      recipient_phone, recipient_name, order_payment, order_amount, items, stops, extra_stops, vehicle } = body;
     if (kind !== 'viaje' && kind !== 'mandado') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
     if (!dest_zone && !dest_detail) return send(res, 400, { ok: false, error: 'Falta el destino.' });
     // No se publica sin número de teléfono del pasajero: el conductor
@@ -1782,19 +1785,32 @@ async function api(req, res, pathname) {
     // Forma de pago OBLIGATORIA al publicar (v1.3.0): es la final del
     // servicio y ya no se vuelve a pedir al confirmar.
     if (payment_method !== 'efectivo' && payment_method !== 'transferencia') return send(res, 400, { ok: false, error: 'Elige la forma de pago: efectivo o transferencia.' });
+    // Enviar un mandado (v1.4.34): quien recibe (nombre + WhatsApp de 10
+    // dígitos) y cómo se paga el pedido son obligatorios; si se va a pagar,
+    // la cantidad que el chofer lleva también lo es.
+    if (body.type === 'enviar') {
+      if (!String(recipient_name || '').trim()) return send(res, 400, { ok: false, error: 'Escribe el nombre de quién recibe el mandado.' });
+      if (!recipient_phone || String(recipient_phone).replace(/\D/g, '').length !== 10) return send(res, 400, { ok: false, error: 'Escribe el WhatsApp completo de quien recibe: 10 dígitos.' });
+      if (order_payment !== 'pagado' && order_payment !== 'por_pagar') return send(res, 400, { ok: false, error: 'Elige cómo se paga el pedido: ya pagado o se pagará.' });
+      if (order_payment === 'por_pagar' && !(Number(order_amount) > 0)) return send(res, 400, { ok: false, error: 'Escribe la cantidad que el chofer necesita llevar para recoger el mandado.' });
+    }
     const itemsJson = items ? JSON.stringify(items) : null;
     const stopsJson = stops ? JSON.stringify(stops) : null;
     const r = db.prepare(`INSERT INTO requests (kind, passenger_id, passenger_name, passenger_phone, passenger_photo,
       origin_zone, origin_detail, origin_lat, origin_lng, dest_zone, dest_detail, dest_lat, dest_lng,
-      distance_km, eta_minutes, price, payment_method, description, recipient_phone, items_json, stops_json, extra_stops,
+      distance_km, eta_minutes, price, payment_method, description, recipient_phone, recipient_name, order_payment, order_amount, items_json, stops_json, extra_stops,
       vehicle, status, trip_stage)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
       kind, passenger_id || null, pName || null, pPhone, p ? p.face_photo : null,
       origin_zone || null, origin_detail || null, origin_lat ?? null, origin_lng ?? null,
       dest_zone || null, dest_detail || null, dest_lat ?? null, dest_lng ?? null,
       Math.round(km * 10) / 10, eta_minutes ?? Math.max(3, Math.round(km * 3.5)), finalPrice,
       payment_method, description || '',
-      recipient_phone ? String(recipient_phone).trim() : null, itemsJson, stopsJson, extra_stops || 0, reqVehicle);
+      recipient_phone ? String(recipient_phone).trim() : null,
+      recipient_name ? String(recipient_name).trim() : null,
+      order_payment === 'pagado' || order_payment === 'por_pagar' ? order_payment : null,
+      order_payment === 'por_pagar' ? Number(order_amount) || 0 : 0,
+      itemsJson, stopsJson, extra_stops || 0, reqVehicle);
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(r.lastInsertRowid) });
   }
   if (pathname === '/api/requests') {

@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.33)
+# SanFerGo — versión pública (v1.4.34)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.34 (2026-11-23) — Mandados 'Enviar': quien recibe en el paso 2, sin paso 3, y pago del pedido
+
+- El flujo de 'Enviar un mandado' pasa de 5 a 4 pasos: el paso 3 (\"¿Quién lo recibe?\") se borró entero porque repetía lo del paso 2 (mismo número, mismo botón de pedir ubicación y mismo punto pegado). El paso 2 (\"¿Dónde se entrega?\") ahora recoge, en este orden: **Nombre de quién recibe** (obligatorio), **WhatsApp de quien recibe** (obligatorio, 10 dígitos, ya sin \"(opcional)\"), y SOLO cuando el número está completo aparecen el botón **Pedir ubicación por WhatsApp** y la caja **¿Ya te mandaron la ubicación por WhatsApp?** para pegar el enlace o las coordenadas. Continuar sigue exigiendo el punto de entrega marcado desde WhatsApp, además del nombre y el número. El paso de detalles (\"¿Qué hay que entregar?\", ahora paso 3 de 4) trae **¿Cómo se paga el pedido?** con dos opciones — **Pedido ya pagado** / **Se pagará el pedido** — y, si se va a pagar, el campo **Cantidad que el chofer necesita llevar para recoger el mandado** (obligatorio en ese caso: es el efectivo que el chofer adelanta al recoger). Todo viaja con el mandado publicado (columnas nuevas `recipient_name`, `order_payment`, `order_amount` en `requests`, por el patrón `addCol`): el chofer lo ve en la solicitud como \"Recibe: nombre · teléfono\" y \"Pedido: ya pagado\" o \"Pedido: se pagará · Lleva $X para recogerlo\". El servidor rechaza un 'Enviar' sin nombre, sin WhatsApp de 10 dígitos, sin opción de pago, o con \"se pagará\" sin cantidad. Sin tocar el flujo 'Quiero un mandado' (sigue en 5 pasos) ni los viajes.
+- Pruebas: suite completa contra BD limpia: 509 OK, 0 FAIL (499 de antes + 10 nuevas: 7 estáticas del paso 2, el paso 3 borrado, el pago del pedido, la vista del chofer y la publicación, y 3 en vivo del guardado y la validación en `/api/create-request`).
 
 ## v1.4.33 (2026-11-23) — Mandados 'Enviar': paso de entrega solo con WhatsApp
 
