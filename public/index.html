@@ -341,6 +341,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
     <div class="home-top"><div class="logo">SanFer<span>Go</span></div><div class="sub">San Fernando, Chiapas</div></div>
     <h1 class="mt">¿Qué necesitas hoy?</h1>
     <p class="muted">Elige una opción para empezar.</p>
+    <div id="home-active-banner"></div>
     <div id="home-menu"></div>
     <div id="home-driver-btn"></div>
     <div id="home-account-link" class="center" style="margin-top:14px"></div>
@@ -434,7 +435,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.13'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.14'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -964,6 +965,37 @@ function renderHome(){
     db.innerHTML = '<button class="driver-card" onclick="openRegistro(\'chofer\')"><span class="chev">›</span><b>Registrarse como conductor</b><span class="hint">Regístrate gratis y empieza a recibir viajes y mandados.</span></button>';
   }
   loadHomeAds();
+  fillHomeActiveBanner();
+}
+let paxActiveId = null, dismissedPaxActiveId = null; // aviso de viaje activo en Inicio: la X solo lo oculta en esta sesión; al recargar vuelve porque el viaje sigue activo en el servidor
+async function fillHomeActiveBanner(){
+  // Banner de viaje activo en Inicio (app real: aviso "¡Tu viaje fue
+  // aceptado!" con botón "Ver mi viaje en curso" que abre el mapa en
+  // vivo). Sin viaje aceptado no se pinta nada.
+  const b = document.getElementById('home-active-banner'); if(!b) return;
+  if(!myPassenger){ b.innerHTML = ''; return; }
+  let active = null;
+  try {
+    const v = await myActiveRequest('viaje');
+    const m = await myActiveRequest('mandado');
+    active = [v, m].find(r=>r && r.status==='aceptado') || null;
+  } catch(e){ active = null; }
+  if(!active || active.id===dismissedPaxActiveId){ paxActiveId = null; b.innerHTML = ''; return; }
+  paxActiveId = active.id;
+  const isMan = active.kind==='mandado';
+  b.innerHTML = '<div class="card" style="background:#14532d;color:#fff;border:none">'
+    + '<div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><b style="font-size:18px">'
+    + (isMan ? '¡Tu mandado fue aceptado! El conductor viene en camino' : '¡Tu viaje fue aceptado! Tu mototaxi viene en camino')
+    + '</b><p class="mt" style="color:rgba(255,255,255,.85)">'+esc(active.origin_zone||'')+' → '+esc(active.dest_zone||'')
+    + (active.driver_name ? ' · con '+esc(active.driver_name) : '')+' · '+fmt$(active.final_price||active.price)+'</p></div>'
+    + '<button aria-label="Cerrar aviso" onclick="dismissPaxActiveBanner()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:800;line-height:1;flex:none">×</button></div>'
+    + '<button class="btn amber" style="width:100%;margin-top:12px" onclick="goLive('+active.id+', false)">'
+    + (isMan ? 'Ver mi mandado en curso' : 'Ver mi viaje en curso')+'</button></div>';
+}
+function dismissPaxActiveBanner(){
+  dismissedPaxActiveId = paxActiveId;
+  const b = document.getElementById('home-active-banner');
+  if(b) b.innerHTML = '';
 }
 function loadHomeAds(){ /* v1.3.5: el Inicio NO muestra anuncios. Los anuncios
   salen flotando, uno a la vez, al entrar a Viajes, Negocios o Mandados
@@ -1526,7 +1558,7 @@ function drawWizMap(){
   wizMap.on('load', async ()=>{
     new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([wiz.origin.lng, wiz.origin.lat]).addTo(wizMap);
     new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([wiz.dest.lng, wiz.dest.lat]).addTo(wizMap);
-    const rt = await osrmRoute(wiz.origin, wiz.dest);
+    let rt = null; try { rt = await osrmRoute(wiz.origin, wiz.dest); } catch(e){}
     if(rt) setRouteLine(wizMap, 'route', rt.coords, '#2b7de9', 5);
     fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]]);
   });
@@ -2114,7 +2146,7 @@ async function openLiveTrip(requestId, asDriver){
     liveMap.on('rotatestart', liveFollowOff);
   }
   liveMap.resize();
-  await renderLiveMap();
+  try { await renderLiveMap(); } catch(e){ /* el mapa igual abre: las tiras se dibujan abajo */ }
   renderLiveStrips();
   startLivePolling();
   startDriverGpsWatch();
@@ -2129,7 +2161,10 @@ async function renderLiveMap(){
   const inTrip = (r.trip_stage==='en_viaje' || r.trip_stage==='finalizado');
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
-  const rt = from ? await osrmRoute(from, target) : null;
+  // Si OSRM falla (sin señal en la carretera), el mapa en vivo igual se
+  // abre con los puntos y las tiras; solo falta la línea azul de la ruta.
+  let rt = null;
+  if(from){ try { rt = await osrmRoute(from, target); } catch(e){ rt = null; } }
   if(rt){ liveRouteCoords = rt.coords; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
   else { liveRouteCoords = null; /* sin ruta OSRM: no se dibuja línea recta */ }
   if(liveAsDriver){
@@ -2985,7 +3020,7 @@ function drawMdMap(){
   mdMap.on('load', async ()=>{
     new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([first.lng, first.lat]).addTo(mdMap);
     new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([dest.lng, dest.lat]).addTo(mdMap);
-    const rt = await osrmRoute(first, dest);
+    let rt = null; try { rt = await osrmRoute(first, dest); } catch(e){}
     if(rt) setRouteLine(mdMap, 'route', rt.coords, '#2b7de9', 5);
     fitPoints(mdMap, [[first.lng, first.lat], [dest.lng, dest.lat]]);
   });
@@ -3350,6 +3385,12 @@ function driverTab(tab){
   if(tab==='recibir') renderDriverInbox();
 }
 let driverHomeExpanded = null; // 'plan' | 'trips' | 'hist' | null
+let driverActiveId = null, dismissedDriverActiveId = null; // la X del banner de viaje activo solo lo oculta en esta sesión; al recargar vuelve porque el viaje sigue activo en el servidor
+function dismissDriverActiveBanner(){
+  dismissedDriverActiveId = driverActiveId;
+  const b = document.getElementById('driver-active-banner');
+  if(b) b.innerHTML = '';
+}
 function driverEntry(key, label, pill){
   return '<button class="driver-entry" onclick="driverHomeExpand(\''+key+'\')"><span><b>'+label+'</b> '+(pill||'')+'</span><span style="font-size:20px;color:var(--green)">›</span></button>';
 }
@@ -3392,7 +3433,8 @@ function renderDriverHome(){
   if(blocked) onlineWhy = 'Estás bloqueado por el administrador: no puedes ponerte en línea.';
   else if(!approved) onlineWhy = 'Tu registro está pendiente de aprobación del administrador.';
   else if(!complete) onlineWhy = 'Tu registro está incompleto: sube tus dos fotos para ponerte en línea.';
-  p.innerHTML = '<div class="card white"><div class="flex">'
+  p.innerHTML = '<div id="driver-active-banner"></div>'
+  + '<div class="card white"><div class="flex">'
     + (d.selfie?'<img style="width:84px;height:84px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #16a34a" src="'+d.selfie+'">':'<div class="avatar" style="width:84px;height:84px;font-size:34px;display:flex;align-items:center;justify-content:center;border:3px solid #16a34a">👤</div>')
     + '<div class="flex1"><b style="font-size:19px">'+esc(d.name)+'</b><div class="muted">'+vehicleLine+'</div></div></div>'
     + '<div class="mt" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="chip '+(d.online?'':'red')+'">'+(d.online?'● EN LÍNEA':'● FUERA DE LÍNEA')+'</span><span class="muted">WhatsApp '+esc(d.phone)+'</span></div>'
@@ -3416,6 +3458,29 @@ function renderDriverHome(){
     if(tt && c.active) tt.textContent = 'Servicio en curso · ver el mapa';
     const ts = document.getElementById('de-trips-sub');
     if(ts) ts.textContent = c.confirmedTotal ? (c.confirmedTotal + ' en total · ' + c.inCourse + ' en curso') : 'Todavía no tienes viajes confirmados.';
+    // Banner de viaje activo ARRIBA del Inicio de chofer (app real:
+    // aviso verde "¡El pasajero confirmó tu viaje!" con botón ámbar
+    // "Ver mi viaje en curso" que abre el mapa en vivo). El viaje en
+    // vivo solo vivía en memoria: al salir del mapa o recargar, el
+    // chofer lo perdía y solo lo encontraba tras dos toques dentro de
+    // "Mis viajes confirmados". El banner se pinta desde el servidor
+    // en cada visita al inicio, así que sobrevive a salir y a recargar.
+    const db2 = document.getElementById('driver-active-banner');
+    if(db2){
+      if(c.active && c.active.id!==dismissedDriverActiveId){
+        driverActiveId = c.active.id;
+        const isMan = c.active.kind==='mandado';
+        db2.innerHTML = '<div class="card" style="background:#14532d;color:#fff;border:none">'
+          + '<div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><b style="font-size:18px">'
+          + (isMan ? '¡El pasajero confirmó tu mandado!' : '¡El pasajero confirmó tu viaje!')
+          + '</b><p class="mt" style="color:rgba(255,255,255,.85)">'+esc(c.active.origin_zone||'')+' → '+esc(c.active.dest_zone||'')
+          + (c.active.passenger_name ? ' · '+esc(c.active.passenger_name) : '')+' · '+fmt$(c.active.final_price||c.active.price)
+          + ' · ya puedes empezar el servicio.</p></div>'
+          + '<button aria-label="Cerrar aviso" onclick="dismissDriverActiveBanner()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:800;line-height:1;flex:none">×</button></div>'
+          + '<button class="btn amber" style="width:100%;margin-top:12px" onclick="goLive('+c.active.id+', true)">'
+          + (isMan ? 'Ver mi mandado en curso' : 'Ver mi viaje en curso')+'</button></div>';
+      } else { db2.innerHTML = ''; }
+    }
   });
 }
 function driverHomeExpand(key){
