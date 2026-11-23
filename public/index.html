@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.20'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.23'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1135,9 +1135,7 @@ function openRegistro(kind, ret){
     + '<div id="rp-prev">'+(hasPhoto?'<img src="'+myPassenger.face_photo+'">':'')+'</div>'
     + '<input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rp-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
     + '<div class="card warn"><b>Aviso: si guardas sin la foto de tu cara, tu registro queda incompleto.</b><p class="muted mt">Podrás subirla después aquí mismo.</p></div>'
-    + '<button class="btn" onclick="savePassenger()">Guardar mi perfil de pasajero</button>'
-    + '<div id="reg-pick-list"></div>';
-    renderRegPickList('pasajero');
+    + '<button class="btn" onclick="savePassenger()">Guardar mi perfil de pasajero</button>';
   } else {
     // Registro de conductor (app real): dos botones de vehículo, unidad
     // obligatoria, caja ámbar si falta una foto, nota de pendiente y lista
@@ -1151,9 +1149,7 @@ function openRegistro(kind, ret){
       + '<h2>Registro de conductor</h2>'
       + '<div class="card warn"><b>Tu registro está incompleto: falta ' + (!hasSelfie && !hasVeh ? 'tu foto y la foto de tu vehículo' : (!hasSelfie ? 'tu foto (selfie)' : 'la foto de tu vehículo')) + '.</b><p class="muted mt">Súbelas para poder ponerte en línea.</p></div>'
       + (hasSelfie ? '' : '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1"></div><input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rd-prev1\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'selfie\')">Subir mi foto</button>')
-      + (hasVeh ? '' : '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2"></div><input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'vehicle\')">Subir foto del vehículo</button>')
-      + '<div id="reg-pick-list"></div>';
-      renderRegPickList('chofer');
+      + (hasVeh ? '' : '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2"></div><input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'vehicle\')">Subir foto del vehículo</button>');
     } else {
       p.innerHTML = backPill('Regresar', "go('"+regReturn+"')")
       + '<h2>Registro de conductor</h2>'
@@ -1168,10 +1164,8 @@ function openRegistro(kind, ret){
       + '<input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
       + '<div id="rd-photo-warn"></div>'
       + '<p class="muted mt">Al registrarte, tu solicitud queda pendiente: el administrador de SanFerGo la revisa y, cuando la acepta, tu cuenta se activa y puedes ponerte en línea.</p>'
-      + '<button class="btn amber" onclick="saveDriver()">Registrarme como conductor</button>'
-      + '<h3 class="mt2">¿Ya eres conductor registrado? Elige tu perfil:</h3><div id="reg-pick-list"></div>';
+      + '<button class="btn amber" onclick="saveDriver()">Registrarme como conductor</button>';
       regVehicle = veh;
-      renderRegPickList('chofer');
     }
   }
   go('registro');
@@ -1183,30 +1177,6 @@ function renderRegVehicle(){
   if(m) m.classList.toggle('sel', regVehicle==='moto');
   const h = document.getElementById('rd-veh-hint');
   if(h) h.textContent = regVehicle==='moto' ? 'Con moto de dos ruedas solo podrás tomar mandados, no viajes de pasajeros.' : 'Con mototaxi puedes tomar viajes y mandados en mototaxi.';
-}
-async function renderRegPickList(kind){
-  const box = document.getElementById('reg-pick-list'); if(!box) return;
-  try {
-    if(kind==='pasajero'){
-      const j = await api('/api/passengers');
-      const list = (j.passengers||[]).slice(0, 8);
-      box.innerHTML = list.length ? '<p class="muted mt">¿Ya te registraste en este teléfono? Elige tu perfil:</p>' + list.map(p=>'<button class="listbtn" onclick="pickRegPassenger('+p.id+')"><span><b>'+esc(p.name)+'</b> · '+esc(p.phone)+'</span><span class="chip '+(p.face_photo?'':'amber')+'">'+(p.face_photo?'COMPLETO':'INCOMPLETO')+'</span></button>').join('') : '';
-    } else {
-      const j = await api('/api/drivers');
-      const list = (j.drivers||[]).slice(0, 8);
-      box.innerHTML = list.length ? list.map(d=>{
-        const complete = d.selfie && d.vehicle_photo;
-        const pill = d.status==='pendiente' ? '<span class="chip amber">PENDIENTE DE APROBACIÓN</span>' : (complete ? '<span class="chip">COMPLETO</span>' : '<span class="chip amber">INCOMPLETO</span>');
-        return '<button class="listbtn" onclick="pickRegDriver('+d.id+')"><span><b>'+esc(d.name)+'</b> · '+esc(d.vehicle)+' · Unidad '+esc(d.unit||'—')+'</span>'+pill+'</button>';
-      }).join('') : '';
-    }
-  } catch(e){}
-}
-async function pickRegPassenger(id){
-  try { const j = await api('/api/passengers'); const p = j.passengers.find(x=>x.id===id); if(!p) return; store.pid = p.id; myPassenger = p; if(myAccount){ try { await api('/api/link-profiles', { token: store.token, passenger_id: p.id }); } catch(e){} } await loadMe(); openRegistro('pasajero', regReturn); toast('Perfil elegido: '+p.name); } catch(e){ toast(e.message); }
-}
-async function pickRegDriver(id){
-  try { const j = await api('/api/drivers'); const d = j.drivers.find(x=>x.id===id); if(!d) return; store.did = d.id; myDriver = d; if(myAccount){ try { await api('/api/link-profiles', { token: store.token, driver_id: d.id }); } catch(e){} } await loadMe(); openRegistro('chofer', regReturn); toast('Perfil elegido: '+d.name); } catch(e){ toast(e.message); }
 }
 async function uploadDriverPhotoOnly(kind){
   const photo = kind==='selfie' ? regPhoto1 : regPhoto2;
@@ -1220,6 +1190,16 @@ async function savePassenger(){
   const photo = regPhoto1 || (myPassenger && myPassenger.face_photo);
   // Se puede guardar SIN foto: el registro queda incompleto (app real).
   try {
+    // v1.4.23: cuenta solo-correo (Google, sin teléfono): el enlace de
+    // abajo rechaza 400 sin teléfono (v1.4.21) y el error se tragaba en
+    // silencio, así que el pasajero quedaba creado pero SIN enlazar. El
+    // formulario sí pide el teléfono: se registra primero en la cuenta
+    // (igual que saveAccountPhone); si eso falla, se para aquí y NO se
+    // crea un perfil huérfano. Con teléfono ya en la cuenta, se salta.
+    if (myAccount && !myAccount.phone) {
+      const acc = await api('/api/set-account-phone', { token: store.token, phone });
+      myAccount = acc.account;
+    }
     if (myPassenger) {
       await api('/api/update-passenger', { passenger_id: myPassenger.id, name, phone });
       if(regPhoto1) await api('/api/upload-passenger-photo', { passenger_id: myPassenger.id, photo: regPhoto1 });
@@ -1248,6 +1228,16 @@ async function saveDriver(){
     warnBox.innerHTML = '<div class="card warn"><b>Aviso: falta ' + (!selfie && !vphoto ? 'las dos fotos' : (!selfie ? 'tu foto (selfie)' : 'la foto de tu vehículo')) + '.</b><p class="muted mt">Si te registras así, tu registro queda incompleto y no podrás ponerte en línea hasta subirlas.</p></div>';
   }
   try {
+    // v1.4.23: cuenta solo-correo (Google, sin teléfono): el enlace de
+    // abajo rechaza 400 sin teléfono (v1.4.21) y el chofer quedaba creado
+    // pero SIN enlazar (solo un toast de error). El formulario sí pide el
+    // WhatsApp: se registra primero en la cuenta (igual que
+    // saveAccountPhone); si eso falla, se para aquí y NO se crea un
+    // perfil huérfano. Con teléfono ya en la cuenta, se salta.
+    if (myAccount && !myAccount.phone) {
+      const acc = await api('/api/set-account-phone', { token: store.token, phone });
+      myAccount = acc.account;
+    }
     if (myDriver) {
       await api('/api/update-driver', { driver_id: myDriver.id, name, phone, vehicle, unit });
       if(regPhoto1) await api('/api/upload-driver-photo', { driver_id: myDriver.id, kind:'selfie', photo: regPhoto1 });
@@ -1585,6 +1575,12 @@ async function saveAccountPhone(){
   const ph = ($('#acc-phone').value||'').replace(/\D/g,'');
   if(ph.length !== 10) return toast('Escribe tu número de 10 dígitos.');
   try {
+    // v1.4.22: una cuenta solo-correo (Google) no puede enlazar un perfil
+    // sin teléfono (v1.4.21): primero se registra el número en la cuenta;
+    // si eso falla, se para aquí y NO se crea un pasajero que quedaría
+    // huérfano (sin enlace a la cuenta).
+    const acc = await api('/api/set-account-phone', { token: store.token, phone: ph });
+    myAccount = acc.account;
     const j = await api('/api/register-passenger', { name: myAccount.name, phone: ph, face_photo: null });
     store.pid = j.passenger.id; myPassenger = j.passenger;
     await api('/api/link-profiles', { token: store.token, passenger_id: j.passenger.id });
@@ -1628,6 +1624,15 @@ async function ensureNoProfilePassenger(){
   const phone = ($('#np-phone')||{}).value ? $('#np-phone').value.trim() : '';
   if(!name || !phone){ toast('Escribe tu nombre y tu número para pedir el viaje.'); return false; }
   try {
+    // v1.4.22: con cuenta solo-correo (Google, sin teléfono) el enlace de
+    // abajo rechazaría 400 (v1.4.21) y el pasajero quedaría huérfano: el
+    // número se registra primero en la cuenta, con el teléfono del
+    // formulario. Si eso falla, el error sale por el catch de abajo (toast
+    // y false) y NO se crea el pasajero.
+    if(myAccount && !myAccount.phone){
+      const acc = await api('/api/set-account-phone', { token: store.token, phone });
+      myAccount = acc.account;
+    }
     const j = await api('/api/register-passenger', { name, phone, face_photo: null });
     store.pid = j.passenger.id; myPassenger = j.passenger;
     if(myAccount){ try { await api('/api/link-profiles', { token: store.token, passenger_id: j.passenger.id }); } catch(e){} }
