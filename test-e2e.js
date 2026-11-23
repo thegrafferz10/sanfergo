@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.24 en /api/health', h.ok && h.version === '1.4.24', JSON.stringify(h));
+  check('versión 1.4.25 en /api/health', h.ok && h.version === '1.4.25', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.24', h134.ok && h134.version === '1.4.24', JSON.stringify(h134));
+  check('versión 1.4.25', h134.ok && h134.version === '1.4.25', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.24)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.24';") && h.version === '1.4.24', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.25)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.25';") && h.version === '1.4.25', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1292,6 +1292,51 @@ async function api(path, body) {
   check('cliente: el registro con correo pide el código y muestra el paso "Revisa tu correo" (v1.4.17)', html.includes("api('/api/request-email-code', { email })") && html.includes('function showEmailCodeStep(email)') && html.includes('Revisa tu correo') && html.includes('function doVerifyEmailCode()') && html.includes("api('/api/verify-email-code'") && html.includes("email_code_token: v.verification_token") && html.includes('function resendEmailCode()'));
   check('cliente: el botón de Google se reemplaza por el real solo si hay client ID; si no, queda el aviso (v1.4.17)', html.includes('id="google-btn-wrap"') && html.includes("if(cfg.googleClientId) setupGoogleSignIn()") && html.includes("if(!wrap || !cfg.googleClientId) return;"));
   check('cliente: solo con número el registro sigue directo, sin código (v1.4.17)', html.includes("if(email){") && html.includes('Con correo y el código activado, primero va el código'));
+
+  // v1.4.25: el admin cambia su propio usuario y/o contraseña desde
+  // el panel (POST /api/admin/change-credentials). La contraseña
+  // actual se verifica con el hash guardado; el usuario nuevo no
+  // puede ser el de otra cuenta; la sesión no depende de la
+  // contraseña, así que el cambio no cierra la sesión (el token viejo
+  // sigue sirviendo tras cambiar la contraseña).
+  console.log('== v1.4.25: el admin cambia su usuario y contraseña ==');
+  const ccNoTok = await api('/api/admin/change-credentials', { current_password: 'TestPass123', new_password: 'TestPass456' });
+  check('cambiar credenciales sin token rechazado (403)', !ccNoTok.ok, JSON.stringify(ccNoTok));
+  const ccUser = await api('/api/admin/change-credentials', { token: li1.token, current_password: 'secreta123', new_password: 'TestPass456' });
+  check('cambiar credenciales con cuenta normal rechazado (403)', !ccUser.ok, JSON.stringify(ccUser));
+  const ccBadCur = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'no-es-esta', new_password: 'TestPass456' });
+  check('contraseña actual incorrecta rechazada (400)', !ccBadCur.ok && /actual/.test(ccBadCur.error || ''), JSON.stringify(ccBadCur));
+  const ccNone = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'admin' });
+  check('sin usuario ni contraseña nuevos rechazado (400)', !ccNone.ok, JSON.stringify(ccNone));
+  const ccTaken = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'admin', new_username: 'ana_' + RUN });
+  check('usuario ya en uso por otra cuenta rechazado (400)', !ccTaken.ok, JSON.stringify(ccTaken));
+  const ccShort = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'admin', new_password: '123' });
+  check('contraseña nueva muy corta rechazada (400)', !ccShort.ok, JSON.stringify(ccShort));
+  const ccPw = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'admin', new_password: 'TestPass123' });
+  check('admin cambia su contraseña (200)', ccPw.ok && ccPw.username === 'admin', JSON.stringify(ccPw));
+  const liNewPw = await api('/api/login', { identifier: 'admin', password: 'TestPass123' });
+  check('login con la contraseña nueva funciona', liNewPw.ok && liNewPw.account.role === 'admin', JSON.stringify(liNewPw));
+  const liOldPw = await api('/api/login', { identifier: 'admin', password: 'admin' });
+  check('login con la contraseña vieja ya no funciona', !liOldPw.ok, JSON.stringify(liOldPw));
+  // El token de sesión viejo (de antes del cambio de contraseña)
+  // sigue sirviendo: el cambio no cierra la sesión.
+  const ccUser2 = await api('/api/admin/change-credentials', { token: admLogin.token, current_password: 'TestPass123', new_username: 'admin2_' + RUN });
+  check('la sesión vieja sigue sirviendo tras cambiar la contraseña; admin cambia su usuario (200)', ccUser2.ok && ccUser2.username === 'admin2_' + RUN, JSON.stringify(ccUser2));
+  const liNewUser = await api('/api/login', { identifier: 'admin2_' + RUN, password: 'TestPass123' });
+  check('login con el usuario nuevo funciona', liNewUser.ok && liNewUser.account.role === 'admin', JSON.stringify(liNewUser));
+  const liOldUser = await api('/api/login', { identifier: 'admin', password: 'TestPass123' });
+  check('login con el usuario viejo ya no funciona', !liOldUser.ok, JSON.stringify(liOldUser));
+  // Se restaura el usuario 'admin' para dejar la base limpia (la
+  // contraseña de prueba queda en la base de la corrida, que se
+  // desecha; el endpoint exige mínimo 6 caracteres y la contraseña
+  // temporal original tiene 5).
+  const ccBack = await api('/api/admin/change-credentials', { token: liNewUser.token, current_password: 'TestPass123', new_username: 'admin' });
+  check('se restaura el usuario admin', ccBack.ok && ccBack.username === 'admin', JSON.stringify(ccBack));
+  const liBack = await api('/api/login', { identifier: 'admin', password: 'TestPass123' });
+  check('login admin con la contraseña de prueba funciona tras restaurar el usuario', liBack.ok && liBack.account.role === 'admin', JSON.stringify(liBack));
+  // Estático: la tarjeta existe en el panel, con sus campos, el botón
+  // y la función que llama al endpoint.
+  check('el panel de administrador tiene la tarjeta de credenciales (campos, botón y función)', html.includes('<h3 style="margin:0 0 4px">Administrador</h3>') && html.includes("pwInput('adm-cur-pass'") && html.includes('id="adm-new-user"') && html.includes("pwInput('adm-new-pass'") && html.includes("pwInput('adm-new-pass2'") && html.includes('onclick="saveAdminCredentials()"') && html.includes('function saveAdminCredentials()') && html.includes("api('/api/admin/change-credentials'") && html.includes('Credenciales actualizadas.'));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

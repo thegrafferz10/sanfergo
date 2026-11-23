@@ -660,7 +660,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.24' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.25' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1605,6 +1605,28 @@ async function api(req, res, pathname) {
       db.prepare('UPDATE accounts SET passenger_id=? WHERE id=?').run(profile_id, target.id);
     }
     return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(target.id)) });
+  }
+
+  // Cambiar las credenciales del administrador (v1.4.25): el admin
+  // cambia su propio usuario y/o su contraseña desde el panel. La
+  // contraseña actual se verifica con el hash guardado; el usuario
+  // nuevo no puede ser el de otra cuenta; la sesión no depende de la
+  // contraseña, así que el cambio no cierra la sesión.
+  if (pathname === '/api/admin/change-credentials') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const { current_password, new_username, new_password } = body;
+    if (!verifyPassword(String(current_password || ''), a.password_salt, a.password_hash)) return send(res, 400, { ok: false, error: 'Contraseña actual incorrecta.' });
+    const un = new_username != null && String(new_username).trim() !== '' ? cleanUsername(new_username) : null;
+    const pw = new_password != null && String(new_password) !== '' ? String(new_password) : null;
+    if (!un && !pw) return send(res, 400, { ok: false, error: 'Escribe un usuario nuevo o una contraseña nueva.' });
+    if (un && !/^[a-z0-9_]{3,20}$/.test(un)) return send(res, 400, { ok: false, error: 'El nombre de usuario debe tener de 3 a 20 letras, números o guion bajo.' });
+    if (un && db.prepare('SELECT id FROM accounts WHERE LOWER(username)=? AND id<>?').get(un, a.id)) return send(res, 400, { ok: false, error: 'Ese nombre de usuario ya está en uso. Elige otro.' });
+    if (pw && pw.length < 6) return send(res, 400, { ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' });
+    if (un) db.prepare('UPDATE accounts SET username=? WHERE id=?').run(un, a.id);
+    if (pw) { const h = hashPassword(pw); db.prepare('UPDATE accounts SET password_salt=?, password_hash=? WHERE id=?').run(h.salt, h.hash, a.id); }
+    const updated = db.prepare('SELECT * FROM accounts WHERE id=?').get(a.id);
+    return send(res, 200, { ok: true, username: updated.username });
   }
 
   if (pathname === '/api/create-request') {

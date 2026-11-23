@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.24)
+# SanFerGo — versión pública (v1.4.25)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.25 (2026-11-23) — el admin cambia su usuario y contraseña
+
+- El administrador ya puede cambiar su propio usuario y contraseña desde el panel: tarjeta "Administrador" debajo de su ficha (contraseña actual, nuevo usuario prellenado, contraseña nueva con confirmación). Nuevo endpoint solo-admin `POST /api/admin/change-credentials` {token, current_password, new_username?, new_password?}: 403 sin token o sin rol admin, 400 con la contraseña actual incorrecta, sin campos nuevos, con usuario ya en uso por otra cuenta o con contraseña nueva de menos de 6 caracteres. El cambio no cierra la sesión (el token no depende de la contraseña). Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 412 OK, 0 FAIL (397 de antes + 15 nuevos: los 403/400 del endpoint, cambio de contraseña con login nuevo/viejo, cambio de usuario con login nuevo/viejo, la sesión vieja sigue sirviendo, restauración del usuario, y la tarjeta en el panel).
 
 ## v1.4.24 (2026-11-23) — nuevo ícono de la app
 
