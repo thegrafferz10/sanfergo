@@ -660,7 +660,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.20' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.23' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -964,15 +964,41 @@ async function api(req, res, pathname) {
     if (passenger_id) {
       const p = db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id);
       if (!p) return send(res, 404, { ok: false, error: 'Pasajero no encontrado.' });
-      if (a.phone && cleanPhone(p.phone) && cleanPhone(p.phone) !== a.phone) return send(res, 400, { ok: false, error: 'Ese perfil de pasajero tiene otro número.' });
+      // v1.4.21: sin teléfono en la cuenta no se puede comprobar que el
+      // perfil sea suyo — una cuenta de Google sin teléfono adoptaba
+      // cualquier chofer o pasajero (el selector "Elige tu perfil" lo
+      // hacía con un toque). Y un perfil ya es de una sola cuenta.
+      if (!a.phone) return send(res, 400, { ok: false, error: 'Tu cuenta no tiene teléfono registrado: no se puede enlazar este perfil.' });
+      if (cleanPhone(p.phone) && cleanPhone(p.phone) !== a.phone) return send(res, 400, { ok: false, error: 'Ese perfil de pasajero tiene otro número.' });
+      const otherP = db.prepare('SELECT id FROM accounts WHERE passenger_id=? AND id<>?').get(passenger_id, a.id);
+      if (otherP) return send(res, 400, { ok: false, error: 'Ese perfil de pasajero ya está enlazado a otra cuenta.' });
       db.prepare('UPDATE accounts SET passenger_id=? WHERE id=?').run(passenger_id, a.id);
     }
     if (driver_id) {
       const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
       if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
-      if (a.phone && cleanPhone(d.phone) && cleanPhone(d.phone) !== a.phone) return send(res, 400, { ok: false, error: 'Ese perfil de chofer tiene otro número.' });
+      if (!a.phone) return send(res, 400, { ok: false, error: 'Tu cuenta no tiene teléfono registrado: no se puede enlazar este perfil.' });
+      if (cleanPhone(d.phone) && cleanPhone(d.phone) !== a.phone) return send(res, 400, { ok: false, error: 'Ese perfil de chofer tiene otro número.' });
+      const otherD = db.prepare('SELECT id FROM accounts WHERE driver_id=? AND id<>?').get(driver_id, a.id);
+      if (otherD) return send(res, 400, { ok: false, error: 'Ese perfil de chofer ya está enlazado a otra cuenta.' });
       db.prepare('UPDATE accounts SET driver_id=? WHERE id=?').run(driver_id, a.id);
     }
+    return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(a.id)) });
+  }
+  if (pathname === '/api/set-account-phone') {
+    // v1.4.22: el blindaje de v1.4.21 (sin teléfono no se puede enlazar un
+    // perfil) rompía dos flujos legítimos de las cuentas solo-correo
+    // (Google): la tarjeta "Mi cuenta" y pedir un viaje sin perfil crean
+    // el pasajero y luego lo enlazan. Aquí la cuenta registra su teléfono
+    // UNA vez — con comprobación de duplicado, como en el registro — y el
+    // enlace ya puede pasar con la comprobación de número.
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (a.phone) return send(res, 400, { ok: false, error: 'Tu cuenta ya tiene teléfono registrado.' });
+    const ph = cleanPhone(body.phone);
+    if (!ph || ph.length !== 10) return send(res, 400, { ok: false, error: 'Escribe un número de 10 dígitos.' });
+    if (db.prepare('SELECT id FROM accounts WHERE phone=? AND id<>?').get(ph, a.id)) return send(res, 400, { ok: false, error: 'Ese número ya tiene cuenta.' });
+    db.prepare('UPDATE accounts SET phone=? WHERE id=?').run(ph, a.id);
     return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(a.id)) });
   }
   if (pathname === '/api/update-account') {
@@ -1531,6 +1557,54 @@ async function api(req, res, pathname) {
     } catch (e) {
       return send(res, 500, { ok: false, error: 'No se pudo crear el respaldo.' });
     }
+  }
+
+  // Desenlazar un perfil de una cuenta (v1.4.21, solo admin): repara los
+  // enlaces malos que creó el selector "Elige tu perfil" (un chofer o un
+  // pasajero adoptado por otra cuenta). Solo borra el enlace de la cuenta;
+  // el perfil (chofer o pasajero) sigue existiendo.
+  if (pathname === '/api/admin/unlink-profile') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const { account_id, kind } = body;
+    if (kind !== 'driver' && kind !== 'passenger') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
+    const target = db.prepare('SELECT * FROM accounts WHERE id=?').get(account_id);
+    if (!target) return send(res, 404, { ok: false, error: 'Cuenta no encontrada.' });
+    if (kind === 'driver') db.prepare('UPDATE accounts SET driver_id=NULL WHERE id=?').run(target.id);
+    else db.prepare('UPDATE accounts SET passenger_id=NULL WHERE id=?').run(target.id);
+    return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(target.id)) });
+  }
+
+  // Enlazar un perfil a una cuenta (v1.4.23, solo admin): herramienta de
+  // reparación del admin para los enlaces malos que creó el selector
+  // "Elige tu perfil" (v1.4.21) — /api/admin/unlink-profile solo los
+  // quita; este los vuelve a poner bien. Solo escribe el enlace de la
+  // cuenta; el perfil (chofer o pasajero) sigue existiendo. Con las
+  // mismas reglas de /api/link-profiles: el perfil no puede ser de otra
+  // cuenta y, si cuenta y perfil tienen teléfono, deben coincidir.
+  if (pathname === '/api/admin/link-profile') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const { account_id, kind, profile_id } = body;
+    if (kind !== 'driver' && kind !== 'passenger') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
+    const target = db.prepare('SELECT * FROM accounts WHERE id=?').get(account_id);
+    if (!target) return send(res, 404, { ok: false, error: 'Cuenta no encontrada.' });
+    if (kind === 'driver') {
+      const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(profile_id);
+      if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
+      const otherD = db.prepare('SELECT id FROM accounts WHERE driver_id=? AND id<>?').get(profile_id, target.id);
+      if (otherD) return send(res, 400, { ok: false, error: 'Ese perfil de chofer ya está enlazado a otra cuenta.' });
+      if (target.phone && cleanPhone(d.phone) && cleanPhone(d.phone) !== target.phone) return send(res, 400, { ok: false, error: 'Ese perfil de chofer tiene otro número.' });
+      db.prepare('UPDATE accounts SET driver_id=? WHERE id=?').run(profile_id, target.id);
+    } else {
+      const p = db.prepare('SELECT * FROM passengers WHERE id=?').get(profile_id);
+      if (!p) return send(res, 404, { ok: false, error: 'Pasajero no encontrado.' });
+      const otherP = db.prepare('SELECT id FROM accounts WHERE passenger_id=? AND id<>?').get(profile_id, target.id);
+      if (otherP) return send(res, 400, { ok: false, error: 'Ese perfil de pasajero ya está enlazado a otra cuenta.' });
+      if (target.phone && cleanPhone(p.phone) && cleanPhone(p.phone) !== target.phone) return send(res, 400, { ok: false, error: 'Ese perfil de pasajero tiene otro número.' });
+      db.prepare('UPDATE accounts SET passenger_id=? WHERE id=?').run(profile_id, target.id);
+    }
+    return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(target.id)) });
   }
 
   if (pathname === '/api/create-request') {

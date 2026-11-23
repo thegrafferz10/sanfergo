@@ -1,9 +1,27 @@
-# SanFerGo — versión pública (v1.4.20)
+# SanFerGo — versión pública (v1.4.23)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.23 (2026-11-23) — formularios de registro con teléfono primero + enlace de admin
+
+- Problema que dejó la v1.4.22: `savePassenger()` y `saveDriver()` (los formularios de registro) seguían llamando a `/api/link-profiles` dentro de un try/catch tragado. Una cuenta solo-correo (Google, sin teléfono) que se registraba directo desde el formulario, sin haber puesto antes su número en la tarjeta "Mi cuenta", quedaba con el perfil creado pero SIN enlazar (en silencio en el pasajero, con un toast de error en el chofer).
+- Arreglo: en los dos formularios, si la cuenta no tiene teléfono, primero se llama a `POST /api/set-account-phone` con el teléfono del formulario; si falla, se muestra el error y NO se crea el perfil. Con teléfono ya en la cuenta, se salta (el endpoint rechazaría 400) y el enlace pasa como antes. Nuevo endpoint solo-admin `POST /api/admin/link-profile` {token, account_id, kind: 'driver'|'passenger', profile_id} para reparar enlaces malos (el de desenlazar solo quita): 403 sin admin, 400 con tipo no válido, perfil ya enlazado a otra cuenta o números distintos, 404 con cuenta o perfil inexistente. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 394 OK, 0 FAIL (363 de antes + 31 nuevos: los formularios ponen el teléfono ANTES de crear el perfil, flujo completo de pasajero y de chofer para cuentas solo-correo hasta `/api/me`, que el teléfono duplicado detiene la creación sin dejar huérfanos, y el enlace de admin con sus 403/400/404 y 200).
+
+## v1.4.22 (2026-11-23) — teléfono en la cuenta para las cuentas solo-correo
+
+- Problema que dejó la v1.4.21: su blindaje (una cuenta sin teléfono no puede enlazar un perfil) rompía dos flujos legítimos de las cuentas solo-correo (Google, sin teléfono en la base): la tarjeta "Mi cuenta" (`saveAccountPhone`) y pedir un viaje sin perfil (`ensureNoProfilePassenger`) crean el pasajero y luego lo enlazan, así que el enlace rechazaba 400 y el perfil quedaba huérfano.
+- Arreglo: nuevo endpoint `POST /api/set-account-phone` {token, phone} — la cuenta registra su teléfono UNA vez (401 sin sesión; 400 si la cuenta ya tiene teléfono, si el número no es de 10 dígitos, o si otro cuenta ya lo tiene, con el mismo texto de duplicado del registro) y devuelve la cuenta actualizada. `saveAccountPhone()` llama primero a ese endpoint y, si falla, se para ahí sin crear el pasajero; `ensureNoProfilePassenger()` hace lo mismo con el teléfono del formulario del viaje, y si falla el error sale por el camino que ya existe (toast y no publicar) en vez de tragarse en silencio. Con el teléfono ya puesto, el enlace pasa con la comprobación de número de siempre. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 363 OK, 0 FAIL (342 de antes + 21 nuevos: set-account-phone con sus 401/400 y 200, flujo completo de la tarjeta "Mi cuenta" hasta `/api/me`, flujo de pedir viaje sin perfil sin huérfano, y que el cliente pone el teléfono ANTES de crear el pasajero en los dos flujos). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id DATA_DIR=<dir vacío> node server.js` (puerto 3000 libre antes) y `DATA_DIR=<mismo dir> node test-e2e.js`.
+
+## v1.4.21 (2026-11-23) — sin selector de perfiles y link-profiles blindado
+
+- Reporte del usuario: con la v1.4.20 el chofer ya no aparecía solo al entrar, PERO el formulario de registro todavía tenía el selector "¿Ya eres conductor registrado? Elige tu perfil:" con TODOS los choferes. Al tocar el de Josué, `pickRegDriver` llamaba a `/api/link-profiles` y enlazaba PERMANENTEMENTE el chofer de Josué a la cuenta de Emiliano (la comprobación de número se saltaba porque la cuenta de Google no tiene teléfono). Lo mismo dejó a Paulina enlazada al pasajero "Prueba Mapa" en vez de al suyo.
+- Arreglo: se ELIMINARON los selectores "Elige tu perfil" de los dos formularios de registro (chofer y pasajero), con `renderRegPickList`, `pickRegDriver` y `pickRegPassenger`: los formularios son solo para perfiles NUEVOS; los perfiles existentes se alcanzan solo por la cuenta enlazada, nunca eligiendo el de otro (igual que la app real, que ya los había quitado). `/api/link-profiles` ahora rechaza con 400 si la cuenta no tiene teléfono, si el número del perfil no coincide con el de la cuenta (como antes) y si el perfil ya está enlazado a OTRA cuenta (un perfil = una cuenta); la misma cuenta sí puede volver a enlazar el suyo. Nuevo endpoint solo-admin `POST /api/admin/unlink-profile` {token, account_id, kind: 'driver'|'passenger'} que borra el enlace de esa cuenta (el perfil sigue existiendo), con la misma autenticación del panel (sin admin → 403); sirve para reparar los enlaces malos que creó el selector. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 342 OK, 0 FAIL (326 de antes + 16 nuevos: sin selector en el cliente, cuenta sin teléfono no enlaza chofer, chofer y pasajero ya enlazados no se pueden adoptar, la misma cuenta sí re-enlaza el suyo, y desenlazar con sus 403/400/404 y 200 del admin). La suite se corre con `RESEND_API_KEY=test GOOGLE_CLIENT_ID=test-client-id` y una BD limpia.
 
 ## v1.4.20 (2026-11-23) — el chofer de una cuenta no aparece en otra
 

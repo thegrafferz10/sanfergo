@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.20 en /api/health', h.ok && h.version === '1.4.20', JSON.stringify(h));
+  check('versión 1.4.23 en /api/health', h.ok && h.version === '1.4.23', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.20', h134.ok && h134.version === '1.4.20', JSON.stringify(h134));
+  check('versión 1.4.23', h134.ok && h134.version === '1.4.23', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.20)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.20';") && h.version === '1.4.20', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.23)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.23';") && h.version === '1.4.23', 'health=' + JSON.stringify(h));
   // Aviso de privacidad (v1.4.18): página pública en /privacidad y enlace
   // en el pie de la pantalla de inicio de sesión.
   const privRes = await fetch(B + '/privacidad');
@@ -665,6 +665,221 @@ async function api(path, body) {
   const logoutSrc = html.slice(loStart, loEnd);
   check('doLogout() limpia el id del chofer y del pasajero guardados', logoutSrc.includes('store.did = null') && logoutSrc.includes('store.pid = null'), logoutSrc.slice(0, 200));
   check('loadMe() solo usa el id guardado cuando NO hay sesión (if (!hasSession))', loadMeSrc.includes('if (!hasSession) {') && loadMeSrc.includes('if (!myDriver && store.did)'), loadMeSrc.slice(0, 300));
+  // v1.4.21: el selector "Elige tu perfil" ya no existe y /api/link-profiles
+  // está blindado. Escenario del usuario: con la v1.4.20, al tocar el
+  // perfil de Josué en el formulario de registro, pickRegDriver llamaba a
+  // /api/link-profiles y enlazaba PERMANENTEMENTE el chofer de Josué a la
+  // cuenta de Emiliano (sin teléfono, la comprobación de número se saltaba).
+  // Lo mismo dejó a Paulina enlazada al pasajero "Prueba Mapa" en vez de al suyo.
+  console.log('== v1.4.21: sin selector de perfiles y link-profiles blindado ==');
+  check('los formularios de registro ya no tienen el selector "Elige tu perfil"', !html.includes('Elige tu perfil') && !html.includes('reg-pick-list') && !html.includes('pickRegDriver') && !html.includes('pickRegPassenger') && !html.includes('renderRegPickList'), 'queda el selector en el cliente');
+  // (b) cuenta sin teléfono (solo correo, como la de Emiliano por Google)
+  // no puede adoptar un chofer: 400 y su driver_id sigue NULL.
+  const noPhoneLink = await api('/api/link-profiles', { token: liMail.token, driver_id: drvAcc.driver.id });
+  check('cuenta sin teléfono no puede enlazar un chofer (400)', !noPhoneLink.ok, JSON.stringify(noPhoneLink));
+  const meMail = await api('/api/me?token=' + liMail.token);
+  check('la cuenta sin teléfono sigue sin chofer enlazado', meMail.ok && meMail.driver === null, JSON.stringify(meMail));
+  // (c) un chofer ya enlazado a otra cuenta no se puede adoptar (400) y
+  // sigue en su cuenta original. El mismo blindaje vale para pasajeros:
+  // el pasajero de Beto (creado al registrarse con correo, teléfono vacío)
+  // no lo puede adoptar Bruno, y ahí la rama de "ya enlazado" se ejerce de
+  // verdad porque la comprobación de número se salta con teléfono vacío.
+  const adoptLink = await api('/api/link-profiles', { token: liB.token, driver_id: drvAcc.driver.id });
+  check('chofer ya enlazado a otra cuenta no se puede adoptar (400)', !adoptLink.ok, JSON.stringify(adoptLink));
+  const meAna2 = await api('/api/me?token=' + li1.token);
+  check('el chofer sigue enlazado a su cuenta original', meAna2.ok && meAna2.driver && meAna2.driver.id === drvAcc.driver.id, JSON.stringify(meAna2));
+  const adoptPax = await api('/api/link-profiles', { token: liB.token, passenger_id: accMail.passenger.id });
+  check('pasajero ya enlazado a otra cuenta no se puede adoptar (400)', !adoptPax.ok, JSON.stringify(adoptPax));
+  const meMail2 = await api('/api/me?token=' + liMail.token);
+  check('el pasajero sigue enlazado a su cuenta original', meMail2.ok && meMail2.passenger && meMail2.passenger.id === accMail.passenger.id, JSON.stringify(meMail2));
+  // La misma cuenta sí puede volver a enlazar su propio perfil (200).
+  const relinkOwn = await api('/api/link-profiles', { token: li1.token, driver_id: drvAcc.driver.id });
+  check('la misma cuenta puede volver a enlazar su propio chofer (200)', relinkOwn.ok && relinkOwn.account.driver_id === drvAcc.driver.id, JSON.stringify(relinkOwn));
+  // (d) desenlazar (solo admin): se enlaza un chofer nuevo a B y el admin lo quita.
+  const drvB = await api('/api/register-driver', { name: 'Bruno Chofer', phone: '961104' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'B-' + RUN.slice(0, 3), selfie: PHOTO, vehicle_photo: PHOTO });
+  check('chofer nuevo para la cuenta B', drvB.ok && drvB.driver.id, JSON.stringify(drvB));
+  await approveDriver(drvB.driver.id);
+  const linkB = await api('/api/link-profiles', { token: liB.token, driver_id: drvB.driver.id });
+  check('chofer enlazado a la cuenta B', linkB.ok && linkB.account.driver_id === drvB.driver.id, JSON.stringify(linkB));
+  const unlNoTok = await api('/api/admin/unlink-profile', { account_id: accB.account.id, kind: 'driver' });
+  check('desenlazar sin token rechazado (403)', !unlNoTok.ok, JSON.stringify(unlNoTok));
+  const unlUser = await api('/api/admin/unlink-profile', { token: liB.token, account_id: accB.account.id, kind: 'driver' });
+  check('desenlazar con cuenta normal rechazado (403)', !unlUser.ok, JSON.stringify(unlUser));
+  const unlBad = await api('/api/admin/unlink-profile', { token: admLogin.token, account_id: accB.account.id, kind: 'otro' });
+  check('desenlazar con tipo no válido rechazado (400)', !unlBad.ok, JSON.stringify(unlBad));
+  const unlNoAcc = await api('/api/admin/unlink-profile', { token: admLogin.token, account_id: 999999, kind: 'driver' });
+  check('desenlazar cuenta inexistente rechazado (404)', !unlNoAcc.ok, JSON.stringify(unlNoAcc));
+  const unl = await api('/api/admin/unlink-profile', { token: admLogin.token, account_id: accB.account.id, kind: 'driver' });
+  check('admin desenlaza el chofer de la cuenta B (200)', unl.ok && unl.account.driver_id == null, JSON.stringify(unl));
+  const meB2 = await api('/api/me?token=' + liB.token);
+  check('/api/me de B ya no devuelve chofer tras desenlazar', meB2.ok && meB2.driver === null, JSON.stringify(meB2));
+  // v1.4.22: el blindaje de v1.4.21 rompía dos flujos legítimos de las
+  // cuentas solo-correo (Google, sin teléfono): la tarjeta "Mi cuenta"
+  // (saveAccountPhone) y pedir un viaje sin perfil
+  // (ensureNoProfilePassenger) crean el pasajero y luego lo enlazan, y el
+  // enlace rechaza 400 sin teléfono. Nuevo endpoint POST
+  // /api/set-account-phone: la cuenta registra su teléfono UNA vez (con
+  // comprobación de duplicado, como en el registro) y el enlace ya pasa.
+  console.log('== v1.4.22: set-account-phone para cuentas solo-correo ==');
+  const setNoTok = await api('/api/set-account-phone', { phone: '961105' + RUN.slice(0, 4) });
+  check('poner teléfono sin sesión rechazado (401)', !setNoTok.ok, JSON.stringify(setNoTok));
+  const setHasPhone = await api('/api/set-account-phone', { token: liB.token, phone: '961106' + RUN.slice(0, 4) });
+  check('cuenta que ya tiene teléfono no lo puede cambiar por aquí (400)', !setHasPhone.ok, JSON.stringify(setHasPhone));
+  // Cuenta nueva solo-correo (como la de Google): pide su código por el
+  // pase de pruebas, se registra sin teléfono y luego pone su número.
+  const celiaCode = await api('/api/request-email-code', { email: 'celia' + RUN + '@prueba.mx' });
+  check('pedir código para Celia (modo de pruebas)', celiaCode.ok && /^\d{6}$/.test(celiaCode.test_code || ''), JSON.stringify(celiaCode));
+  const celiaVer = await api('/api/verify-email-code', { email: 'celia' + RUN + '@prueba.mx', code: celiaCode.test_code });
+  check('verificar el código de Celia entrega el pase', celiaVer.ok && !!celiaVer.verification_token, JSON.stringify(celiaVer));
+  const accCelia = await api('/api/register-account', { name: 'Celia Correo', username: 'celia_' + RUN, email: 'celia' + RUN + '@prueba.mx', password: 'secreta123', email_code_token: celiaVer.verification_token });
+  check('cuenta nueva solo-correo (sin teléfono)', accCelia.ok && !accCelia.account.phone, JSON.stringify(accCelia));
+  const liCelia = await api('/api/login', { identifier: 'celia' + RUN + '@prueba.mx', password: 'secreta123' });
+  check('login de Celia', liCelia.ok && liCelia.token, JSON.stringify(liCelia));
+  const setDup = await api('/api/set-account-phone', { token: liCelia.token, phone: '961104' + RUN.slice(0, 4) });
+  check('teléfono de otra cuenta rechazado (400)', !setDup.ok, JSON.stringify(setDup));
+  const setBad = await api('/api/set-account-phone', { token: liCelia.token, phone: '123' });
+  check('teléfono inválido rechazado (400)', !setBad.ok, JSON.stringify(setBad));
+  const celiaPhone = '961105' + RUN.slice(0, 4);
+  const setOk = await api('/api/set-account-phone', { token: liCelia.token, phone: celiaPhone });
+  check('cuenta solo-correo pone su teléfono (200) y queda guardado', setOk.ok && setOk.account.phone === celiaPhone, JSON.stringify(setOk));
+  // Flujo de saveAccountPhone (tarjeta "Mi cuenta"): teléfono ya puesto,
+  // crear pasajero y enlazar; /api/me muestra el pasajero nuevo.
+  const paxCelia = await api('/api/register-passenger', { name: 'Celia Correo', phone: celiaPhone, face_photo: null });
+  check('pasajero creado para Celia', paxCelia.ok && paxCelia.passenger.id, JSON.stringify(paxCelia));
+  const linkCelia = await api('/api/link-profiles', { token: liCelia.token, passenger_id: paxCelia.passenger.id });
+  check('tras poner el teléfono, el pasajero sí se enlaza (200)', linkCelia.ok && linkCelia.account.passenger_id === paxCelia.passenger.id, JSON.stringify(linkCelia));
+  const meCelia = await api('/api/me?token=' + liCelia.token);
+  check('/api/me de Celia muestra el teléfono y el pasajero enlazado', meCelia.ok && meCelia.account.phone === celiaPhone && meCelia.passenger && meCelia.passenger.id === paxCelia.passenger.id, JSON.stringify(meCelia));
+  // Flujo de ensureNoProfilePassenger (pedir viaje sin perfil): otra
+  // cuenta solo-correo, sin pasajero enlazado: teléfono primero, luego
+  // pasajero y enlace — el pasajero creado es el enlazado (sin huérfano).
+  const doraCode = await api('/api/request-email-code', { email: 'dora' + RUN + '@prueba.mx' });
+  const doraVer = await api('/api/verify-email-code', { email: 'dora' + RUN + '@prueba.mx', code: doraCode.test_code });
+  const accDora = await api('/api/register-account', { name: 'Dora Correo', username: 'dora_' + RUN, email: 'dora' + RUN + '@prueba.mx', password: 'secreta123', email_code_token: doraVer.verification_token });
+  check('cuenta nueva solo-correo Dora (sin teléfono)', accDora.ok && !accDora.account.phone, JSON.stringify(accDora));
+  const liDora = await api('/api/login', { identifier: 'dora' + RUN + '@prueba.mx', password: 'secreta123' });
+  const unlDora = await api('/api/admin/unlink-profile', { token: ADM.token, account_id: accDora.account.id, kind: 'passenger' });
+  check('Dora sin pasajero enlazado para el flujo de viaje', unlDora.ok && unlDora.account.passenger_id == null, JSON.stringify(unlDora));
+  const doraPhone = '961107' + RUN.slice(0, 4);
+  const setDora = await api('/api/set-account-phone', { token: liDora.token, phone: doraPhone });
+  check('Dora pone su teléfono antes de pedir el viaje (200)', setDora.ok && setDora.account.phone === doraPhone, JSON.stringify(setDora));
+  const paxDora = await api('/api/register-passenger', { name: 'Dora Correo', phone: doraPhone, face_photo: null });
+  check('pasajero del viaje creado para Dora', paxDora.ok && paxDora.passenger.id, JSON.stringify(paxDora));
+  const linkDora = await api('/api/link-profiles', { token: liDora.token, passenger_id: paxDora.passenger.id });
+  check('el pasajero del viaje se enlaza a la cuenta (200)', linkDora.ok && linkDora.account.passenger_id === paxDora.passenger.id, JSON.stringify(linkDora));
+  const meDora = await api('/api/me?token=' + liDora.token);
+  check('/api/me de Dora: el pasajero enlazado ES el creado en el viaje (sin huérfano)', meDora.ok && meDora.passenger && meDora.passenger.id === paxDora.passenger.id, JSON.stringify(meDora));
+  // Estático: el cliente pone el teléfono ANTES de crear el pasajero en
+  // los dos flujos, y si falla no crea el perfil (el error sale por el
+  // camino de error que ya existe, no se traga en silencio).
+  const sapStart = html.indexOf('async function saveAccountPhone(){');
+  const sapEnd = html.indexOf('\n/* ===== VIAJES', sapStart);
+  const sapSrc = sapStart >= 0 && sapEnd > sapStart ? html.slice(sapStart, sapEnd) : '';
+  check('saveAccountPhone() llama a set-account-phone ANTES de crear el pasajero', sapSrc.includes("api('/api/set-account-phone'") && sapSrc.indexOf("set-account-phone") < sapSrc.indexOf("register-passenger"), sapSrc.slice(0, 300));
+  const enpStart = html.indexOf('async function ensureNoProfilePassenger(){');
+  const enpEnd = html.indexOf('\nasync function renderViajes(){', enpStart);
+  const enpSrc = enpStart >= 0 && enpEnd > enpStart ? html.slice(enpStart, enpEnd) : '';
+  check('ensureNoProfilePassenger() pone el teléfono ANTES de crear el pasajero', enpSrc.includes("api('/api/set-account-phone'") && enpSrc.indexOf("set-account-phone") < enpSrc.indexOf("register-passenger"), enpSrc.slice(0, 300));
+  const enpBetween = enpSrc.indexOf("set-account-phone") >= 0 && enpSrc.indexOf("register-passenger") > enpSrc.indexOf("set-account-phone") ? enpSrc.slice(enpSrc.indexOf("set-account-phone"), enpSrc.indexOf("register-passenger")) : 'sin-llamada';
+  check('ensureNoProfilePassenger() no traga el error del teléfono en silencio (el fallo sale por el catch con toast y false)', enpSrc.includes("catch(e){ toast(e.message); return false; }") && !enpBetween.includes('catch'), enpSrc.slice(0, 300));
+  // v1.4.23: savePassenger()/saveDriver() (formularios de registro)
+  // llamaban a /api/link-profiles dentro de un try/catch tragado: una
+  // cuenta solo-correo (Google, sin teléfono) que se registraba desde el
+  // formulario, sin haber puesto antes su número en "Mi cuenta", quedaba
+  // con el perfil creado pero SIN enlazar. Los formularios sí piden el
+  // teléfono, así que el arreglo es el mismo patrón de v1.4.22: el
+  // teléfono se registra en la cuenta ANTES de crear el perfil; si eso
+  // falla, no se crea nada. Y nuevo endpoint solo-admin POST
+  // /api/admin/link-profile para reparar enlaces malos (el de
+  // desenlazar solo quita).
+  console.log('== v1.4.23: formularios con teléfono primero + link de admin ==');
+  // Estático: los dos formularios ponen el teléfono ANTES de crear el
+  // perfil, solo si la cuenta no tiene, y el fallo para ahí (el error
+  // sale por el catch con toast que ya existe, no se traga en silencio).
+  const spStart = html.indexOf('async function savePassenger(){');
+  const spEnd = html.indexOf('\nasync function saveDriver(){', spStart);
+  const spSrc = spStart >= 0 && spEnd > spStart ? html.slice(spStart, spEnd) : '';
+  check('savePassenger() registra el teléfono en la cuenta ANTES de crear el pasajero', spSrc.includes("api('/api/set-account-phone'") && spSrc.indexOf("set-account-phone") < spSrc.indexOf("register-passenger") && spSrc.includes("if (myAccount && !myAccount.phone)"), spSrc.slice(0, 300));
+  const sdStart = html.indexOf('async function saveDriver(){');
+  const sdEnd = html.indexOf('\n/* ===== INICIO DE SESIÓN', sdStart);
+  const sdSrc = sdStart >= 0 && sdEnd > sdStart ? html.slice(sdStart, sdEnd) : '';
+  check('saveDriver() registra el teléfono en la cuenta ANTES de crear el chofer', sdSrc.includes("api('/api/set-account-phone'") && sdSrc.indexOf("set-account-phone") < sdSrc.indexOf("register-driver") && sdSrc.includes("if (myAccount && !myAccount.phone)"), sdSrc.slice(0, 300));
+  // Cuentas nuevas solo-correo (como las de Google) para los flujos.
+  async function newMailAccount(tag){
+    const email = tag + RUN + '@prueba.mx';
+    const code = await api('/api/request-email-code', { email });
+    const ver = await api('/api/verify-email-code', { email, code: code.test_code });
+    const acc = await api('/api/register-account', { name: tag[0].toUpperCase() + tag.slice(1) + ' Correo', username: tag + '_' + RUN, email, password: 'secreta123', email_code_token: ver.verification_token });
+    const li = await api('/api/login', { identifier: email, password: 'secreta123' });
+    return { acc, li };
+  }
+  // Flujo del formulario de pasajero para una cuenta solo-correo:
+  // teléfono primero, luego pasajero y enlace — queda enlazado.
+  const ines = await newMailAccount('ines');
+  check('cuenta nueva solo-correo Inés (sin teléfono)', ines.acc.ok && !ines.acc.account.phone, JSON.stringify(ines.acc));
+  const inesPhone = '961108' + RUN.slice(0, 4);
+  const setInes = await api('/api/set-account-phone', { token: ines.li.token, phone: inesPhone });
+  check('Inés pone su teléfono antes del formulario (200)', setInes.ok && setInes.account.phone === inesPhone, JSON.stringify(setInes));
+  const paxInes = await api('/api/register-passenger', { name: 'Inés Correo', phone: inesPhone, face_photo: null });
+  check('pasajero creado para Inés desde el formulario', paxInes.ok && paxInes.passenger.id, JSON.stringify(paxInes));
+  const linkInes = await api('/api/link-profiles', { token: ines.li.token, passenger_id: paxInes.passenger.id });
+  check('el pasajero de Inés se enlaza (200)', linkInes.ok && linkInes.account.passenger_id === paxInes.passenger.id, JSON.stringify(linkInes));
+  const meInes = await api('/api/me?token=' + ines.li.token);
+  check('/api/me de Inés: teléfono y pasajero enlazado (sin huérfano)', meInes.ok && meInes.account.phone === inesPhone && meInes.passenger && meInes.passenger.id === paxInes.passenger.id, JSON.stringify(meInes));
+  // Flujo del formulario de chofer para una cuenta solo-correo.
+  const juan = await newMailAccount('juan');
+  check('cuenta nueva solo-correo Juan (sin teléfono)', juan.acc.ok && !juan.acc.account.phone, JSON.stringify(juan.acc));
+  const juanPhone = '961109' + RUN.slice(0, 4);
+  const setJuan = await api('/api/set-account-phone', { token: juan.li.token, phone: juanPhone });
+  check('Juan pone su teléfono antes del formulario (200)', setJuan.ok && setJuan.account.phone === juanPhone, JSON.stringify(setJuan));
+  const drvJuan = await api('/api/register-driver', { name: 'Juan Correo', phone: juanPhone, vehicle: 'mototaxi', unit: 'J-' + RUN.slice(0, 3), selfie: PHOTO, vehicle_photo: PHOTO });
+  check('chofer creado para Juan desde el formulario', drvJuan.ok && drvJuan.driver.id, JSON.stringify(drvJuan));
+  await approveDriver(drvJuan.driver.id);
+  const linkJuan = await api('/api/link-profiles', { token: juan.li.token, driver_id: drvJuan.driver.id });
+  check('el chofer de Juan se enlaza (200)', linkJuan.ok && linkJuan.account.driver_id === drvJuan.driver.id, JSON.stringify(linkJuan));
+  const meJuan = await api('/api/me?token=' + juan.li.token);
+  check('/api/me de Juan: teléfono y chofer enlazado (sin huérfano)', meJuan.ok && meJuan.account.phone === juanPhone && meJuan.driver && meJuan.driver.id === drvJuan.driver.id, JSON.stringify(meJuan));
+  // Si poner el teléfono falla (número ya de otra cuenta), el formulario
+  // no crea el perfil: la cuenta sigue sin teléfono y sin nada enlazado.
+  const kike = await newMailAccount('kike');
+  check('cuenta nueva solo-correo Kike (sin teléfono)', kike.acc.ok && !kike.acc.account.phone, JSON.stringify(kike.acc));
+  const meKike0 = await api('/api/me?token=' + kike.li.token);
+  check('Kike nace con el pasajero automático de la cuenta (teléfono vacío)', meKike0.ok && meKike0.passenger && meKike0.passenger.phone === '', JSON.stringify(meKike0));
+  const setKike = await api('/api/set-account-phone', { token: kike.li.token, phone: celiaPhone });
+  check('teléfono ya usado: ponerlo falla (400) y el formulario no crea nada', !setKike.ok, JSON.stringify(setKike));
+  const meKike = await api('/api/me?token=' + kike.li.token);
+  check('Kike sigue sin teléfono y con el mismo pasajero automático (nada nuevo enlazado)', meKike.ok && !meKike.account.phone && meKike.passenger && meKike.passenger.id === meKike0.passenger.id, JSON.stringify(meKike));
+  const allPax = await api('/api/passengers');
+  check('ningún pasajero huérfano con el teléfono duplicado', allPax.ok && allPax.passengers.filter(p => p.phone === celiaPhone).length === 1, JSON.stringify(allPax.passengers.filter(p => p.phone === celiaPhone)));
+  // Enlace de admin: repara enlaces malos (unlink solo quita).
+  const lkNoTok = await api('/api/admin/link-profile', { account_id: accB.account.id, kind: 'driver', profile_id: drvB.driver.id });
+  check('enlazar de admin sin token rechazado (403)', !lkNoTok.ok, JSON.stringify(lkNoTok));
+  const lkUser = await api('/api/admin/link-profile', { token: liB.token, account_id: accB.account.id, kind: 'driver', profile_id: drvB.driver.id });
+  check('enlazar de admin con cuenta normal rechazado (403)', !lkUser.ok, JSON.stringify(lkUser));
+  const lkBad = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'otro', profile_id: drvB.driver.id });
+  check('enlazar de admin con tipo no válido rechazado (400)', !lkBad.ok, JSON.stringify(lkBad));
+  const lkNoAcc = await api('/api/admin/link-profile', { token: ADM.token, account_id: 999999, kind: 'driver', profile_id: drvB.driver.id });
+  check('enlazar de admin con cuenta inexistente rechazado (404)', !lkNoAcc.ok, JSON.stringify(lkNoAcc));
+  const lkNoProf = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'driver', profile_id: 999999 });
+  check('enlazar de admin con perfil inexistente rechazado (404)', !lkNoProf.ok, JSON.stringify(lkNoProf));
+  const lkOther = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'driver', profile_id: drvAcc.driver.id });
+  check('perfil ya enlazado a otra cuenta no lo puede enlazar el admin (400)', !lkOther.ok, JSON.stringify(lkOther));
+  const meAna3 = await api('/api/me?token=' + li1.token);
+  check('el chofer sigue enlazado a su cuenta original', meAna3.ok && meAna3.driver && meAna3.driver.id === drvAcc.driver.id, JSON.stringify(meAna3));
+  const paxFar = await api('/api/register-passenger', { name: 'Lejos Prueba', phone: '961110' + RUN.slice(0, 4), face_photo: null });
+  check('pasajero sin enlazar para la prueba de números distintos', paxFar.ok && paxFar.passenger.id, JSON.stringify(paxFar));
+  const lkMis = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'passenger', profile_id: paxFar.passenger.id });
+  check('enlazar de admin con números distintos rechazado (400)', !lkMis.ok, JSON.stringify(lkMis));
+  const lkB = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'driver', profile_id: drvB.driver.id });
+  check('admin enlaza el chofer a la cuenta B (200)', lkB.ok && lkB.account.driver_id === drvB.driver.id, JSON.stringify(lkB));
+  const meB3 = await api('/api/me?token=' + liB.token);
+  check('/api/me de B muestra el chofer tras el enlace del admin', meB3.ok && meB3.driver && meB3.driver.id === drvB.driver.id, JSON.stringify(meB3));
+  const unlDora2 = await api('/api/admin/unlink-profile', { token: ADM.token, account_id: accDora.account.id, kind: 'passenger' });
+  check('Dora desenlazada para la reparación del admin', unlDora2.ok && unlDora2.account.passenger_id == null, JSON.stringify(unlDora2));
+  const lkDora = await api('/api/admin/link-profile', { token: ADM.token, account_id: accDora.account.id, kind: 'passenger', profile_id: paxDora.passenger.id });
+  check('admin enlaza el pasajero a la cuenta Dora (200)', lkDora.ok && lkDora.account.passenger_id === paxDora.passenger.id, JSON.stringify(lkDora));
+  const meDora2 = await api('/api/me?token=' + liDora.token);
+  check('/api/me de Dora muestra el pasajero tras el enlace del admin', meDora2.ok && meDora2.passenger && meDora2.passenger.id === paxDora.passenger.id, JSON.stringify(meDora2));
   // Anuncio flotante con la geometría exacta de la app real (v1.4.13,
   // marca roja del usuario 6:38: "en la app está súper bien"): tarjeta
   // max-width 340 px con radio 24 px y sin borde; imagen a todo lo ancho
