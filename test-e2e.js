@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.25 en /api/health', h.ok && h.version === '1.4.25', JSON.stringify(h));
+  check('versión 1.4.26 en /api/health', h.ok && h.version === '1.4.26', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.25', h134.ok && h134.version === '1.4.25', JSON.stringify(h134));
+  check('versión 1.4.26', h134.ok && h134.version === '1.4.26', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.25)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.25';") && h.version === '1.4.25', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.26)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.26';") && h.version === '1.4.26', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1337,6 +1337,37 @@ async function api(path, body) {
   // Estático: la tarjeta existe en el panel, con sus campos, el botón
   // y la función que llama al endpoint.
   check('el panel de administrador tiene la tarjeta de credenciales (campos, botón y función)', html.includes('<h3 style="margin:0 0 4px">Administrador</h3>') && html.includes("pwInput('adm-cur-pass'") && html.includes('id="adm-new-user"') && html.includes("pwInput('adm-new-pass'") && html.includes("pwInput('adm-new-pass2'") && html.includes('onclick="saveAdminCredentials()"') && html.includes('function saveAdminCredentials()') && html.includes("api('/api/admin/change-credentials'") && html.includes('Credenciales actualizadas.'));
+
+  // v1.4.26: el admin ve cuántos usuarios nuevos se registraron. El
+  // marcador 'users_seen_at' y created_at usan el mismo formato UTC
+  // 'YYYY-MM-DD HH:MM:SS' (segundos): para que un registro cuente tiene
+  // que caer en un segundo posterior al marcador, así que se espera
+  // 1.1 s tras crear el marcador y tras marcar visto.
+  console.log('== v1.4.26: aviso de usuarios nuevos registrados ==');
+  const ov0 = await api('/api/admin-overview?token=' + encodeURIComponent(ADM.token));
+  check('primera llamada a admin-overview crea el marcador y new_users es 0', ov0.ok && ov0.new_users === 0, JSON.stringify(ov0));
+  check('admin-overview sigue devolviendo pendientes de choferes/negocios', ov0.ok && typeof ov0.pending_drivers === 'number' && typeof ov0.pending_businesses === 'number' && ov0.pending_total === ov0.pending_drivers + ov0.pending_businesses, JSON.stringify(ov0));
+  await new Promise(r => setTimeout(r, 1100));
+  const nu1 = await api('/api/register-account', { name: 'Nuevo Uno', username: 'nuevo1_' + RUN, phone: '961111' + RUN.slice(0, 4), password: 'secreta123' });
+  const nu2 = await api('/api/register-account', { name: 'Nuevo Dos', username: 'nuevo2_' + RUN, phone: '961112' + RUN.slice(0, 4), password: 'secreta123' });
+  check('se registran 2 cuentas nuevas', nu1.ok && nu2.ok, JSON.stringify([nu1, nu2]));
+  const ov2 = await api('/api/admin-overview?token=' + encodeURIComponent(ADM.token));
+  check('tras 2 registros, new_users es 2', ov2.ok && ov2.new_users === 2, JSON.stringify(ov2));
+  const mkBad = await api('/api/admin/mark-users-seen', { token: li1.token });
+  check('mark-users-seen con cuenta normal rechazado (403)', !mkBad.ok, JSON.stringify(mkBad));
+  const mk = await api('/api/admin/mark-users-seen', { token: ADM.token });
+  check('mark-users-seen con token admin (200)', mk.ok === true, JSON.stringify(mk));
+  const ov3 = await api('/api/admin-overview?token=' + encodeURIComponent(ADM.token));
+  check('tras marcar visto, new_users es 0', ov3.ok && ov3.new_users === 0, JSON.stringify(ov3));
+  await new Promise(r => setTimeout(r, 1100));
+  const nu3 = await api('/api/register-account', { name: 'Nuevo Tres', username: 'nuevo3_' + RUN, phone: '961113' + RUN.slice(0, 4), password: 'secreta123' });
+  check('se registra 1 cuenta más', nu3.ok, JSON.stringify(nu3));
+  const ov4 = await api('/api/admin-overview?token=' + encodeURIComponent(ADM.token));
+  check('tras 1 registro más, new_users es 1', ov4.ok && ov4.new_users === 1, JSON.stringify(ov4));
+  // Estático: el aviso, el badge y la llamada a marcar visto existen en
+  // el cliente; el aviso de solicitudes sigue intacto. (En index.html el
+  // onclick va con comillas escapadas \' dentro de la cadena JS.)
+  check('el aviso de usuarios nuevos existe en el cliente (línea, botón Ver pasajeros, badge y llamada a mark-users-seen)', html.includes("Se registraron '+u+' usuario") && html.includes("adminScreen=\\'pasajeros\\'") && html.includes("'cnt-pasajeros'") && html.includes("api('/api/admin/mark-users-seen'") && html.includes('Ver pasajeros') && html.includes('Tienes ') && html.includes('por revisar'));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

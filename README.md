@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.25)
+# SanFerGo — versión pública (v1.4.26)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.26 (2026-11-23) — el admin ve cuántos usuarios nuevos se registraron
+
+- El panel del administrador ahora avisa de los usuarios nuevos registrados, igual que el aviso ámbar de solicitudes pendientes: `GET /api/admin-overview` también devuelve `new_users` (cuentas con rol de pasajero creadas después del marcador `users_seen_at` en la tabla nueva `admin_state`); el aviso muestra "Se registraron N usuario(s) nuevo(s)" con botón "Ver pasajeros", y la tarjeta "Administrar pasajeros" lleva su badge (ámbar mientras haya nuevos). Al abrir "Administrar pasajeros" el cliente llama a `POST /api/admin/mark-users-seen` (solo admin) y el aviso se limpia. La primera vez el marcador se crea con la hora actual y `new_users` es 0, así los usuarios que ya existían no cuentan como nuevos. El aviso de choferes/negocios sigue exactamente igual. Nada más cambia.
+- Pruebas: suite completa contra BD limpia: 422 OK, 0 FAIL (412 de antes + 10 nuevos: primera llamada crea el marcador con new_users 0, overview de pendientes sin cambios, 2 registros → new_users 2, mark-users-seen con cuenta normal 403, con admin 200 → new_users 0, 1 registro más → new_users 1, y el aviso/badge/llamada en el cliente).
 
 ## v1.4.25 (2026-11-23) — el admin cambia su usuario y contraseña
 

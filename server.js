@@ -151,6 +151,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY, account_id INTEGER NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
+-- Estado del administrador (v1.4.26): pares clave/valor, p. ej.
+-- 'users_seen_at' guarda cuándo revisó por última vez los usuarios
+-- nuevos registrados (para el aviso 'Se registraron N usuarios nuevos').
+CREATE TABLE IF NOT EXISTS admin_state (
+  key TEXT PRIMARY KEY, value TEXT
+);
 -- Verificación por correo (v1.4.17): el código va hasheado, vence en 10
 -- minutos y se agota a los 5 intentos; verified_token es el pase de un solo
 -- uso que el registro con correo debe presentar (vale 15 minutos).
@@ -660,7 +666,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.25' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.26' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1527,13 +1533,38 @@ async function api(req, res, pathname) {
   }
   // Resumen del panel: conteos de solicitudes nuevas (el cliente lo revisa
   // cada 5 segundos y muestra el aviso ámbar 'Tienes N solicitudes nuevas').
+  // v1.4.26: también devuelve new_users, las cuentas de pasajero creadas
+  // DESPUÉS del marcador 'users_seen_at'. La primera vez no hay marcador:
+  // se crea con la hora actual y new_users es 0, así los usuarios que ya
+  // existían no cuentan como nuevos; solo cuentan los que se registren
+  // de ahí en adelante. created_at y el marcador usan el mismo formato
+  // UTC 'YYYY-MM-DD HH:MM:SS' de datetime('now'), así que la comparación
+  // de texto es cronológica. (Un registro en el mismo segundo que el
+  // marcador no cuenta: ventana de 1 s, despreciable.)
   if (pathname === '/api/admin-overview') {
     const a = accountFromToken(body.token || q.get('token'));
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
     const pd = db.prepare(`SELECT COUNT(*) c FROM drivers WHERE status='pendiente'`).get();
     const pb = db.prepare(`SELECT COUNT(*) c FROM businesses WHERE status='pendiente'`).get();
     const pendingDrivers = pd ? pd.c : 0, pendingBusinesses = pb ? pb.c : 0;
-    return send(res, 200, { ok: true, pending_drivers: pendingDrivers, pending_businesses: pendingBusinesses, pending_total: pendingDrivers + pendingBusinesses });
+    let newUsers = 0;
+    const seen = db.prepare(`SELECT value FROM admin_state WHERE key='users_seen_at'`).get();
+    if (!seen) {
+      db.prepare(`INSERT INTO admin_state (key, value) VALUES ('users_seen_at', datetime('now'))`).run();
+    } else {
+      const nu = db.prepare(`SELECT COUNT(*) c FROM accounts WHERE role='user' AND created_at > ?`).get(seen.value);
+      newUsers = nu ? nu.c : 0;
+    }
+    return send(res, 200, { ok: true, pending_drivers: pendingDrivers, pending_businesses: pendingBusinesses, pending_total: pendingDrivers + pendingBusinesses, new_users: newUsers });
+  }
+  // Marcar los usuarios nuevos como vistos (v1.4.26): el cliente lo llama
+  // al abrir 'Administrar pasajeros'; el aviso y el badge se limpian
+  // hasta que se registre otra cuenta.
+  if (pathname === '/api/admin/mark-users-seen') {
+    const a = accountFromToken(body.token || q.get('token'));
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    db.prepare(`INSERT OR REPLACE INTO admin_state (key, value) VALUES ('users_seen_at', datetime('now'))`).run();
+    return send(res, 200, { ok: true });
   }
   // Respaldo de la base de datos (v1.4.19, solo admin): descarga una copia
   // completa del SQLite vivo como archivo adjunto. La autenticación es la
