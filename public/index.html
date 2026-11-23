@@ -338,6 +338,17 @@ input[type=file]{padding:8px}
 .veh-opt.sel{border-color:#14532d;background:#14532d;color:#fff}
 .pay-opt{flex:1;text-align:center;padding:14px 8px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:16px;font-weight:700}
 .pay-opt.sel{border-color:var(--green);background:#e8f5ee;color:var(--green)}
+/* v1.4.31: selector de ubicación del anuncio (Subir anuncio): dos opciones
+   apiladas a lo ancho, misma altura, título corto + subtítulo en una línea. */
+.adplace{display:block;width:100%;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;margin-top:8px;font-family:inherit}
+.adplace b{display:block;font-size:16px;color:var(--dark)}
+.adplace span{display:block;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adplace.sel{border-color:var(--green);background:#e8f5ee}
+.adplace.sel b{color:var(--green)}
+/* v1.4.31: filas de entradas del anuncio: la casilla NO hereda el width:100%
+   global de los input (eso la estiraba y empujaba la etiqueta al borde). */
+.ad-entry input[type=checkbox]{width:auto;flex:none;margin:0}
+.ad-entry span{min-width:0}
 .stepper{display:flex;align-items:center;gap:12px;justify-content:center;margin-top:10px}
 .stepper .pm{width:52px;height:52px;border-radius:50%;background:#f3f4f6;border:1.5px solid var(--line);font-size:26px;font-weight:800}
 .stepper .val{font-size:38px;font-weight:800;min-width:110px;text-align:center}
@@ -355,7 +366,7 @@ input[type=file]{padding:8px}
 .pickpill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:65;background:#fff;color:#166534;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.2);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
 .pickpill.idle{background:rgba(255,255,255,.92);color:#374151}
 .dashbox{border:2px dashed var(--line);border-radius:14px;padding:14px;margin-top:10px}
-input[type=checkbox].chk{width:auto}
+input[type=checkbox]{width:auto;flex:none;margin:0} /* v1.4.31: ninguna casilla hereda el width:100% global; el guarda anterior solo cubría input.chk y dejaba rotas 'Seleccionar todos' de pasajeros, las casillas por pasajero y 'Disponible hoy' de productos */
 label.chk{display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px}
 textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .tabbtn{flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:14px}
@@ -466,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.30'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.31'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4445,7 +4456,7 @@ async function renderAdminAccounts(){
    HORIZONTAL, banner arriba en el panel de Negocios). El admin sube cada
    una en su formato. Los anuncios viejos (sin ubicación) siguen siendo
    flotantes y salen en el carrusel como antes. */
-let adImgData = null, adBizList = [], adKind = 'libre', adScreen = 'menu', adPlacement = 'flotante';
+let adImgData = null, adFileName = '', adBizList = [], adKind = 'libre', adScreen = 'menu', adPlacement = 'flotante';
 function adCard(a){
   // Un anuncio puede tener una o las dos imágenes: vertical (flotante)
   // y horizontal (panel). Se muestran las dos que tenga, con su rótulo.
@@ -4471,8 +4482,8 @@ async function renderAdminAds(){
   }
   if (adScreen === 'subir') {
     body.innerHTML = backPill('Regresar', "adScreen='menu';renderAdminAds()")
-      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'libre\';adPlacement=\'flotante\';adImgData=null;adScreen=\'form\';renderAdminAds()"><b>Subir anuncio Libre</b><p class="muted mt">Un anuncio sin negocio vinculado.</p></div>'
-      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'negocio\';adPlacement=\'flotante\';adImgData=null;adScreen=\'form\';renderAdminAds()"><b>Subir anuncio de un negocio</b><p class="muted mt">Vinculado a un negocio activo: al tocarlo, el cliente llega a su ficha.</p></div>';
+      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'libre\';adPlacement=\'flotante\';adImgData=null;adFileName=\'\';adScreen=\'form\';renderAdminAds()"><b>Subir anuncio Libre</b><p class="muted mt">Un anuncio sin negocio vinculado.</p></div>'
+      + '<div class="card white" style="cursor:pointer" onclick="adKind=\'negocio\';adPlacement=\'flotante\';adImgData=null;adFileName=\'\';adScreen=\'form\';renderAdminAds()"><b>Subir anuncio de un negocio</b><p class="muted mt">Vinculado a un negocio activo: al tocarlo, el cliente llega a su ficha.</p></div>';
     return;
   }
   if (adScreen === 'ver') {
@@ -4501,22 +4512,34 @@ async function renderAdminAds(){
           + (adBizList.length ? adBizList.map(b=>'<option value="'+b.id+'">'+esc(b.name)+' · '+esc(b.category||'')+' · '+(b.is_premium?'SUSCRITO (Premium)':'Gratis')+'</option>').join('') : '')
           + '</select><p class="muted mt">Al tocar el anuncio, el cliente llega a la ficha del negocio. Los negocios con suscripción llevan la insignia ★ PREMIUM · VERIFICADO.</p>')
       + '<label class="mt">¿Dónde se muestra?</label>'
-      + '<div class="btnrow"><button type="button" class="pay-opt '+(adPlacement==='flotante'?'sel':'')+'" onclick="adPlacement=\'flotante\';renderAdminAds()">Anuncio flotante</button>'
-      + '<button type="button" class="pay-opt '+(adPlacement==='panel'?'sel':'')+'" onclick="adPlacement=\'panel\';renderAdminAds()">Anuncio en el panel de Negocios</button></div>'
+      + '<button type="button" class="adplace '+(adPlacement==='flotante'?'sel':'')+'" onclick="adPlacement=\'flotante\';renderAdminAds()"><b>Anuncio flotante</b><span>Vertical · al entrar a Viajes, Negocios o Mandados</span></button>'
+      + '<button type="button" class="adplace '+(adPlacement==='panel'?'sel':'')+'" onclick="adPlacement=\'panel\';renderAdminAds()"><b>Anuncio en el panel</b><span>Horizontal · arriba en Negocios</span></button>'
       + '<div class="photobox"><b>'+(adPlacement==='panel' ? 'Imagen horizontal del anuncio *' : 'Imagen vertical del anuncio *')+'</b><div class="muted">'
       + (adPlacement==='panel'
         ? 'Formato HORIZONTAL: es el banner que sale arriba en el panel de Negocios. Súbela en horizontal para que se vea completa.'
-        : 'Formato VERTICAL, como las historias: es la que sale flotando al entrar a Viajes, Negocios o Mandados. En la página principal no sale.')
+        : 'Formato VERTICAL, como las historias.')
       + '</div><div id="ad-prev">'+(adImgData?'<img src="'+adImgData+'">':'')+'</div>'
-      + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{adImgData=d; document.getElementById(\'ad-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+      + '<input type="file" id="ad-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="adPickFile(this)">'
+      + '<button type="button" class="btn ghost" onclick="document.getElementById(\'ad-file\').click()">Elegir imagen</button>'
+      + '<div class="muted" id="ad-filename" style="margin-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(adFileName?esc(adFileName):'Sin imagen elegida')+'</div></div>'
       + (adPlacement==='flotante'
         ? '<label class="mt">Mostrar como flotante al entrar a…</label>'
-          + '<label class="chk"><input type="checkbox" id="ad-e-viajes" checked> Viajes (al pedir un viaje)</label>'
-          + '<label class="chk"><input type="checkbox" id="ad-e-negocios" checked> Negocios</label>'
-          + '<label class="chk"><input type="checkbox" id="ad-e-mandados" checked> Mandados (al pedir un mandado)</label>'
+          + '<label class="chk ad-entry"><input type="checkbox" id="ad-e-viajes" checked><span><b>Viajes</b> <span class="muted">(al pedir un viaje)</span></span></label>'
+          + '<label class="chk ad-entry"><input type="checkbox" id="ad-e-negocios" checked><span><b>Negocios</b></span></label>'
+          + '<label class="chk ad-entry"><input type="checkbox" id="ad-e-mandados" checked><span><b>Mandados</b> <span class="muted">(al pedir un mandado)</span></span></label>'
         : '<p class="muted mt">Este anuncio sale solo arriba en el panel de Negocios, no como flotante.</p>')
       + '<button class="btn" onclick="createAd()">Publicar anuncio</button></div>';
   } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
+}
+/* v1.4.31: el selector de archivo del anuncio muestra un botón propio
+   ("Elegir imagen") y el nombre del archivo, sin el texto nativo truncado
+   del input ("ningún…ccionado"). La imagen en sí sigue por fileToPhoto. */
+function adPickFile(input){
+  const f = input.files && input.files[0];
+  adFileName = f ? f.name : '';
+  const nameEl = document.getElementById('ad-filename');
+  if(nameEl) nameEl.textContent = adFileName || 'Sin imagen elegida';
+  if(f) fileToPhoto(input, d=>{adImgData=d; const p=document.getElementById('ad-prev'); if(p) p.innerHTML='<img src='+JSON.stringify(d)+'>';});
 }
 async function createAd(){
   const kind = adKind;
@@ -4527,7 +4550,7 @@ async function createAd(){
   if(!adImgData) return toast('Sube la imagen del anuncio: es obligatoria para publicar.');
   if(kind === 'negocio' && !businessId) return toast('Elige el negocio para vincular el anuncio.');
   if(slot === 'flotante' && !entries.length) return toast('Elige al menos una entrada donde rote el anuncio.');
-  try { await api('/api/create-ad', { token: store.token, kind, business_id: businessId, label, image: adImgData, entries, slot }); adImgData=null; toast('Anuncio subido.'); adScreen='ver'; renderAdminAds(); }
+  try { await api('/api/create-ad', { token: store.token, kind, business_id: businessId, label, image: adImgData, entries, slot }); adImgData=null; adFileName=''; toast('Anuncio subido.'); adScreen='ver'; renderAdminAds(); }
   catch(e){ toast(e.message); }
 }
 async function setAdActive(id, active){
