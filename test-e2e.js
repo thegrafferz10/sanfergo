@@ -310,7 +310,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.10 en /api/health', h.ok && h.version === '1.4.10', JSON.stringify(h));
+  check('versión 1.4.11 en /api/health', h.ok && h.version === '1.4.11', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -411,7 +411,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.10', h134.ok && h134.version === '1.4.10', JSON.stringify(h134));
+  check('versión 1.4.11', h134.ok && h134.version === '1.4.11', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -447,7 +447,7 @@ async function api(path, body) {
   // puntos con ≥ 2 m; suavizado 0.7 y giro en 300 ms; se ocultan los
   // rótulos de negocios en taxímetro y viaje en vivo; controles más chicos.
   check('el taxímetro mueve marcador/giro/centro en cada lectura, el 4 m es solo tarifa', html.includes('if(d >= 0.004){ // los pasos cuentan desde 4 m SOLO para la tarifa') && html.includes('taxiFollowCenter({ lat, lng })'));
-  check('rumbo reactivo: suavizado 0.7 en taxímetro y viaje en vivo', html.includes('taxiLastHeading += dd * 0.7') && html.includes('liveLastHeading += d * 0.7') && html.includes('newBearing = -taxiLastHeading') && html.includes('return -liveLastHeading;'));
+  check('rumbo reactivo: suavizado 0.7 en taxímetro y viaje en vivo', html.includes('taxiLastHeading += dd * 0.7') && html.includes('liveLastHeading += d * 0.7') && html.includes('newBearing = taxiLastHeading') && html.includes('return liveLastHeading;'));
   check('se ocultan los rótulos de negocios en los mapas en vivo (taxímetro y viaje)', html.includes('function hidePoiLabels(map)') && html.includes('function declutterLiveMap(map)') && html.includes('declutterLiveMap(taxiMap)') && html.includes('declutterLiveMap(liveMap)'));
   check('controles del taxímetro más chicos (velocidad, zoom/brújula, píldoras)', html.includes('.taxispeed{position:absolute;right:0;bottom:calc(100% + 10px);width:62px;height:62px') && html.includes('.taxizoom button{width:36px;height:36px;font-size:17px') && html.includes('.taxi-vas{background:#14532d;color:#fff;font-weight:800;font-size:11px'));
   // Un solo easeTo por actualización (v1.4.6): en MapLibre cada easeTo
@@ -480,21 +480,24 @@ async function api(path, body) {
   // brújula: el rumbo es siempre el del desplazamiento entre lecturas.
   // Simulación del caso real: dos lecturas yendo al SUR (latitud bajando)
   // con la brújula presente y al revés (0°, norte) → rumbo 180° (sur) y
-  // bearing -180°, con la fórmula de círculo máximo (taxiBearingDeg).
+  // bearing +180° en MapLibre (el bearing es +rumbo; ver v1.4.11), con la
+  // fórmula de círculo máximo (taxiBearingDeg).
   const latA = 16.8709, lngA = -93.2063, latB = 16.8700, lngB = -93.2063;
   const dLngS = (lngB-lngA)*Math.PI/180, la1S = latA*Math.PI/180, la2S = latB*Math.PI/180;
   const hSur = (Math.atan2(Math.sin(dLngS)*Math.cos(la2S), Math.cos(la1S)*Math.sin(la2S)-Math.sin(la1S)*Math.cos(la2S)*Math.cos(dLngS)) * 180/Math.PI + 360) % 360;
-  check('giro v1.4.8: el rumbo es siempre el del desplazamiento, nunca la brújula del teléfono', !html.includes('coords.heading') && html.includes('function taxiBearingDeg(') && Math.abs(hSur - 180) < 0.01 && Math.abs((-hSur) - (-180)) < 0.01);
+  check('giro v1.4.8: el rumbo es siempre el del desplazamiento, nunca la brújula del teléfono', !html.includes('coords.heading') && html.includes('function taxiBearingDeg(') && Math.abs(hSur - 180) < 0.01);
   // Rumbo con referencia ESTABLE (v1.4.9): replica el método de la app real
   // (MapView followVehicle: lastVehiclePosRef solo avanza con >4 m y rumbo
-  // bearingDeg de círculo máximo; bearing = -rumbo; marcador clavado en el
+  // bearingDeg de círculo máximo; bearing = +rumbo en MapLibre — el
+  // rotate() de CSS de la app real es -rumbo, pero MapLibre aplica el
+  // bearing con el signo opuesto (ver v1.4.11); marcador clavado en el
   // centro y el mapa gira debajo). La web movía su referencia en CADA
   // lectura (~1 Hz): con ruido de GPS el rumbo salía de dos puntos de ~5 m
   // y saltaba, así que la línea azul quedaba AL LADO de la mototaxi
   // (capturas 5:17/5:18) aunque el ícono apuntara arriba.
   // (a) Viaje recto al ESTE, lecturas ~1 Hz a 2.8 m, ruido GPS realista
   // (deriva lenta ±0.3 m/lectura + temblor ±0.5 m, error total ~±3 m): el
-  // rumbo suavizado 0.7 debe mantenerse ~90° (este) y el bearing ~-90°,
+  // rumbo suavizado 0.7 debe mantenerse ~90° (este) y el bearing ~+90°,
   // o sea la línea queda abajo. El método viejo (referencia cada lectura,
   // ≥2 m) se degrada mucho más con el mismo ruido.
   function havKmT(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180;
@@ -546,6 +549,27 @@ async function api(path, body) {
     if(havKmT(ref9b.lat,ref9b.lng,p.lat,p.lng)>0.004){ upd9b++; ref9b=p; }
   }
   check('giro v1.4.9: parado con temblor la referencia del rumbo no avanza ni gira', upd9b===0 && !html.includes('if(speedKmh >= 5)'), 'actualizaciones='+upd9b);
+  // Signo del giro (v1.4.11): en MapLibre el bearing es +rumbo, al revés
+  // que el rotate() de CSS de la app real (donde es -rumbo). Comprobado en
+  // navegador real con MapLibre 4.7.1 (mismo estilo y opciones de makeMap,
+  // simulación del taxímetro con la cadena verbatim): jumpTo/easeTo con
+  // bearing -90 dejan el este ABAJO en pantalla y con bearing +90 lo dejan
+  // ARRIBA (project() del punto 60 m al este: y mayor que el centro con
+  // -90, y menor con +90; y el fuente confirma bearing()=-angle/π*180).
+  // El signo viejo (-rumbo, desde v1.4.4) hacía que la moto fuera hacia
+  // abajo o de lado aunque el rumbo fuera estable (capturas 4:56, 5:17/5:18;
+  // "Nada sigue igual" 17:40); los tests viejos afirmaban ese signo malo
+  // (bearing -180° para ir al sur), por eso pasaban 248/248 mientras el
+  // usuario lo veía mal. Simulación: ir al ESTE da rumbo ~90° → bearing
+  // +90°; ir al SUR da rumbo 180° → bearing +180°. La línea azul queda
+  // abajo solo con +rumbo, en el taxímetro y en el viaje en vivo.
+  const bEast11 = hs9.length ? hs9[hs9.length-1] : null;
+  check('giro v1.4.11: en MapLibre el bearing es +rumbo (el signo viejo lo dejaba al revés)', html.includes('newBearing = taxiLastHeading;') && !html.includes('newBearing = -taxiLastHeading;') && html.includes('return liveLastHeading;') && !html.includes('return -liveLastHeading;') && bEast11!=null && Math.abs(bEast11 - 90) < 15 && Math.abs(hSur - 180) < 0.01, 'bearing este=+' + (bEast11==null?'?':bEast11.toFixed(1)) + ' sur=+' + hSur.toFixed(1));
+  // Pie de versión en inicio (v1.4.11, petición del usuario): debajo del
+  // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
+  // única constante APP_VERSION del cliente; el check compara con
+  // /api/health para que ambas coincidan al subir de versión.
+  check('pie de versión en inicio (v1.4.11)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.11';") && h.version === '1.4.11', 'health=' + JSON.stringify(h));
   // Anuncio flotante de entrada a sangre (v1.4.10, igual que la app real
   // EntryAdOverlay): en la web la imagen quedaba dentro de un marco
   // blanco de 12 px (tarjeta con padding:12px e imagen con

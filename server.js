@@ -2,11 +2,14 @@
 // Uso:  node server.js        (PORT=3000, datos en ./data/sanfergo.db)
 //       PORT=8080 DATA_DIR=/ruta node server.js
 //
-// Estado del spec: 2026-11-22 (v1.4.10: el anuncio flotante de entrada va
-// a sangre como en la app real — sin padding en la tarjeta ni radio en la
-// imagen, solo el pie con padding; v1.4.9: el giro del taxímetro usa la
-// referencia estable de la app real para que la línea azul quede abajo
-// nunca la brújula del teléfono — el rumbo es siempre el del
+// Estado del spec: 2026-11-22 (v1.4.11: el bearing del giro es +rumbo en
+// MapLibre (signo opuesto al rotate() de CSS de la app real) y el inicio
+// muestra "Versión 1.4.11" en el pie; v1.4.10: el anuncio flotante de
+// entrada va a sangre como en la app real — sin padding en la tarjeta ni
+// radio en la imagen, solo el pie con padding; v1.4.9: el giro del
+// taxímetro usa la referencia estable de la app real para que la línea
+// azul quede abajo; nunca la brújula del teléfono — el rumbo es siempre
+// el del
 // desplazamiento entre lecturas; la brújula apuntaba al revés del viaje
 // y el mapa giraba 180° al revés, la moto parecía ir hacia abajo.
 // Antes v1.4.7: rediseño compacto del taxímetro
@@ -597,7 +600,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.10' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.11' });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {

@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.10)
+# SanFerGo — versión pública (v1.4.11)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.11 (2026-11-22) — el bearing del giro es +rumbo en MapLibre (el signo estaba al revés) + pie de versión en inicio
+
+- El usuario probó la 1.4.10 y dijo "Nada sigue igual" (el taxímetro seguía con la línea al lado), y pidió: "Por qué no checas la configuración que tiene la aplicación y esa misma se la pasas". La app real gira su mapa con CSS (`RotatedBase` en `MapView.tsx`: `transform: rotate(bearing)` con `bearing = -rumbo`); la web gira con el bearing nativo de MapLibre (`easeTo({bearing})`).
+- Prueba decisiva en navegador real (Chrome headless del sandbox, MapLibre 4.7.1, mismo estilo y opciones de `makeMap`, simulación del taxímetro con la cadena de seguimiento verbatim): el bearing nativo SÍ gira el mapa (jumpTo/easeTo con bearing cambian `getBearing()` y la proyección), pero con el signo OPUESTO al `rotate()` de CSS: con bearing -90 el este queda ABAJO en pantalla, con bearing +90 queda ARRIBA (números de `project()` del punto 60 m al este; el fuente de MapLibre lo confirma: `bearing() = -angle/π*180`). El signo viejo (`newBearing = -rumbo`, desde v1.4.4) dejaba la moto hacia abajo o de lado aunque el rumbo ya fuera estable — y los tests viejos afirmaban ese signo malo (bearing -180° para ir al sur), por eso pasaban 248/248 mientras el usuario lo veía mal.
+- Arreglo (solo el signo, en el taxímetro y en el viaje en vivo): `newBearing = taxiLastHeading` y `applyHeading` devuelve `liveLastHeading` (sin el menos). Referencia estable >4 m, `taxiBearingDeg`, suavizado, un solo `easeTo`, diseño compacto, ícono, anuncios y tarifa sin cambios; `coords.heading` sigue prohibida. El giro con GPS real no se puede verificar sin un teléfono en movimiento: hay que probarlo andando en la mototaxi — la línea azul debe quedar siempre abajo.
+- Pie de versión en inicio (petición del usuario, captura 5:44 CST): debajo del enlace "Mi cuenta" sale "Versión 1.4.11" en texto pequeño y discreto, de la única constante `APP_VERSION` del cliente; el test compara el pie con `/api/health` para que coincidan al subir de versión. Solo en inicio, nada más cambia de diseño.
 
 ## v1.4.10 (2026-11-22) — el anuncio flotante de entrada va a sangre, como en la app real
 
