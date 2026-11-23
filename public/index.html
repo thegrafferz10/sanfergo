@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.31'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.32'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3490,6 +3490,16 @@ function renderMandadoEnviar(){
       + '<input id="md-dest-q" placeholder="Escribe un lugar: Centro, Progreso, Madero…" autocomplete="off" value="'+esc(md.destZone||'')+'" oninput="mdDestSearch(this.value)">'
       + '<div id="md-dest-res"></div>'
       + (md.dest ? '<p class="muted mt">📍 Punto marcado: '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(md.destZone ? ' · cerca de '+esc(md.destZone) : '')+'</p>' : '')
+      + '<div class="dashbox"><b>Ubicación por WhatsApp</b>'
+      + (md.waDest ? '<p class="muted mt">📍 Punto de entrega marcado desde WhatsApp</p><p class="muted">'+md.waDest.lat.toFixed(5)+', '+md.waDest.lng.toFixed(5)+'</p><button class="btn ghost small" onclick="md.waDest=null;md.dest=null;md.destZone=\'\';renderMandados()">Quitar este punto</button>'
+          : '<textarea id="md-wa-dest" rows="2" placeholder="Pega aquí el enlace de la ubicación o las coordenadas que te mandaron"></textarea>'
+          + '<button class="btn" style="background:#25d366;color:#fff" onclick="mdResolveWaDest()">Marcar como punto de entrega</button>'
+          + '<div class="err hidden" id="md-wa-err2">No se encontró ningún punto en ese texto: pega el enlace de Google Maps o las coordenadas.</div>'
+          + '<p class="muted mt">Vale el enlace de la ubicación fija o en tiempo real (de la de tiempo real se toma el punto en este momento) y las coordenadas escritas.</p>')
+      + '<label class="mt">WhatsApp de quien recibe (opcional)</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
+      + '<div id="md-ask-btn" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
+      + '<div id="md-ask-hint" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
+      + '</div>'
       + '<label class="mt">Calle o referencia (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de la esquina, portón verde" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
       + '<div class="err hidden" id="md-err2">Escribe el lugar de entrega y elige una coincidencia.</div>'
       + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null){document.getElementById(\'md-err2\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
@@ -3549,6 +3559,7 @@ function mdDestSearch(q){
 }
 function mdChooseDestPlace(j){
   const p = mdDestList[j]; if(!p) return;
+  md.waDest = null; // el lugar elegido sustituye un punto pegado de WhatsApp
   md.dest = { lat: p.lat, lng: p.lng, label: p.name, zone: p.name };
   md.destZone = p.name;
   const inp = document.getElementById('md-dest-q'); if(inp) inp.value = p.name;
@@ -3557,16 +3568,17 @@ function mdChooseDestPlace(j){
 }
 async function mdResolveWaDest(){
   const txt = ($('#md-wa-dest')||{}).value ? $('#md-wa-dest').value.trim() : '';
+  const err2 = document.getElementById('md-wa-err2'); if(err2) err2.classList.add('hidden');
   if(!txt) return toast('Pega el enlace o las coordenadas.');
   try {
     const j = await api('/api/resolve-location', { text: txt });
-    if(!j.lat) return toast('No se encontró ningún punto en ese texto.');
+    if(!j.lat){ if(err2) err2.classList.remove('hidden'); return toast('No se encontró ningún punto en ese texto.'); }
     md.waDest = { lat: j.lat, lng: j.lng };
     md.dest = { lat: j.lat, lng: j.lng, label: 'Punto de WhatsApp', zone: '' };
     md.destZone = '';
     toast('Punto de entrega marcado desde WhatsApp.');
     renderMandados();
-  } catch(e){ toast('No se pudo leer esa ubicación.'); }
+  } catch(e){ if(err2) err2.classList.remove('hidden'); toast('No se pudo leer esa ubicación.'); }
 }
 async function mdActivatePickup(){
   try {
