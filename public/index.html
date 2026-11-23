@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.34'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.35'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2134,16 +2134,42 @@ function priceSheetHtml(kind){
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
   }
   return '<b>'+(isTrip ? 'Tu precio' : 'Precio y publicar')+'</b>'
-    + (!isTrip ? '<p class="muted mt">'+esc(mdSummaryLine())+'</p>' : '')
+    + (!isTrip ? mdPublishSummaryHtml() : '')
     + extra
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-weight:700">Tu precio</span><button class="sugg-pill" onclick="priceSetSuggested(\''+kind+'\')">Sugerido: '+fmt$(sugg)+'</button></div>'
     + '<div class="stepper"><button class="pm" onclick="priceStep(\''+kind+'\',-5)">−</button><span class="val" id="price-val">'+fmt$(st.price)+'</span><button class="pm" onclick="priceStep(\''+kind+'\',5)">+</button></div>'
-    + '<p class="muted center mt">Tú pones el precio, de $5 en $5. El conductor lo acepta o te ofrece el suyo.</p>'
+    + (isTrip ? '<p class="muted center mt">Tú pones el precio, de $5 en $5. El conductor lo acepta o te ofrece el suyo.</p>' : '')
     + '<div style="font-weight:700;margin-top:10px">¿Cómo vas a pagar?</div>'
     + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(st.payment==='efectivo'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'efectivo\')">Efectivo</button><button type="button" class="pay-opt '+(st.payment==='transferencia'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'transferencia\')">Transferencia</button></div>'
-    + '<p class="muted mt" id="price-pay-note">'+payNote+'</p>'
+    + (isTrip ? '<p class="muted mt" id="price-pay-note">'+payNote+'</p>' : '')
     + '<button class="amber" style="background:#f59e0b" onclick="'+(isTrip ? 'publishTrip()' : 'publishMandado()')+'">'+(isTrip ? 'Pedir viaje' : 'Publicar mandado')+'</button>'
-    + '<p class="muted center mt">Al publicar, tu '+(isTrip?'viaje':'mandado')+' se envía a los choferes. En cuanto uno acepte tu precio, queda confirmado con el pago que elegiste aquí.</p>';
+    + (isTrip ? '<p class="muted center mt">Al publicar, tu '+(isTrip?'viaje':'mandado')+' se envía a los choferes. En cuanto uno acepte tu precio, queda confirmado con el pago que elegiste aquí.</p>' : '');
+}
+function mdPublishSummaryHtml(){
+  // Resumen compacto en la hoja "Precio y publicar" (mandados, v1.4.35):
+  // lo que se solicita, recogida, entrega, quien recibe, pago del pedido,
+  // precio y forma de pago. Ocupa el lugar de los tres párrafos largos que
+  // se quitaron, así la hoja sigue sin scroll. Precio y pago se actualizan
+  // en vivo al mover el stepper o cambiar el pago (ids md-sum-price/pay).
+  const rows = [];
+  const what = md.kind==='quiero'
+    ? ((md.items||[]).filter(i=>i.trim()).join(' · ') || 'Mandado')
+    : (md.description || 'Mandado');
+  rows.push(['Qué se entrega', esc(what)]);
+  if(md.kind==='quiero'){
+    const stops = (md.stops||[]).map(s=>s.zone||s.detail||'').filter(Boolean);
+    rows.push(['Se recoge en', esc(stops.length ? stops.join(' · ') : 'Varios lados')]);
+    rows.push(['Se entrega', esc('Tu punto' + (md.destRef ? ' · '+md.destRef : ''))]);
+  } else {
+    rows.push(['Se recoge', esc('Donde estás tú' + (md.pickupRef ? ' · '+md.pickupRef : ''))]);
+    rows.push(['Se entrega', esc('Punto de WhatsApp' + (md.dest && md.dest.lat!=null ? ' ('+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+')' : ''))]);
+    if(md.recipientName||md.recipient) rows.push(['Recibe', esc((md.recipientName||'Quien recibe') + (md.recipient ? ' · '+md.recipient : ''))]);
+    if(md.orderPay==='pagado') rows.push(['Pedido', 'Ya pagado']);
+    else if(md.orderPay==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(Number(md.orderAmount)||0)+' para recogerlo']);
+  }
+  rows.push(['Tu precio', '<span id="md-sum-price">'+fmt$(md.price)+'</span> · <span id="md-sum-pay">'+(md.payment==='transferencia'?'Transferencia':'Efectivo')+'</span>']);
+  return '<div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-top:8px"><b>Resumen de tu mandado</b>'
+    + rows.map(r=>'<div class="kv"><span>'+r[0]+'</span><b style="text-align:right">'+r[1]+'</b></div>').join('') + '</div>';
 }
 function mdSummaryLine(){
   if(md.kind==='quiero'){
@@ -2156,6 +2182,7 @@ function priceStep(kind, d){
   const st = kind==='viaje' ? wiz : md;
   st.price = Math.max(20, st.price + d);
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
+  const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
   const n = document.getElementById('price-pay-note');
   if(n) n.textContent = (st.payment==='efectivo' ? 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.' : 'Pagas '+fmt$(st.price)+' por transferencia directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.');
 }
@@ -2163,6 +2190,7 @@ function priceSetSuggested(kind){
   const st = kind==='viaje' ? wiz : md;
   st.price = st.suggested;
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
+  const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
 }
 function priceSetPay(kind, m){
   const st = kind==='viaje' ? wiz : md;
@@ -2571,6 +2599,7 @@ function renderLiveStrips(){
     pill.classList.add('hidden');
     const nxt = nextStage(r);
     bot.innerHTML = '<div class="row"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
+      + mandadoDriverSummaryHtml(r)
       + (r.trip_stage==='llego' ? '<a class="telbtn" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+' · '+esc(r.passenger_phone||'')+'</a>' : '')
       + (r.kind==='mandado' ? '<button class="ghostb" onclick="driverPasteLocationInline('+r.id+')">📍 Pegar ubicación de WhatsApp para la entrega</button><div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:8px;background:var(--amber);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
@@ -3942,6 +3971,20 @@ async function loadDriverHist(){
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
 }
 let driverInboxTab = 'sol', driverCounter = null;
+function mandadoDriverSummaryHtml(r){
+  // Resumen del mandado en la tarjeta del chofer (v1.4.35): quien recibe y,
+  // si el pedido se va a pagar, lo que el chofer debe llevar para recogerlo.
+  // Se usa en solicitudes, en curso y en el mapa en vivo. Las solicitudes
+  // viejas, sin esos campos, no muestran nada y la tarjeta no se rompe.
+  if(!r || r.kind!=='mandado') return '';
+  const rows = [];
+  if(r.recipient_name||r.recipient_phone) rows.push(['Recibe', esc(r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')]);
+  if(r.order_payment==='pagado') rows.push(['Pedido', 'Ya pagado']);
+  else if(r.order_payment==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo']);
+  if(!rows.length) return '';
+  return '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px 12px;margin-top:8px"><b>Resumen del mandado</b>'
+    + rows.map(x=>'<div class="kv"><span>'+x[0]+'</span><b style="text-align:right">'+x[1]+'</b></div>').join('') + '</div>';
+}
 async function renderDriverInbox(){
   const p = $('#chofer-page');
   // Se pinta la pantalla al instante (encabezado + Cargando…): antes la
@@ -3974,7 +4017,7 @@ async function renderDriverInbox(){
         + '<button class="tabbtn'+(driverInboxTab==='sol'?' on':'')+'" onclick="driverInboxTab=\'sol\';renderDriverInbox()">Solicitudes ('+list.length+')</button></div>';
     }
     if(driverInboxTab==='curso' && active.length){
-      html += active.map(r=>'<div class="card white"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b><div class="muted mt">'+fmt$(r.final_price||r.price)+' · '+stageLabel(r)+'</div><button class="btn small" onclick="goLive('+r.id+', true)">Abrir mapa del servicio</button></div>').join('');
+      html += active.map(r=>'<div class="card white"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b><div class="muted mt">'+fmt$(r.final_price||r.price)+' · '+stageLabel(r)+'</div>'+mandadoDriverSummaryHtml(r)+'<button class="btn small" onclick="goLive('+r.id+', true)">Abrir mapa del servicio</button></div>').join('');
       p.innerHTML = html;
       return;
     }
@@ -4007,8 +4050,7 @@ async function renderDriverInbox(){
       + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
       + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
       + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
-      + ((r.kind==='mandado' && (r.recipient_name||r.recipient_phone))?'<p class="muted">Recibe: '+esc(r.recipient_name||'Quien recibe')+(r.recipient_phone?' · '+esc(r.recipient_phone):'')+'</p>':'')
-      + (r.order_payment==='pagado'?'<p class="muted">Pedido: ya pagado</p>':r.order_payment==='por_pagar'?'<p class="muted">Pedido: se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo</p>':'');
+      + mandadoDriverSummaryHtml(r);
     if(counter){
       html += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
         + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
