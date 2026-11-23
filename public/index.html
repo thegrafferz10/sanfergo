@@ -466,7 +466,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.18'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.20'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -609,18 +609,29 @@ async function loadMe(){
   try {
     // Sesión de cuenta (persistente en el dispositivo): recupera la cuenta
     // y sus perfiles enlazados en cualquier teléfono.
+    // v1.4.20: con sesión, los perfiles son SOLO los enlazados a esa
+    // cuenta (/api/me). El id de chofer/pasajero guardado en el teléfono
+    // (store.did/store.pid) es de la sesión anterior: si no coincide con
+    // la cuenta actual, se borra y NUNCA se usa — el chofer de una cuenta
+    // no puede aparecer en la cuenta de otra persona.
+    let hasSession = false;
     if (store.token) {
       try {
         const j = await api('/api/me?token=' + encodeURIComponent(store.token));
         myAccount = j.account;
         myPassenger = j.passenger || null;
         myDriver = j.driver || null;
-        if (myPassenger) store.pid = myPassenger.id;
-        if (myDriver) store.did = myDriver.id;
+        hasSession = true;
+        if (myPassenger) store.pid = myPassenger.id; else store.pid = null;
+        if (myDriver) store.did = myDriver.id; else store.did = null;
       } catch(e){ store.token = null; myAccount = null; }
     }
-    if (!myPassenger && store.pid) { const j = await api('/api/passengers'); myPassenger = j.passengers.find(p=>p.id==store.pid) || null; if(!myPassenger) store.pid=null; }
-    if (!myDriver && store.did) { const j = await api('/api/drivers'); myDriver = j.drivers.find(d=>d.id==store.did) || null; if(!myDriver) store.did=null; }
+    // Sin sesión (modo sin cuenta, heredado): el teléfono recuerda sus
+    // propios perfiles por id. Con sesión esto NO se ejecuta.
+    if (!hasSession) {
+      if (!myPassenger && store.pid) { const j = await api('/api/passengers'); myPassenger = j.passengers.find(p=>p.id==store.pid) || null; if(!myPassenger) store.pid=null; }
+      if (!myDriver && store.did) { const j = await api('/api/drivers'); myDriver = j.drivers.find(d=>d.id==store.did) || null; if(!myDriver) store.did=null; }
+    }
   } catch(e){}
 }
 function placeByName(n){ return allPlaces().find(p=>p.name===n); }
@@ -1516,7 +1527,8 @@ function goAfterLogin(){
 }
 async function doLogout(){
   try { await api('/api/logout', { token: store.token }); } catch(e){}
-  store.token = null; myAccount = null;
+  store.token = null; myAccount = null; myPassenger = null; myDriver = null;
+  store.pid = null; store.did = null; // v1.4.20: no dejar el id del chofer/pasajero en el teléfono para la próxima cuenta
   await loadMe();
   openLogin('login');
   toast('Sesión cerrada.');
@@ -3922,6 +3934,8 @@ function renderAdminGrid(){
     + '<div style="width:56px;height:56px;border-radius:50%;background:#14532d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0">'+initial+'</div>'
     + '<div class="flex1"><b style="font-size:18px">'+esc(a.name)+'</b><div class="muted">Usuario: @'+esc(a.username)+'</div><div class="muted">Teléfono: '+esc(a.phone||a.email||'—')+'</div></div>'
     + '<span class="chip" style="background:#991b1b;color:#fff">ADMINISTRADOR</span></div></div>'
+    + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
+    + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -3937,6 +3951,15 @@ function renderAdminGrid(){
   loadAdminOverview();
   if(adminPoll) clearInterval(adminPoll);
   adminPoll = setInterval(loadAdminOverview, 5000); // revisa cada 5 segundos
+}
+// Respaldo de la base de datos (v1.4.19): el admin descarga una copia
+// completa con su token de sesión; el servidor la sirve como archivo.
+function downloadBackup(){
+  const a = document.createElement('a');
+  a.href = '/api/admin/backup?token=' + encodeURIComponent(store.token);
+  a.download = '';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('Descargando el respaldo de la base de datos…');
 }
 async function loadAdminOverview(){
   try {
