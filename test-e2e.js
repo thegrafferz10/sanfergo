@@ -333,7 +333,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.29 en /api/health', h.ok && h.version === '1.4.29', JSON.stringify(h));
+  check('versión 1.4.30 en /api/health', h.ok && h.version === '1.4.30', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -434,7 +434,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.29', h134.ok && h134.version === '1.4.29', JSON.stringify(h134));
+  check('versión 1.4.30', h134.ok && h134.version === '1.4.30', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -596,7 +596,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.29)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.29';") && h.version === '1.4.29', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.30)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.30';") && h.version === '1.4.30', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -986,7 +986,7 @@ async function api(path, body) {
   // que saltan al banner, auto-avance cada 5 s que se pausa al tocar, tap
   // (sin arrastre) abre el negocio vinculado y el libre no hace nada.
   // Sin anuncios activos no se muestra nada (sin caja vacía).
-  check('carrusel Negocios: se alimenta de /api/ads filtrando por entrada negocios, auto-avance 5 s, tap abre el negocio vinculado y el libre no hace nada, sin anuncios no muestra nada (v1.4.16)', html.includes("async function renderBizAdsCarousel(){") && html.includes("api('/api/ads')") && html.includes("(a.entries||[]).includes('negocios')") && html.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);") && html.includes("bizCarouselStop()") && html.includes('class="biz-carousel-dots"') && html.includes('data-biz="')); 
+  check('carrusel Negocios: se alimenta de /api/ads filtrando por banner_image, auto-avance 5 s, tap abre el negocio vinculado y el libre no hace nada, sin anuncios no muestra nada (v1.4.16, v1.4.30: el banner es la imagen horizontal)', html.includes("async function renderBizAdsCarousel(){") && html.includes("api('/api/ads')") && html.includes("filter(a=>a.banner_image)") && html.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);") && html.includes("bizCarouselStop()") && html.includes('class="biz-carousel-dots"') && html.includes('data-biz="')); 
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y
@@ -1381,7 +1381,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.29 en /api/health (sección)', h27.ok && h27.version === '1.4.29', JSON.stringify(h27));
+  check('versión 1.4.30 en /api/health (sección)', h27.ok && h27.version === '1.4.30', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1426,7 +1426,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.29 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.29', JSON.stringify(h28));
+  check('versión 1.4.30 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.30', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1440,12 +1440,122 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.29 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.29', JSON.stringify(h29));
+  check('versión 1.4.30 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.30', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
   const sac = html.slice(html.indexOf('async function saveAdminCredentials(){'), html.indexOf('async function loadAdminOverview(){'));
   check('al guardar bien, la tarjeta se colapsa de nuevo y sale el aviso de siempre', sac.includes('adminCredsOpen = false;') && sac.indexOf('adminCredsOpen = false;') < sac.indexOf('renderAdminGrid();') && sac.includes("toast('Credenciales actualizadas.')"));
+
+  console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
+  const h30 = await api('/api/health');
+  check('versión 1.4.30 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.30', JSON.stringify(h30));
+  // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
+  const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
+  const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
+  check('anuncio flotante: solo imagen vertical, sin banner', adF.ok && adF.ad.image && !adF.ad.banner_image, JSON.stringify(adF.ad));
+  const adP = await api('/api/create-ad', { token: admLogin.token, label: 'Panel ' + RUN, image: ADIMG2, slot: 'panel' });
+  check('anuncio de panel: solo banner horizontal, sin vertical, entradas solo negocios', adP.ok && adP.ad.banner_image && !adP.ad.image && Array.isArray(adP.ad.entries) && adP.ad.entries.length === 1 && adP.ad.entries[0] === 'negocios', JSON.stringify(adP.ad));
+  const adBadSlot = await api('/api/create-ad', { token: admLogin.token, label: 'Malo ' + RUN, image: ADIMG, slot: 'inicio' });
+  check('slot inválido rechazado', !adBadSlot.ok, JSON.stringify(adBadSlot));
+  const adsAll = await api('/api/ads');
+  check('/api/ads trae ambos con sus dos imágenes', adsAll.ok && adsAll.ads.some(a => a.id === adF.ad.id && a.image && !a.banner_image) && adsAll.ads.some(a => a.id === adP.ad.id && a.banner_image && !a.image), JSON.stringify(adsAll.ads && adsAll.ads.filter(a => a.id === adF.ad.id || a.id === adP.ad.id)));
+  // El de panel (sin vertical) NUNCA rota como flotante: 20 sorteos por entrada.
+  let panelSeen = false;
+  for (let i = 0; i < 20; i++) {
+    for (const e of ['viajes', 'negocios', 'mandados']) {
+      const ev = await api('/api/entry-ad?entry=' + e + '&token=' + admLogin.token);
+      if (ev.ad && ev.ad.id === adP.ad.id) panelSeen = true;
+    }
+  }
+  check('el anuncio solo-banner nunca rota como flotante (20 sorteos x 3 entradas)', !panelSeen);
+  // Negocio con anuncio: subir el banner actualiza EL MISMO anuncio
+  // (el negocio de la sección v1.4.0 ya tiene su anuncio flotante adA).
+  const bizAdF = await api('/api/create-ad', { token: admLogin.token, label: 'Negocio flotante ' + RUN, image: ADIMG, kind: 'negocio', business_id: biz.business.id, entries: ['viajes'] });
+  check('negocio: subir flotante actualiza su anuncio (vertical, sin banner)', bizAdF.ok && bizAdF.ad.id && bizAdF.ad.image && !bizAdF.ad.banner_image, JSON.stringify(bizAdF.ad));
+  const bizAdP = await api('/api/create-ad', { token: admLogin.token, label: 'Negocio panel ' + RUN, image: ADIMG2, kind: 'negocio', business_id: biz.business.id, slot: 'panel' });
+  check('negocio: subir el banner actualiza EL MISMO anuncio (vertical intacta, ya tiene ambas)', bizAdP.ok && bizAdP.ad.id === bizAdF.ad.id && bizAdP.ad.image && bizAdP.ad.banner_image, JSON.stringify(bizAdP.ad));
+  const bizAds = await api('/api/admin-ads?token=' + admLogin.token);
+  check('negocio: sigue habiendo UN solo anuncio para ese negocio', bizAds.ok && bizAds.ads.filter(a => a.business_id === biz.business.id).length === 1, JSON.stringify(bizAds.ads && bizAds.ads.filter(a => a.business_id === biz.business.id)));
+  // --- Administrar pasajeros (v1.4.30) ---
+  const paxAcc = await api('/api/register-account', { name: 'Pasajero Prueba', username: 'pax_' + RUN, phone: '961103' + RUN.slice(0, 4), password: 'secreta123' });
+  check('cuenta de pasajero de prueba creada', paxAcc.ok && paxAcc.account.id, JSON.stringify(paxAcc));
+  const paxLogin = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('pasajero entra antes de suspender', paxLogin.ok && paxLogin.token, JSON.stringify(paxLogin));
+  const paxList = await api('/api/admin-passengers?token=' + ADM.token);
+  const paxRow = paxList.passengers.find(p => p.account_id === paxAcc.account.id);
+  check('lista de pasajeros trae cuenta, usuario y estado', paxList.ok && paxRow && paxRow.account_username === 'pax_' + RUN && paxRow.account_status === 'activo', JSON.stringify(paxRow));
+  const badStatus = await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'expulsado' });
+  check('estado inválido rechazado', !badStatus.ok, JSON.stringify(badStatus));
+  const noAdminStatus = await api('/api/admin/set-account-status', { token: paxLogin.token, account_id: paxAcc.account.id, status: 'activo' });
+  check('cuenta normal no puede cambiar estados', !noAdminStatus.ok, JSON.stringify(noAdminStatus));
+  const selfStatus = await api('/api/admin/set-account-status', { token: ADM.token, account_id: ADM.account.id, status: 'suspendido' });
+  check('el admin no se puede suspender a sí mismo', !selfStatus.ok, JSON.stringify(selfStatus));
+  const sus = await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'suspendido', suspend_reason: 'Prueba motivo ' + RUN });
+  check('admin suspende la cuenta con motivo', sus.ok && sus.account.status === 'suspendido' && sus.account.suspend_reason === 'Prueba motivo ' + RUN, JSON.stringify(sus));
+  const loginSus = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('suspendido no puede entrar y ve el motivo', !loginSus.ok && /suspendida/.test(loginSus.error || '') && loginSus.error.includes('Motivo: Prueba motivo ' + RUN), JSON.stringify(loginSus));
+  const meSus = await api('/api/me?token=' + paxLogin.token);
+  check('/api/me 403 para suspendido (sesión abierta se cierra)', !meSus.ok && /suspendida/.test(meSus.error || ''), JSON.stringify(meSus));
+  const paxListSus = await api('/api/admin-passengers?token=' + ADM.token);
+  const paxRowSus = paxListSus.passengers.find(p => p.account_id === paxAcc.account.id);
+  check('la lista de pasajeros muestra el motivo de la suspensión', paxRowSus && paxRowSus.account_status === 'suspendido' && paxRowSus.account_suspend_reason === 'Prueba motivo ' + RUN, JSON.stringify(paxRowSus));
+  const react = await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'activo' });
+  check('reactivar deja la cuenta activa y borra el motivo', react.ok && react.account.status === 'activo' && react.account.suspend_reason == null, JSON.stringify(react));
+  const loginOk = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('reactivado vuelve a entrar', loginOk.ok && loginOk.token, JSON.stringify(loginOk));
+  const susNoReason = await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'suspendido' });
+  const loginNoReason = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('suspender sin motivo también vale (mensaje sin Motivo:)', susNoReason.ok && !loginNoReason.ok && /suspendida/.test(loginNoReason.error || '') && !/Motivo:/.test(loginNoReason.error || ''), JSON.stringify(loginNoReason));
+  await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'activo' });
+  const blk = await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'bloqueado' });
+  const loginBlk = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('bloqueado no puede entrar (mensaje claro)', blk.ok && !loginBlk.ok && /bloqueada/.test(loginBlk.error || ''), JSON.stringify(loginBlk));
+  await api('/api/admin/set-account-status', { token: ADM.token, account_id: paxAcc.account.id, status: 'activo' });
+  // Borrar con chofer → 400 (la fila del propio usuario, que es chofer, nunca se borra).
+  const drvAccT = await api('/api/register-account', { name: 'Chofer Cuenta', username: 'drv_' + RUN, phone: '961110' + RUN.slice(0, 4), password: 'secreta123' });
+  check('cuenta de chofer de prueba creada', drvAccT.ok && drvAccT.account.id, JSON.stringify(drvAccT));
+  const drvT = await api('/api/register-driver', { name: 'Chofer Cuenta', phone: '961110' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'D-' + RUN.slice(0, 3), selfie: PHOTO, vehicle_photo: PHOTO });
+  check('chofer de prueba registrado', drvT.ok && drvT.driver.id, JSON.stringify(drvT));
+  await approveDriver(drvT.driver.id);
+  const drvLoginT = await api('/api/login', { identifier: 'drv_' + RUN, password: 'secreta123' });
+  const link2 = await api('/api/link-profiles', { token: drvLoginT.token, driver_id: drvT.driver.id });
+  check('cuenta de chofer enlazada para la prueba de borrado', link2.ok && link2.account.driver_id === drvT.driver.id, JSON.stringify(link2));
+  const delDrv = await api('/api/admin/delete-account', { token: ADM.token, account_id: drvAccT.account.id });
+  check('borrar cuenta con chofer rechazado', !delDrv.ok, JSON.stringify(delDrv));
+  const susDrv = await api('/api/admin/set-account-status', { token: ADM.token, account_id: drvAccT.account.id, status: 'suspendido' });
+  check('suspender cuenta con chofer rechazado (se gestiona en choferes)', !susDrv.ok, JSON.stringify(susDrv));
+  // Borrar al pasajero de prueba: cuenta y pasajero desaparecen.
+  const delPax = await api('/api/admin/delete-account', { token: ADM.token, account_id: paxAcc.account.id });
+  const accsAfter = await api('/api/admin-accounts?token=' + ADM.token);
+  const paxsAfter = await api('/api/admin-passengers?token=' + ADM.token);
+  check('borrar cuenta elimina cuenta y pasajero', delPax.ok && !accsAfter.accounts.some(a => a.id === paxAcc.account.id) && !paxsAfter.passengers.some(p => p.account_id === paxAcc.account.id), JSON.stringify(delPax));
+  const loginDel = await api('/api/login', { identifier: 'pax_' + RUN, password: 'secreta123' });
+  check('borrado ya no puede entrar: debe registrarse desde cero', !loginDel.ok && /No existe/.test(loginDel.error || ''), JSON.stringify(loginDel));
+  const meDel = await api('/api/me?token=' + paxLogin.token);
+  check('/api/me del borrado ya no vale', !meDel.ok, JSON.stringify(meDel));
+  const delSelf = await api('/api/admin/delete-account', { token: ADM.token, account_id: ADM.account.id });
+  check('el admin no se puede borrar a sí mismo', !delSelf.ok, JSON.stringify(delSelf));
+  const delNoAdmin = await api('/api/admin/delete-account', { token: loginOk.token, account_id: drvAccT.account.id });
+  check('cuenta normal no puede borrar cuentas', !delNoAdmin.ok, JSON.stringify(delNoAdmin));
+  // Cliente (estático): menú de anuncios, formulario por ubicación,
+  // carrusel por ubicación, buscador y acciones de pasajeros, aviso 403.
+  const adsSec = html.slice(html.indexOf('function adCard(a){'), html.indexOf('async function createAd(){'));
+  check('Anuncios: menú con Ver anuncios y Subir anuncio', adsSec.includes("adScreen=\\'ver\\'") && adsSec.includes('Ver anuncios') && adsSec.includes("adScreen=\\'subir\\'") && adsSec.includes('Subir anuncio'));
+  check('Subir anuncio: menú Libre y De un negocio (sin toggle de tipo)', adsSec.includes('Subir anuncio Libre') && adsSec.includes('Subir anuncio de un negocio') && !adsSec.includes('Anuncio libre</button>') && !adsSec.includes('De un negocio</button>'));
+  check('Ver anuncios: activos y ocultos separados, con rótulo Flotante/Panel/Ambos y las dos imágenes', adsSec.includes('Anuncios activos') && adsSec.includes('Anuncios ocultos') && adsSec.includes("'Ambos'") && adsSec.includes("'Panel'") && adsSec.includes("'Flotante'") && adsSec.includes('Vertical · flotante') && adsSec.includes('Horizontal · panel'));
+  check('formulario: ubicación flotante (vertical) o panel (horizontal)', adsSec.includes('¿Dónde se muestra?') && adsSec.includes('Anuncio flotante') && adsSec.includes('Anuncio en el panel de Negocios') && adsSec.includes('Imagen vertical del anuncio') && adsSec.includes('Imagen horizontal del anuncio'));
+  const carSec = html.slice(html.indexOf('async function renderBizAdsCarousel(){'), html.indexOf('async function renderBizDetail(){'));
+  check('carrusel Negocios: solo anuncios con banner_image, y la foto es el banner', carSec.includes("filter(a=>a.banner_image)") && carSec.includes("<img src=\"'+a.banner_image+'\""));
+  const paxSec = html.slice(html.indexOf('function renderPaxList(){'), html.indexOf('async function renderAdminPassengers(){'));
+  check('pasajeros: buscador, seleccionar todos y barra Suspender/Bloquear/Eliminar/Reactivar', html.includes('Buscar por nombre') && paxSec.includes('Seleccionar todos') && paxSec.includes('Suspender') && paxSec.includes('Bloquear') && paxSec.includes('Eliminar') && paxSec.includes('Reactivar'));
+  check('pasajeros: la fila propia y la de chofer no tienen casilla', paxSec.includes('Tu cuenta') && paxSec.includes('>Chofer</span>') && paxSec.includes('paxActionable(p)'));
+  check('suspender pide motivo opcional y la fila lo muestra', html.includes("prompt('Motivo de la suspensión") && html.includes('suspend_reason') && paxSec.includes('Motivo: '));
+  const lmSec = html.slice(html.indexOf('async function loadMe(){'), html.indexOf('function placeByName'));
+  check('sesión suspendida/bloqueada: /api/me 403 muestra el aviso y cierra la sesión', lmSec.includes('/suspendida|bloqueada/') && lmSec.includes('toast(e.message)'));
+  // Limpieza: los dos anuncios de la prueba se borran (quedan los de otras secciones).
+  await api('/api/delete-ad', { token: admLogin.token, ad_id: adF.ad.id });
+  await api('/api/delete-ad', { token: admLogin.token, ad_id: adP.ad.id });
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

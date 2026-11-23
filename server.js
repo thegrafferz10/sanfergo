@@ -242,6 +242,20 @@ addCol('drivers', 'status', "TEXT DEFAULT 'pendiente'");
 addCol('ads', 'business_id', 'INTEGER');
 addCol('ads', 'label', 'TEXT');
 addCol('ads', 'entries', 'TEXT');
+// v1.4.30: la segunda imagen del anuncio (banner horizontal del panel
+// de Negocios). Al crear la columna, los anuncios que ya existen copian
+// su imagen vertical como banner, para que no desaparezcan del carrusel
+// hasta que el admin los vuelva a subir en horizontal. Solo se hace esa
+// vez: en los arranques siguientes la columna ya existe y no se toca nada.
+(function addBannerImageCol(){
+  try {
+    const cols = db.prepare(`PRAGMA table_info(ads)`).all().map(c=>c.name);
+    if (!cols.includes('banner_image')) {
+      db.exec(`ALTER TABLE ads ADD COLUMN banner_image TEXT`);
+      db.exec(`UPDATE ads SET banner_image = image WHERE image IS NOT NULL AND image <> ''`);
+    }
+  } catch (e) { /* si falla, el anuncio sigue con su imagen vertical */ }
+})();
 // Choferes registrados antes de v1.3.5 (sin estado): ya estaban activos,
 // quedan aprobados; solo los nuevos nacen PENDIENTES.
 db.exec(`UPDATE drivers SET status='aprobado' WHERE status IS NULL OR status=''`);
@@ -271,6 +285,8 @@ addCol('business_orders', 'note', 'TEXT');
 // Correo verificado (v1.4.17): 1 si la cuenta llegó por código de correo o
 // por Google; las cuentas viejas quedan en 0 (su correo no se verificó).
 addCol('accounts', 'email_verified', 'INTEGER DEFAULT 0');
+addCol('accounts', 'status', "TEXT DEFAULT 'activo'"); // v1.4.30: 'activo' | 'suspendido' | 'bloqueado' (Administrar pasajeros)
+addCol('accounts', 'suspend_reason', 'TEXT'); // v1.4.30: motivo de la suspensión (opcional); se borra al reactivar
 
 // ---- Cuentas e inicio de sesión (desde v1.2.0) ----
 // Contraseñas con scrypt (nunca en texto plano). La sesión es un token
@@ -295,7 +311,12 @@ function cleanEmail(e) { return String(e || '').trim().toLowerCase(); }
 function cleanUsername(u) { return String(u || '').trim().toLowerCase(); }
 function publicAccount(a) {
   if (!a) return null;
-  return { id: a.id, name: a.name, username: a.username, phone: a.phone, email: a.email, email_verified: a.email_verified ? 1 : 0, role: a.role, passenger_id: a.passenger_id, driver_id: a.driver_id, created_at: a.created_at };
+  return { id: a.id, name: a.name, username: a.username, phone: a.phone, email: a.email, email_verified: a.email_verified ? 1 : 0, role: a.role, status: a.status || 'activo', suspend_reason: a.suspend_reason || null, passenger_id: a.passenger_id, driver_id: a.driver_id, created_at: a.created_at };
+}
+// v1.4.30: el mensaje de rechazo al entrar con la cuenta suspendida
+// incluye el motivo cuando el admin escribió uno.
+function suspendedMessage(a){
+  return 'Tu cuenta está suspendida.' + (a.suspend_reason ? ' Motivo: ' + a.suspend_reason : '') + ' Contacta al administrador.';
 }
 function accountFromToken(token) {
   if (!token) return null;
@@ -666,7 +687,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.29' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.30' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -830,6 +851,10 @@ async function api(req, res, pathname) {
       return send(res, 400, { ok: false, error: 'No existe una cuenta con ese usuario, número o correo. Crea tu cuenta.' });
     }
     if (!verifyPassword(pw, a.password_salt, a.password_hash)) return send(res, 400, { ok: false, error: 'Contraseña incorrecta.' });
+    // v1.4.30: una cuenta suspendida o bloqueada no entra, aunque la
+    // contraseña esté bien.
+    if (a.status === 'suspendido') return send(res, 400, { ok: false, error: suspendedMessage(a) });
+    if (a.status === 'bloqueado') return send(res, 400, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const token = newSession(a.id);
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
@@ -926,6 +951,9 @@ async function api(req, res, pathname) {
         VALUES (?,?,NULL,?,?,?,'user',?,NULL,1)`).run(nm, un, em, salt, hash, passenger.id);
       account = db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid);
     }
+    // v1.4.30: una cuenta suspendida o bloqueada tampoco entra con Google.
+    if (account.status === 'suspendido') return send(res, 400, { ok: false, error: suspendedMessage(account) });
+    if (account.status === 'bloqueado') return send(res, 400, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const token = newSession(account.id);
     const passenger = account.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(account.passenger_id) : null;
     const driver = account.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(account.driver_id) : null;
@@ -955,6 +983,10 @@ async function api(req, res, pathname) {
   if (pathname === '/api/me') {
     const a = accountFromToken(q.get('token') || body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Sesión no válida. Inicia sesión de nuevo.' });
+    // v1.4.30: la sesión abierta de una cuenta suspendida o bloqueada se
+    // cierra (el cliente la saca con este mensaje).
+    if (a.status === 'suspendido') return send(res, 403, { ok: false, error: suspendedMessage(a) });
+    if (a.status === 'bloqueado') return send(res, 403, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
     return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null });
@@ -1045,6 +1077,9 @@ async function api(req, res, pathname) {
     const entry = String(q.get('entry') || 'viajes');
     if (!AD_ENTRIES.includes(entry)) return send(res, 400, { ok: false, error: 'Entrada no válida: viajes, negocios o mandados.' });
     const all = db.prepare('SELECT * FROM ads WHERE active=1 ORDER BY id ASC').all()
+      // El flotante de entrada es el anuncio con su imagen vertical
+      // ('image'); el banner del panel vive en 'banner_image' y nunca
+      // rota como flotante.
       .filter(a => a.image && adEntries(a).includes(entry)).map(adWithBusiness);
     if (!all.length) return send(res, 200, { ok: true, ad: null });
     // Sorteo AL AZAR entre TODOS los anuncios activos de esta entrada, sin
@@ -1073,12 +1108,29 @@ async function api(req, res, pathname) {
       if (!b || b.status !== 'activo') return send(res, 400, { ok: false, error: 'Elige un negocio activo para vincular el anuncio.' });
     }
     let entries = AD_ENTRIES.slice();
-    if (Array.isArray(body.entries) && body.entries.length) {
+    // v1.4.30: UN anuncio, DOS imágenes — 'image' es la vertical del
+    // flotante de entrada; 'banner_image' es la horizontal del panel de
+    // Negocios. El cliente manda la imagen subida y el slot que llena.
+    const slot = String(body.slot || 'flotante');
+    if (!['flotante', 'panel'].includes(slot)) return send(res, 400, { ok: false, error: 'Ubicación del anuncio no válida: flotante o panel de Negocios.' });
+    if (slot === 'panel') entries = ['negocios'];
+    else if (Array.isArray(body.entries) && body.entries.length) {
       const clean = body.entries.filter(x => AD_ENTRIES.includes(String(x)));
       if (clean.length) entries = clean;
     }
-    const r = db.prepare('INSERT INTO ads (title, text, image, business_id, label, entries, active) VALUES (?,?,?,?,?,?,1)')
-      .run(label, null, body.image, businessId, label, JSON.stringify(entries));
+    // De un negocio: si el negocio YA tiene anuncio, se actualiza EL
+    // MISMO (su slot), sin duplicar y sin tocar el otro slot; el banner
+    // tampoco toca las entradas. Libre: siempre se crea uno nuevo.
+    if (kind === 'negocio') {
+      const prev = db.prepare('SELECT * FROM ads WHERE business_id=? ORDER BY id DESC LIMIT 1').get(businessId);
+      if (prev) {
+        if (slot === 'panel') db.prepare('UPDATE ads SET banner_image=? WHERE id=?').run(body.image, prev.id);
+        else db.prepare('UPDATE ads SET image=?, entries=? WHERE id=?').run(body.image, JSON.stringify(entries), prev.id);
+        return send(res, 200, { ok: true, ad: adWithBusiness(db.prepare('SELECT * FROM ads WHERE id=?').get(prev.id)) });
+      }
+    }
+    const r = db.prepare('INSERT INTO ads (title, text, image, banner_image, business_id, label, entries, active) VALUES (?,?,?,?,?,?,?,1)')
+      .run(label, null, slot === 'panel' ? null : body.image, slot === 'panel' ? body.image : null, businessId, label, JSON.stringify(entries));
     return send(res, 200, { ok: true, ad: adWithBusiness(db.prepare('SELECT * FROM ads WHERE id=?').get(r.lastInsertRowid)) });
   }
   if (pathname === '/api/set-ad-active') {
@@ -1462,7 +1514,49 @@ async function api(req, res, pathname) {
   if (pathname === '/api/admin-passengers') {
     const a = accountFromToken(q.get('token') || body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
-    return send(res, 200, { ok: true, passengers: db.prepare('SELECT * FROM passengers ORDER BY id DESC').all() });
+    // v1.4.30: cada pasajero trae su cuenta (para buscar por usuario,
+    // ver su estado y suspender/bloquear/eliminar/reactivar).
+    return send(res, 200, { ok: true, passengers: db.prepare(`SELECT p.*, a.id AS account_id, a.username AS account_username, COALESCE(a.status,'activo') AS account_status, a.suspend_reason AS account_suspend_reason, a.role AS account_role, CASE WHEN a.driver_id IS NOT NULL THEN 1 ELSE 0 END AS account_has_driver FROM passengers p LEFT JOIN accounts a ON a.passenger_id = p.id ORDER BY p.id DESC`).all() });
+  }
+  // ---- Administrar pasajeros: suspender / bloquear / eliminar / reactivar (v1.4.30) ----
+  // Salvaguardas (regla del usuario: sus cuentas nunca se tocan): la
+  // cuenta con rol admin, la cuenta con la que entró el admin, y cualquier
+  // cuenta con perfil de chofer (los choferes se gestionan en
+  // Administrar choferes) no se pueden suspender, bloquear ni eliminar
+  // desde aquí — así la fila del propio usuario (Josué Eduardo, que
+  // también es chofer) nunca es accionable.
+  function adminPassengerTarget(a, accountId) {
+    const t = db.prepare('SELECT * FROM accounts WHERE id=?').get(accountId);
+    if (!t) return { error: 'Cuenta no encontrada.', code: 404 };
+    if (t.role === 'admin' || t.id === a.id) return { error: 'La cuenta del administrador no se puede suspender, bloquear ni eliminar.', code: 400 };
+    if (t.driver_id) return { error: 'Esa cuenta también tiene perfil de chofer: gestiónala en Administrar choferes.', code: 400 };
+    return { account: t };
+  }
+  if (pathname === '/api/admin/set-account-status') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const st = String(body.status || '');
+    if (!['activo', 'suspendido', 'bloqueado'].includes(st)) return send(res, 400, { ok: false, error: 'Estado no válido: activo, suspendido o bloqueado.' });
+    const chk = adminPassengerTarget(a, body.account_id);
+    if (chk.error) return send(res, chk.code, { ok: false, error: chk.error });
+    // v1.4.30: al suspender se guarda el motivo (opcional, puede ir
+    // vacío); al reactivar o bloquear se borra.
+    const reason = String(body.suspend_reason || '').trim().slice(0, 200) || null;
+    db.prepare(`UPDATE accounts SET status=?, suspend_reason=? WHERE id=?`).run(st, st === 'suspendido' ? reason : null, chk.account.id);
+    return send(res, 200, { ok: true, account: publicAccount(db.prepare('SELECT * FROM accounts WHERE id=?').get(chk.account.id)) });
+  }
+  if (pathname === '/api/admin/delete-account') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const chk = adminPassengerTarget(a, body.account_id);
+    if (chk.error) return send(res, chk.code, { ok: false, error: chk.error });
+    const t = chk.account;
+    // La cuenta se borra por completo: al entrar de nuevo tendrá que
+    // registrarse desde cero (cuenta y pasajero nuevos).
+    db.prepare('DELETE FROM sessions WHERE account_id=?').run(t.id);
+    if (t.passenger_id) db.prepare('DELETE FROM passengers WHERE id=?').run(t.passenger_id);
+    db.prepare('DELETE FROM accounts WHERE id=?').run(t.id);
+    return send(res, 200, { ok: true });
   }
 
   // ---- Panel de administrador (solo entrando con la cuenta admin) ----
