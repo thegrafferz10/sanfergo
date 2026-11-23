@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.33'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.34'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3298,7 +3298,7 @@ function showTaxiRun(idx){
 
 /* ===== MANDADOS — rediseño completo ===== */
 let md = null; // estado del flujo de mandado
-function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', waDest:null, description:'', km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
+function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', recipientName:'', waDest:null, description:'', orderPay:'', orderAmount:'', km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
 let mdMap = null, mdSearchLists = {};
 function mdVehicleHtml(){
   return '<label class="mt">¿En qué vehículo?</label>'
@@ -3473,7 +3473,7 @@ function renderMandadoEnviar(){
   if(md.step===1){
     const loc = md.myLoc;
     page.innerHTML = backPill('Regresar', "mdBack(0)")
-      + '<h2>Enviar un mandado</h2><p class="muted mt">Paso 1 de 5 · ¿Dónde se recoge?</p>'
+      + '<h2>Enviar un mandado</h2><p class="muted mt">Paso 1 de 4 · ¿Dónde se recoge?</p>'
       + mdVehicleHtml()
       + '<p class="muted mt">La recogida siempre es en tu ubicación actual: se recoge justo donde estás tú, con el GPS de tu teléfono.</p>'
       + (loc ? '<div class="card white" style="border:2px solid #16a34a;background:#f0fdf4"><b>📍 Ubicación actual activada</b><div class="muted mt">'+loc.lat.toFixed(5)+', '+loc.lng.toFixed(5)+'</div></div>'
@@ -3484,52 +3484,69 @@ function renderMandadoEnviar(){
       + '<div class="err hidden" id="md-err1">Activa tu ubicación para seguir: la recogida siempre es donde estás tú. Toca «Usar mi ubicación actual» y acepta el permiso.</div>'
       + '<button class="btn" onclick="if(!md.myLoc){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(2)">Continuar</button>';
   } else if(md.step===2){
+    const valid = (md.recipient||'').replace(/\D/g,'').length===10;
     page.innerHTML = backPill('Regresar', "mdBack(1)")
-      + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 2 de 5 · El lugar a donde va tu mandado.</p>'
+      + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 2 de 4 · El lugar a donde va tu mandado.</p>'
       + (md.dest ? '<p class="muted mt">📍 Punto marcado: '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(md.destZone ? ' · cerca de '+esc(md.destZone) : '')+'</p>' : '')
-      + '<div class="dashbox"><b>Ubicación por WhatsApp</b>'
+      + '<label class="mt">Nombre de quién recibe</label><input id="md-recipient-name" placeholder="Ej. María López" value="'+esc(md.recipientName||'')+'" oninput="md.recipientName=this.value">'
+      + '<label class="mt">WhatsApp de quien recibe</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
+      + '<div id="md-ask-btn" style="display:'+(valid?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
+      + '<div id="md-ask-hint" style="display:'+(valid?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
+      + '<div class="dashbox" id="md-wa-box" style="display:'+(valid?'block':'none')+'"><b>¿Ya te mandaron la ubicación por WhatsApp?</b>'
       + (md.waDest ? '<p class="muted mt">📍 Punto de entrega marcado desde WhatsApp</p><p class="muted">'+md.waDest.lat.toFixed(5)+', '+md.waDest.lng.toFixed(5)+'</p><button class="btn ghost small" onclick="md.waDest=null;md.dest=null;md.destZone=\'\';renderMandados()">Quitar este punto</button>'
           : '<textarea id="md-wa-dest" rows="2" placeholder="Pega aquí el enlace de la ubicación o las coordenadas que te mandaron"></textarea>'
           + '<button class="btn" style="background:#25d366;color:#fff" onclick="mdResolveWaDest()">Marcar como punto de entrega</button>'
           + '<div class="err hidden" id="md-wa-err2">No se encontró ningún punto en ese texto: pega el enlace de Google Maps o las coordenadas.</div>'
           + '<p class="muted mt">Vale el enlace de la ubicación fija o en tiempo real (de la de tiempo real se toma el punto en este momento) y las coordenadas escritas.</p>')
-      + '<label class="mt">WhatsApp de quien recibe (opcional)</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
-      + '<div id="md-ask-btn" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
-      + '<div id="md-ask-hint" style="display:'+((md.recipient||'').replace(/\D/g,'').length===10?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
       + '</div>'
       + '<div class="err hidden" id="md-err2">Pega la ubicación de WhatsApp y marca el punto de entrega.</div>'
-      + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null){document.getElementById(\'md-err2\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
+      + '<button class="btn" onclick="mdNextEnviar2()">Continuar</button>';
   } else if(md.step===3){
-    const valid = md.recipient && md.recipient.replace(/\D/g,'').length===10;
     page.innerHTML = backPill('Regresar', "mdBack(2)")
-      + '<h2>¿Quién lo recibe?</h2><p class="muted mt">Paso 3 de 5 · Su WhatsApp y su ubicación, si ya te la mandó.</p>'
-      + '<label class="mt">WhatsApp de quien recibe (opcional)</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
-      + '<div id="md-ask-btn" style="display:'+(valid?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
-      + '<div id="md-ask-hint" style="display:'+(valid?'none':'block')+'"><p class="muted mt">Con su número, el conductor le pide su ubicación por WhatsApp al ir a entregar: el mensaje ya va escrito.</p></div>'
-      + '<div class="dashbox"><b>¿Ya te mandaron la ubicación por WhatsApp?</b>'
-      + (md.waDest ? '<p class="muted mt">📍 Punto de entrega marcado desde WhatsApp</p><p class="muted">'+md.waDest.lat.toFixed(5)+', '+md.waDest.lng.toFixed(5)+'</p><button class="btn ghost small" onclick="md.waDest=null;md.dest=null;md.destZone=\'\';renderMandados()">Quitar este punto</button>'
-          : '<textarea id="md-wa-dest" rows="2" placeholder="Pega aquí el enlace de la ubicación o las coordenadas que te mandaron"></textarea>'
-          + '<button class="btn" style="background:#25d366;color:#fff" onclick="mdResolveWaDest()">Marcar como punto de entrega</button>'
-          + '<p class="muted mt">Vale el enlace de la ubicación fija o en tiempo real (de la de tiempo real se toma el punto en este momento) y las coordenadas escritas.</p>')
-      + '</div>'
-      + '<div class="err hidden" id="md-err3">El WhatsApp de quien recibe no se ve completo: escribe los 10 dígitos, o déjalo vacío.</div>'
-      + '<button class="btn" onclick="if(md.recipient && md.recipient.replace(/\\D/g,\'\').length!==10){document.getElementById(\'md-err3\').classList.remove(\'hidden\');return;}mdBack(4)">Continuar</button>';
-  } else if(md.step===4){
-    page.innerHTML = backPill('Regresar', "mdBack(3)")
-      + '<h2>¿Qué hay que entregar?</h2><p class="muted mt">Paso 4 de 5 · Cuéntale al conductor qué lleva.</p>'
+      + '<h2>¿Qué hay que entregar?</h2><p class="muted mt">Paso 3 de 4 · Cuéntale al conductor qué lleva.</p>'
       + '<label class="mt">¿Qué hay que recoger o entregar?</label><textarea id="md-desc" rows="3" placeholder="Ej. llevar un paquete a mi hermana">'+esc(md.description||'')+'</textarea>'
       + '<div class="err hidden" id="md-err4">Cuéntanos qué hay que recoger o entregar.</div>'
-      + '<button class="btn" onclick="md.description=document.getElementById(\'md-desc\').value.trim();if(!md.description){document.getElementById(\'md-err4\').classList.remove(\'hidden\');return;}mdComputeEnviarPrice()">Continuar</button>';
-  } else if(md.step===5){
+      + '<div style="font-weight:700;margin-top:10px">¿Cómo se paga el pedido?</div>'
+      + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(md.orderPay==='pagado'?'sel':'')+'" onclick="md.orderPay=\'pagado\';md.orderAmount=\'\';renderMandados()">Pedido ya pagado</button><button type="button" class="pay-opt '+(md.orderPay==='por_pagar'?'sel':'')+'" onclick="md.orderPay=\'por_pagar\';renderMandados()">Se pagará el pedido</button></div>'
+      + (md.orderPay==='por_pagar' ? '<label class="mt">Cantidad que el chofer necesita llevar para recoger el mandado</label><input id="md-order-amount" inputmode="decimal" placeholder="Ej. 150" value="'+esc(md.orderAmount||'')+'" oninput="md.orderAmount=this.value"><p class="muted mt">Es el dinero que el chofer paga al recoger tu pedido; se lo pagas cuando te lo entrega.</p>' : '')
+      + '<div class="err hidden" id="md-err3b">Elige cómo se paga el pedido.</div>'
+      + '<button class="btn" onclick="mdNextEnviar3()">Continuar</button>';
+  } else if(md.step===4){
     // Precio (app real): mapa a pantalla completa con ruta + pastilla y
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
       + '<div class="strip top" style="background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">'
-      + '<button class="backpill" style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(4)">‹ Regresar</button>'
+      + '<button class="backpill" style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(3)">‹ Regresar</button>'
       + '<div class="pick-instructions" style="width:100%"><b>'+esc(mdSummaryLine())+'</b><div class="muted" style="margin-top:4px">≈ '+md.eta+' min · '+md.km.toFixed(1)+' km de recorrido</div></div></div>'
       + '<div class="strip bottom" style="background:#fff">' + priceSheetHtml('mandado') + '</div></div>';
     setTimeout(()=>drawMdMap(), 60);
   }
+}
+function mdNextEnviar2(){
+  // Paso 2 de Enviar: nombre + WhatsApp (10 dígitos) + punto de WhatsApp,
+  // los tres obligatorios para seguir.
+  const err = document.getElementById('md-err2');
+  if(err) err.classList.add('hidden');
+  md.recipientName = (md.recipientName||'').trim();
+  if(!md.recipientName){ if(err){ err.textContent = 'Escribe el nombre de quién recibe el mandado.'; err.classList.remove('hidden'); } return; }
+  if((md.recipient||'').replace(/\D/g,'').length!==10){ if(err){ err.textContent = 'Escribe el WhatsApp completo de quien recibe: 10 dígitos.'; err.classList.remove('hidden'); } return; }
+  if(!md.dest||md.dest.lat==null){ if(err){ err.textContent = 'Pega la ubicación de WhatsApp y marca el punto de entrega.'; err.classList.remove('hidden'); } return; }
+  mdBack(3);
+}
+function mdNextEnviar3(){
+  // Paso 3 de Enviar: qué se entrega + cómo se paga el pedido; si se va
+  // a pagar, la cantidad que el chofer lleva es obligatoria.
+  md.description = (document.getElementById('md-desc')||{}).value ? document.getElementById('md-desc').value.trim() : '';
+  const e4 = document.getElementById('md-err4'); if(e4) e4.classList.add('hidden');
+  const eb = document.getElementById('md-err3b'); if(eb) eb.classList.add('hidden');
+  if(!md.description){ if(e4) e4.classList.remove('hidden'); return; }
+  if(!md.orderPay){ if(eb){ eb.textContent = 'Elige cómo se paga el pedido.'; eb.classList.remove('hidden'); } return; }
+  if(md.orderPay==='por_pagar'){
+    const amt = Number(String(md.orderAmount||'').replace(',','.'));
+    if(!amt || amt<=0){ if(eb){ eb.textContent = 'Escribe la cantidad que el chofer necesita llevar para recoger el mandado.'; eb.classList.remove('hidden'); } return; }
+    md.orderAmount = amt;
+  }
+  mdComputeEnviarPrice();
 }
 function mdToggleAskBtn(){
   const v = ($('#md-recipient')||{}).value || md.recipient || '';
@@ -3537,6 +3554,7 @@ function mdToggleAskBtn(){
   const b = document.getElementById('md-ask-btn'), h = document.getElementById('md-ask-hint');
   if(b) b.style.display = valid ? 'block' : 'none';
   if(h) h.style.display = valid ? 'none' : 'block';
+  const w = document.getElementById('md-wa-box'); if(w) w.style.display = valid ? 'block' : 'none';
 }
 function mdAskLocation(){
   const phone = (md.recipient||'').replace(/\D/g,'');
@@ -3597,7 +3615,7 @@ async function mdComputeEnviarPrice(){
   md.eta = etaMin(md.km);
   md.suggested = suggestedPrice(md.km);
   md.price = md.suggested;
-  mdBack(5);
+  mdBack(4);
 }
 function mandadoPickDone(which, pos, label){
   if(which==='morigin'){
@@ -3631,12 +3649,14 @@ async function publishMandado(){
         extra_stops: Math.max(0, md.stops.length-1) };
     } else {
       const dest = md.dest;
-      body = { passenger_id: myPassenger.id, kind:'mandado',
+      body = { passenger_id: myPassenger.id, kind:'mandado', type:'enviar',
         origin_zone:'Mi ubicación', origin_detail:'Recogida en mi ubicación' + (md.pickupRef ? ' · '+md.pickupRef : ''), origin_lat: md.myLoc.lat, origin_lng: md.myLoc.lng,
         dest_zone: dest.zone, dest_detail: (dest.label||dest.zone) + (md.destRef ? ' · '+md.destRef : ''), dest_lat: dest.lat, dest_lng: dest.lng,
         distance_km: md.km, eta_minutes: md.eta, price, payment_method: pay, paymentMethod: pay,
         vehicle: md.vehicle||'mototaxi',
-        description: md.description, recipient_phone: md.recipient };
+        description: md.description, recipient_phone: md.recipient,
+        recipient_name: md.recipientName, order_payment: md.orderPay,
+        order_amount: md.orderPay==='por_pagar' ? Number(md.orderAmount)||0 : 0 };
     }
     const j = await api('/api/create-request', body);
     md.requestId = j.request.id;
@@ -3986,7 +4006,9 @@ async function renderDriverInbox(){
       + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
       + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
       + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
-      + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'');
+      + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
+      + ((r.kind==='mandado' && (r.recipient_name||r.recipient_phone))?'<p class="muted">Recibe: '+esc(r.recipient_name||'Quien recibe')+(r.recipient_phone?' · '+esc(r.recipient_phone):'')+'</p>':'')
+      + (r.order_payment==='pagado'?'<p class="muted">Pedido: ya pagado</p>':r.order_payment==='por_pagar'?'<p class="muted">Pedido: se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo</p>':'');
     if(counter){
       html += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
         + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
