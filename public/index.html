@@ -289,6 +289,17 @@ input[type=file]{padding:8px}
 #entry-ad-overlay .adfoot .pub{font-size:11px;color:#b45309;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
 #entry-ad-overlay .adfoot h2{font-size:22px;margin-top:2px}
 #entry-ad-overlay .adfoot .btn{background:#14532d;margin-top:10px}
+/* Detalle de la solicitud del chofer como flotante (v1.4.41, petición del
+   usuario: al picarle a la notificación aparece como el anuncio, con la X
+   arriba para cerrar): misma geometría que el anuncio de entrada — fondo
+   oscuro 60%, tarjeta centrada pegada arriba (pt 7dvh), ancho mín. 92vw y
+   máx. 340 px, radio 24 px, X de 48×48 arriba a la derecha. La X vive en
+   el envoltorio (no en la tarjeta con scroll) para que siga visible
+   aunque se baje en el contenido. */
+#inbox-detail-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}
+#inbox-detail-overlay .reqwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}
+#inbox-detail-overlay .reqfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
+#inbox-detail-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
 /* Carrusel de anuncios en Negocios (v1.4.16, petición del usuario: como
    el inicio de la app de la captura: banners horizontales arriba y las
    tarjetas de negocios abajo, sin tocarlas). Las imágenes de los anuncios
@@ -477,7 +488,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.40'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.41'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2475,6 +2486,10 @@ function stageHint(r){
   return '';
 }
 function goLive(requestId, asDriver){
+  // Al ir al mapa en vivo se cierra el flotante del detalle (v1.4.41):
+  // vive en document.body y no se iría solo al cambiar de vista.
+  const ov41 = document.getElementById('inbox-detail-overlay'); if(ov41) ov41.remove();
+  inboxExpandedId = null; inboxOvSig = '';
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-live').classList.add('active');
   currentView = 'live';
@@ -4009,6 +4024,9 @@ function mandadoDriverSummaryHtml(r){
 // Estado de la bandeja del chofer (v1.4.36): la lista que ya se pintó no se
 // borra nunca en un refresco; solo se repinta si los datos cambiaron.
 let inboxLoaded = false, inboxSig = '', inboxLoading = false, inboxExpandedId = null;
+// Última lista y contexto de la bandeja (v1.4.41): el flotante del detalle
+// se abre al instante con estos datos y el refresco los revalida después.
+let inboxLastList = [], inboxLastMyList = [], inboxLastSub = false, inboxLastAtLimit = false, inboxOvSig = '';
 async function renderDriverInbox(){
   // Toques del usuario (entrar a la pestaña, aceptar, contraofertar,
   // cambiar de pestaña): repintado forzado. El sondeo cada 5 s llama
@@ -4016,11 +4034,15 @@ async function renderDriverInbox(){
   await loadDriverInbox(true);
 }
 function inboxToggle(rid){
-  // Tocar una solicitud compacta la abre (resumen completo + aceptar) o
-  // la cierra si ya estaba abierta; tocar otra cambia la abierta. El id
-  // abierto entra en la firma de datos, así el refresco silencioso no
-  // colapsa el detalle (v1.4.37).
-  inboxExpandedId = inboxExpandedId===rid ? null : rid;
+  // Tocar una solicitud compacta abre su detalle como FLOTANTE (v1.4.41,
+  // como el anuncio de entrada: tarjeta flotante con X arriba) o lo
+  // cierra si ya estaba abierto. La apertura es al instante con los datos
+  // que ya tenemos en caché; el refresco en segundo plano revalida los
+  // datos. El id abierto entra en la firma de datos, así el refresco
+  // silencioso no cierra el flotante.
+  if(inboxExpandedId===rid){ closeInboxOverlay(); return; }
+  inboxExpandedId = rid;
+  renderInboxOverlay(inboxLastList);
   renderDriverInbox();
 }
 async function loadDriverInbox(force){
@@ -4064,6 +4086,9 @@ async function loadDriverInbox(force){
       r._dispO = displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng) || r.origin_detail || '';
       r._dispD = displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng) || r.dest_detail || '';
     }
+    // Caché de la bandeja (v1.4.41): el flotante del detalle se abre al
+    // instante con estos datos y el refresco los revalida después.
+    inboxLastList = list; inboxLastMyList = myList; inboxLastSub = sub; inboxLastAtLimit = atLimit;
     updateDriverBadge(list.length);
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
@@ -4074,6 +4099,7 @@ async function loadDriverInbox(force){
     let html = head;
     if(myDriver.is_blocked){
       p.innerHTML = head + '<div class="card red"><b>Estás bloqueado por el administrador de SanFerGo: no puedes recibir viajes ni mandados nuevos. Tus servicios en curso siguen como están. Habla con el administrador para resolverlo.</b></div>';
+      renderInboxOverlay([]);
       return;
     }
     if(active.length && list.length){
@@ -4083,6 +4109,7 @@ async function loadDriverInbox(force){
     if(driverInboxTab==='curso' && active.length){
       html += active.map(r=>'<div class="card white"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b><div class="muted mt">'+fmt$(r.final_price||r.price)+' · '+stageLabel(r)+'</div>'+mandadoDriverSummaryHtml(r)+'<button class="btn small" onclick="goLive('+r.id+', true)">Abrir mapa del servicio</button></div>').join('');
       p.innerHTML = html;
+      renderInboxOverlay(list);
       return;
     }
     if(!myDriver.online){
@@ -4094,6 +4121,7 @@ async function loadDriverInbox(force){
     if(!list.length){
       html += '<p class="muted center mt">'+(myDriver.vehicle==='moto' ? 'Ahorita no hay mandados en moto buscando conductor. Cuando un pasajero publique, aparecerá aquí.' : 'Ahorita no hay viajes ni mandados en mototaxi buscando conductor. Cuando un pasajero publique, aparecerá aquí.')+'</p>';
       p.innerHTML = html;
+      renderInboxOverlay(list);
       return;
     }
     // Lista apilada (v1.4.36): todas las solicitudes una debajo de otra en
@@ -4104,10 +4132,10 @@ async function loadDriverInbox(force){
     html += list.map(r=>{
       const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
       const counter = mine && mine.passenger_counter_price;
-      const highFare = r.price >= 80;
-      const expanded = inboxExpandedId===r.id;
-      // Fila compacta (v1.4.37): solo tipo, de → a y precio. Al tocarla se
-      // abre el detalle completo con el resumen y aceptar/contraofertar.
+      // Fila compacta (v1.4.37): solo tipo, de → a y precio. Al tocarla el
+      // detalle ya NO se abre en línea dentro de la lista: se abre como
+      // FLOTANTE (v1.4.41), con la X arriba para cerrarlo, como el
+      // anuncio de entrada.
       // (v1.4.38) Si el pasajero contraofertó, la fila cerrada muestra el
       // aviso ámbar para que el chofer lo vea de un vistazo.
       // (v1.4.40) Igual que la app real: la fila cerrada también trae
@@ -4118,62 +4146,115 @@ async function loadDriverInbox(force){
       const rowMeta = [];
       if(r.distance_km!=null && r.eta_minutes!=null) rowMeta.push(r.distance_km+' km · ~'+r.eta_minutes+' min');
       if(r.payment_method) rowMeta.push('Pago: '+esc(r.payment_method));
-      let card = '<div class="card white">'
+      return '<div class="card white">'
       + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
       + '<div class="flex" style="align-items:center">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
       + '<div class="flex1"><b>'+esc(r._dispO)+' → '+esc(r._dispD)+'</b></div>'
       + '<b class="price">'+fmt$(r.price)+'</b>'
-      + '<span class="muted">'+(expanded?'▴':'▾')+'</span></div>'
+      + '<span class="muted">▾</span></div>'
       + (rowMeta.length?'<div class="muted" style="margin-top:4px;font-size:12px">'+rowMeta.join(' · ')+'</div>':'')
       + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
       + (counter?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
-      + '</div>';
-      if(!expanded) return card + '</div>';
-      // (v1.4.39) Botón visible para cerrar el detalle y volver a ver
-      // todas las solicitudes: antes solo se podía tocar otra vez la
-      // fila, y el chofer no lo encontraba.
-      card += '<button class="btn ghost small" style="margin-top:10px" onclick="inboxToggle('+r.id+')">‹ Ver todas las solicitudes</button>';
-      card += '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
-      + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
-      + '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
-      + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
-      + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
-      + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
-      + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
-      + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
-      + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
-      + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
-      + mandadoDriverSummaryHtml(r);
-      if(counter){
-        card += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
-          + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
-          + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
-          + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mine.id+')">Rechazar contraoferta</button></div></div>';
-      } else if(mine){
-        card += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mine.kind==='contraoferta' ? 'contraofertaste '+fmt$(mine.price) : 'aceptaste '+fmt$(mine.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
-      } else if(highFare && !sub){
-        card += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
-      } else if(atLimit){
-        card += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
-      } else if(driverCounter && driverCounter.rid===r.id){
-        card += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
-          + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
-          + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
-          + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
-      } else {
-        card += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
-          + '<button class="btn amber" onclick="driverCounter={rid:'+r.id+',price:roundUp5('+r.price+'*1.15)};renderDriverInbox()">Contraofertar</button></div>';
-      }
-      return card + '</div>';
+      + '</div></div>';
     }).join('');
     p.innerHTML = html;
+    renderInboxOverlay(list);
   } catch(e){
     // Sin conexión o con el servidor dormido: la lista anterior se queda
     // en pantalla y el siguiente ciclo reintenta en silencio. Solo en la
     // primera carga se muestra el aviso.
     if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">No se pudo cargar. Revisa tu conexión; se reintentará solo.</p>';
   } finally { inboxLoading = false; }
+}
+function inboxDetailHtml(r, sub, atLimit){
+  // Contenido del detalle de una solicitud (v1.4.41): EXACTAMENTE lo que
+  // antes se abría en línea dentro de la lista — pasajero con foto y
+  // teléfono, De/A con los nombres resueltos, distancia, precio,
+  // descripción, cosas, paradas extra, forma de pago, cuadro Resumen del
+  // mandado, contraoferta del pasajero y los botones Aceptar /
+  // Contraofertar (o el formulario de contraoferta) — ahora dentro del
+  // flotante. Al final, el botón para cerrar y volver a ver todas las
+  // solicitudes (la X de arriba también lo cierra).
+  const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
+  const counter = mine && mine.passenger_counter_price;
+  const highFare = r.price >= 80;
+  let h = '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
+  + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
+  + '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
+  + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
+  + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
+  + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
+  + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
+  + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
+  + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
+  + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
+  + mandadoDriverSummaryHtml(r);
+  if(counter){
+    h += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
+      + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
+      + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
+      + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mine.id+')">Rechazar contraoferta</button></div></div>';
+  } else if(mine){
+    h += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mine.kind==='contraoferta' ? 'contraofertaste '+fmt$(mine.price) : 'aceptaste '+fmt$(mine.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
+  } else if(highFare && !sub){
+    h += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
+  } else if(atLimit){
+    h += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
+  } else if(driverCounter && driverCounter.rid===r.id){
+    h += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
+      + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
+      + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
+      + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
+  } else {
+    h += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
+      + '<button class="btn amber" onclick="driverCounter={rid:'+r.id+',price:roundUp5('+r.price+'*1.15)};renderDriverInbox()">Contraofertar</button></div>';
+  }
+  // Botón para cerrar el flotante y volver a ver todas las solicitudes
+  // (antes arriba del detalle en línea; la X de arriba también cierra).
+  h += '<button class="btn ghost" onclick="closeInboxOverlay()">‹ Ver todas las solicitudes</button>';
+  return h;
+}
+function renderInboxOverlay(list){
+  // El detalle de la solicitud abierta vive en un FLOTANTE aparte de la
+  // lista (v1.4.41), como el anuncio de entrada: tarjeta centrada sobre
+  // fondo oscuro, X grande arriba que cierra al instante, y tocar el
+  // fondo también lo cierra. La lista de atrás sigue actualizándose en
+  // silencio; el flotante solo se repinta si SUS datos cambiaron (firma
+  // propia), así un refresco no lo cierra, no pierde la contraoferta
+  // escrita ni el scroll dentro de la tarjeta.
+  list = list||[];
+  const r = inboxExpandedId ? list.find(x=>x.id===inboxExpandedId) : null;
+  const ov = document.getElementById('inbox-detail-overlay');
+  if(!r){
+    // Sin solicitud abierta, o ya salió de la lista: el flotante se
+    // cierra solo y no vuelve a abrirse hasta tocar otra fila.
+    inboxExpandedId = null;
+    inboxOvSig = '';
+    if(ov) ov.remove();
+    return;
+  }
+  const sig = JSON.stringify([r.id, r.status, r.price, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit]);
+  if(ov && sig===inboxOvSig) return; // nada cambió en el flotante: no se toca
+  inboxOvSig = sig;
+  const inner = '<div class="reqwrap"><button class="adx" aria-label="Cerrar" onclick="closeInboxOverlay()">✕</button>'
+    + '<div class="reqfloat">' + inboxDetailHtml(r, inboxLastSub, inboxLastAtLimit) + '</div></div>';
+  if(ov){ ov.innerHTML = inner; return; }
+  const el = document.createElement('div');
+  el.id = 'inbox-detail-overlay';
+  el.innerHTML = inner;
+  el.addEventListener('click', e=>{ if(e.target === el) closeInboxOverlay(); });
+  document.body.appendChild(el);
+}
+function closeInboxOverlay(){
+  // La X cierra AL INSTANTE, como la del anuncio de entrada: sin
+  // confirmación y sin esperar a la red. La lista de atrás se refresca
+  // en silencio para seguir al día.
+  inboxExpandedId = null;
+  inboxOvSig = '';
+  const ov = document.getElementById('inbox-detail-overlay');
+  if(ov) ov.remove();
+  loadDriverInbox(false);
 }
 function driverCounterStep(d){
   if(!driverCounter) return;
