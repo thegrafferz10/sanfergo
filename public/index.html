@@ -524,7 +524,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.50'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.51'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4600,7 +4600,7 @@ async function loadDriverInbox(force){
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.passenger_count||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -4650,9 +4650,13 @@ async function loadDriverInbox(force){
       // recogerlo, cuánto debe llevar el chofer. Solo si los datos
       // existen (las solicitudes viejas sin esos campos se ven como
       // en v1.4.39).
+      // (v1.4.51) Viajes: la misma línea tenue trae cuántas personas van
+      // ('1 persona' / '2 personas' / '3 personas'); los mandados son
+      // siempre de 1 persona y no llevan el dato.
       const rowMeta = [];
       if(r.distance_km!=null && r.eta_minutes!=null) rowMeta.push(r.distance_km+' km · ~'+r.eta_minutes+' min');
       if(r.payment_method) rowMeta.push('Pago: '+esc(r.payment_method));
+      if(r.kind==='viaje') rowMeta.push(paxText(r.passenger_count));
       return '<div class="card white">'
       + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
       + '<div class="flex" style="align-items:center;gap:8px">'
