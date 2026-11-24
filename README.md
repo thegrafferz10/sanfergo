@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.58)
+# SanFerGo — versión pública (v1.4.59)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.59 (2026-11-24) — Confirmación antes de activar la suscripción de un chofer
+
+- Al tocar Semanal / Mensual / Anual en ACTIVAR SUSCRIPCIÓN (ficha del chofer en el panel de administrador) ya no se activa de inmediato: primero sale una advertencia con el nombre del chofer, el plan, el precio y los días ("¿Estás seguro que quieres activar la suscripción Semanal ($50 · 7 días) a {nombre}?"). Solo al confirmar se llama al servidor; al cancelar no pasa nada.
+- Si el chofer ya tiene un plan vigente, la advertencia también dice que los días se sumarán a su plan actual (no pierde los que le quedan).
+- Nada más cambia: el endpoint, los precios, los días y el resto de la app siguen igual.
+- Pruebas: suite completa contra BD limpia: **935 OK, 0 FAIL** (927 de antes + 8 nuevas: 2 estáticas, 4 evaluadas con la función real y 2 en vivo).
 
 ## v1.4.58 (2026-11-24) — Límites gratis 5/5; el admin activa suscripciones y Premium; pago del plan por WhatsApp; inicio del chofer más bonito con anuncios; el anuncio abre el menú; suspender/eliminar negocios
 
