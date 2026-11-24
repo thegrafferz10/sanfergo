@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.4.40)
+# SanFerGo — versión pública (v1.4.41)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.41 (2026-11-23) — El detalle de la solicitud se abre como flotante, como el anuncio de entrada
+
+- En **Recibir Viajes**, tocar una fila compacta ya NO abre el detalle en línea dentro de la lista: lo abre como una **tarjeta flotante** sobre la lista, con la misma geometría del anuncio de entrada (fondo oscuro, tarjeta de 340 px, X grande de 48×48 arriba a la derecha que cierra al instante, sin confirmación ni espera). Si el chofer no acepta, la cierra con la X de arriba, tocando el fondo oscuro o con el botón **"‹ Ver todas las solicitudes"** que sigue dentro del flotante, y vuelve a la lista compacta sin cambios.
+- El flotante trae EXACTAMENTE el mismo contenido del detalle de antes: pasajero con foto y teléfono, De/A con los nombres resueltos (por ejemplo "Madero → Centro"), distancia, precio, descripción, cosas, paradas extra, forma de pago, cuadro verde **Resumen del mandado**, contraoferta del pasajero cuando aplica y los botones **Aceptar $X** / **Contraofertar** (o el formulario de contraoferta). Las filas compactas, el aviso ámbar de contraoferta (v1.4.38), los nombres resueltos (v1.4.39) y la línea de km · ETA · pago + "Lleva $X" (v1.4.40) quedan igual.
+- El flotante sobrevive al refresco silencioso de cada 5 s: tiene firma propia (`inboxOvSig`) y solo se repinta si SUS datos cambiaron, así no se cierra solo, no pierde la contraoferta escrita ni el scroll dentro de la tarjeta; la lista de atrás sigue actualizándose en silencio. Si la solicitud sale de la lista (se aceptó o se canceló), el flotante se cierra solo. Al aceptar e ir al mapa en vivo (`goLive`), el flotante se cierra para no quedar sobre el mapa. La X vive en el envoltorio de la tarjeta (no en el área con scroll) para seguir visible aunque se baje en el contenido.
+- Sin tocar: la pestaña **En curso**, la tarjeta del mapa en vivo del chofer, el flujo de publicar, las tarifas, los viajes y Quiero.
+- Pruebas: suite completa contra BD limpia: 542 OK, 0 FAIL (536 de antes + 6 nuevas estáticas: geometría del flotante igual al anuncio, tocar la fila abre el flotante y no una expansión en línea, X arriba + cierre por fondo y por botón, X instantánea antes de cualquier llamada de red, flotante que sobrevive al refresco con firma propia y se cierra solo, y cierre del flotante al ir al mapa en vivo).
 
 ## v1.4.40 (2026-11-23) — La fila compacta trae km · ETA · pago y lo de llevar para recoger (igual que la app real)
 

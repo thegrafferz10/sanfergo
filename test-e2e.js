@@ -339,7 +339,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.40', JSON.stringify(h));
+  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.41', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -440,7 +440,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.40', JSON.stringify(h134));
+  check('versión 1.4.36', h134.ok && h134.version === '1.4.41', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +602,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.40';") && h.version === '1.4.40', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.41';") && h.version === '1.4.41', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1396,7 +1396,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.40', JSON.stringify(h27));
+  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.41', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1441,7 +1441,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.40', JSON.stringify(h28));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.41', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1455,7 +1455,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.40', JSON.stringify(h29));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.41', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1464,7 +1464,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.40', JSON.stringify(h30));
+  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.41', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1610,21 +1610,31 @@ async function api(path, body) {
   check('v1.4.36: el sondeo llama al refresco silencioso y al volver a la app se refresca al instante', html.includes("loadDriverInbox(false); // refresco silencioso") && html.includes("document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && myDriver && store.mode==='driver' && currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); })"));
   check('v1.4.36: las solicitudes son lista apilada, sin paginador; el contador vive en la pestaña', inboxSec.includes('list.map(r=>') && inboxSec.includes("Solicitudes ('+list.length+')") && !inboxSec.includes('driverPageIdx') && !inboxSec.includes('‹ Anterior') && !inboxSec.includes('Siguiente ›') && !inboxSec.includes("de '+list.length+' solicitudes"));
   // --- v1.4.37: solicitudes compactas en Recibir Viajes, toca para ver el detalle ---
-  const compactSec = inboxSec.slice(inboxSec.indexOf('list.map(r=>{'), inboxSec.indexOf("if(!expanded) return card + '</div>';"));
+  // (v1.4.41) La fila ya no expande el detalle en línea: el detalle vive
+  // en el flotante (inboxDetailHtml), así el ancla del corte es el fin del
+  // map de la lista, no el viejo "if(!expanded)".
+  const compactSec = inboxSec.slice(inboxSec.indexOf('list.map(r=>{'), inboxSec.indexOf("}).join('');", inboxSec.indexOf('list.map(r=>{')));
   check('v1.4.37: la fila colapsada solo muestra tipo, de → a y precio (sin resumen, distancia ni botones)', compactSec.includes('inboxToggle') && compactSec.includes('→') && compactSec.includes('fmt$(r.price)') && compactSec.includes('▾') && !compactSec.includes('Recibe') && !compactSec.includes('Resumen del mandado') && !compactSec.includes('Aceptar') && !compactSec.includes('Distancia') && !compactSec.includes('mandadoDriverSummaryHtml'));
-  check('v1.4.37: el detalle expandido trae el resumen completo con Aceptar y Contraofertar', inboxSec.includes('function inboxToggle(rid){') && inboxSec.includes('const expanded = inboxExpandedId===r.id;') && inboxSec.indexOf("if(!expanded) return card + '</div>';") < inboxSec.lastIndexOf('mandadoDriverSummaryHtml(r)') && inboxSec.indexOf("if(!expanded) return card + '</div>';") < inboxSec.indexOf("Aceptar '+fmt$(r.price)") && inboxSec.includes('Contraofertar'));
-  check('v1.4.37: el detalle abierto sobrevive al refresco (el id entra en la firma) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('driverInboxTab, inboxExpandedId, driverCounter?') && inboxSec.includes('if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;') && inboxSec.includes('inboxExpandedId = inboxExpandedId===rid ? null : rid;'));
+  check('v1.4.37: el detalle trae el resumen completo con Aceptar y Contraofertar (ahora en el flotante, v1.4.41)', inboxSec.includes('function inboxDetailHtml(r, sub, atLimit){') && inboxSec.includes('mandadoDriverSummaryHtml(r)') && inboxSec.includes("Aceptar '+fmt$(r.price)") && inboxSec.includes('Contraofertar') && !inboxSec.includes('const expanded = inboxExpandedId===r.id;') && !inboxSec.includes("if(!expanded) return card + '</div>';"));
+  check('v1.4.37: el detalle abierto sobrevive al refresco (el id entra en la firma) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('driverInboxTab, inboxExpandedId, driverCounter?') && inboxSec.includes('if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;') && inboxSec.includes('if(inboxExpandedId===rid){ closeInboxOverlay(); return; }') && inboxSec.includes('inboxExpandedId = rid;'));
   // --- v1.4.38: aviso de contraoferta en la fila colapsada ---
   check('v1.4.38: la fila colapsada muestra el aviso ámbar "Te contraofertó $X · Toca para responder" cuando el pasajero contraofertó', compactSec.includes('Te contraofertó ') && compactSec.includes("fmt$(counter)") && compactSec.includes('· Toca para responder') && compactSec.includes('#fef3c7') && compactSec.includes('passenger_counter_price'));
   check('v1.4.38: el aviso solo sale cuando hay contraoferta (condicionado a counter) y tocar la fila sigue abriendo el detalle', compactSec.includes("(counter?'<div") && compactSec.includes(":'')") && compactSec.includes("inboxToggle('+r.id+')"));
   // --- v1.4.39: nombres de lugar en la fila compacta + botón para cerrar el detalle ---
   check('v1.4.39: la zona genérica se resuelve a la zona conocida más cercana por coordenadas (displayZoneName, radio 1.5 km)', html.includes('function displayZoneName(stored, lat, lng){') && html.includes('GENERIC_ZONES') && html.includes("'Mi ubicación'") && html.includes("'Punto de WhatsApp'") && html.includes('function nearestZoneWithin(pos, maxKm){') && html.includes('nearestZoneWithin({ lat, lng }, 1.5)'));
   check('v1.4.39: la fila compacta y el detalle usan el nombre resuelto (no la etiqueta genérica) y el nombre entra en la firma', inboxSec.includes('displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng)') && inboxSec.includes('displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng)') && inboxSec.includes('esc(r._dispO)') && inboxSec.includes('esc(r._dispD)') && inboxSec.includes("r._dispO+'>'+r._dispD") && !inboxSec.includes("esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')"));
-  check('v1.4.39: el detalle expandido trae un botón visible "‹ Ver todas las solicitudes" que lo cierra', inboxSec.includes('Ver todas las solicitudes') && inboxSec.indexOf('Ver todas las solicitudes') > inboxSec.indexOf("if(!expanded) return card + '</div>';"));
+  check('v1.4.39: el detalle trae un botón visible "‹ Ver todas las solicitudes" que lo cierra (ahora al final del flotante, v1.4.41)', inboxSec.includes('function inboxDetailHtml(r, sub, atLimit){') && inboxSec.includes("onclick=\"closeInboxOverlay()\">‹ Ver todas las solicitudes</button>"));
   // --- v1.4.40: la fila compacta trae km · ETA · pago y lo de llevar para recoger ---
   check('v1.4.40: la fila colapsada trae la línea tenue con km · ETA · pago (igual que la app real)', compactSec.includes("r.distance_km+' km · ~'+r.eta_minutes+' min'") && compactSec.includes("'Pago: '+esc(r.payment_method)") && compactSec.includes("rowMeta.join(' · ')") && compactSec.includes('rowMeta.length'));
   check('v1.4.40: la línea ámbar "Lleva $X para recogerlo" solo sale con pedido por pagar', compactSec.includes("r.order_payment==='por_pagar'") && compactSec.includes("Lleva '+fmt$(r.order_amount||0)+' para recogerlo") && compactSec.includes('#fef3c7'));
   check('v1.4.40: los nuevos campos de la fila entran en la firma (un cambio repinta sin parpadeo)', inboxSec.includes("(r.distance_km||'')") && inboxSec.includes("(r.eta_minutes||'')") && inboxSec.includes("(r.payment_method||'')") && inboxSec.includes("(r.order_payment||'')") && inboxSec.includes("(r.order_amount||0)"));
+  // --- v1.4.41: el detalle de la solicitud se abre como flotante, como el anuncio de entrada ---
+  check('v1.4.41: el flotante del detalle usa la geometría del anuncio de entrada (fondo oscuro, tarjeta 340 px, X de 48×48 arriba)', html.includes('#inbox-detail-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}') && html.includes('#inbox-detail-overlay .reqwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}') && html.includes('#inbox-detail-overlay .reqfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}') && html.includes('#inbox-detail-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}'));
+  check('v1.4.41: tocar una fila abre el flotante (no una expansión en línea) y la lista solo pinta filas compactas', inboxSec.includes('function inboxToggle(rid){') && inboxSec.includes('renderInboxOverlay(inboxLastList);') && inboxSec.includes('function renderInboxOverlay(list){') && inboxSec.includes("el.id = 'inbox-detail-overlay';") && !inboxSec.includes('const expanded = inboxExpandedId===r.id;') && !inboxSec.includes("if(!expanded) return card + '</div>';"));
+  check('v1.4.41: el flotante trae la X arriba y se cierra también tocando el fondo o con "‹ Ver todas las solicitudes"', inboxSec.includes('<button class="adx" aria-label="Cerrar" onclick="closeInboxOverlay()">✕</button>') && inboxSec.includes("el.addEventListener('click', e=>{ if(e.target === el) closeInboxOverlay(); });") && inboxSec.includes('Ver todas las solicitudes'));
+  check('v1.4.41: la X cierra al instante (quita el flotante antes de cualquier llamada de red) y vuelve a la lista compacta', inboxSec.includes('function closeInboxOverlay(){') && inboxSec.indexOf("if(ov) ov.remove();", inboxSec.indexOf('function closeInboxOverlay(){')) < inboxSec.indexOf('loadDriverInbox(false);', inboxSec.indexOf('function closeInboxOverlay(){')));
+  check('v1.4.41: el flotante sobrevive al refresco (firma propia, no se repinta si nada cambió) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('function renderInboxOverlay(list){') && inboxSec.includes('const r = inboxExpandedId ? list.find(x=>x.id===inboxExpandedId) : null;') && inboxSec.includes('if(ov && sig===inboxOvSig) return;') && inboxSec.includes('inboxOvSig'));
+  check('v1.4.41: al ir al mapa en vivo (goLive) el flotante se cierra para no quedar sobre el mapa', html.includes("const ov41 = document.getElementById('inbox-detail-overlay'); if(ov41) ov41.remove();") && html.indexOf("const ov41 = document.getElementById('inbox-detail-overlay'); if(ov41) ov41.remove();") < html.indexOf("document.getElementById('view-live').classList.add('active');"));
   const open36a = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   const open36b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Copalar', dest_detail: 'Copalar', dest_lat: 16.855, dest_lng: -93.198, distance_km: 2.5, eta_minutes: 9, price: 35, payment_method: 'efectivo' });
   const open36 = await api('/api/requests?open=1');
