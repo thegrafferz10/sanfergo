@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.47 en /api/health', h.ok && h.version === '1.4.48', JSON.stringify(h));
+  check('versión 1.4.49 en /api/health', h.ok && h.version === '1.4.49', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.47', h134.ok && h134.version === '1.4.48', JSON.stringify(h134));
+  check('versión 1.4.49', h134.ok && h134.version === '1.4.49', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.47)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.48';") && h.version === '1.4.48', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.49)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.49';") && h.version === '1.4.49', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección)', h27.ok && h27.version === '1.4.48', JSON.stringify(h27));
+  check('versión 1.4.49 en /api/health (sección)', h27.ok && h27.version === '1.4.49', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.48', JSON.stringify(h28));
+  check('versión 1.4.49 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.49', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.48', JSON.stringify(h29));
+  check('versión 1.4.49 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.49', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.48', JSON.stringify(h30));
+  check('versión 1.4.49 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.49', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2015,6 +2015,49 @@ async function api(path, body) {
   // ya no ofrece ese botón.
   const oldPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'transferencia' });
   check('v1.4.48: en vivo, el servidor sigue aceptando "transferencia" en viajes en curso (compatibilidad con clientes viejos)', oldPay.ok && oldPay.request.payment_method === 'transferencia', JSON.stringify(oldPay));
+
+  // --- v1.4.49: el botón "‹ Regresar" del paso de precio vive DENTRO de
+  //     la hoja (captura del usuario 21:58: en "Tu precio" no había forma
+  //     de volver — la píldora flotante de la franja de arriba quedaba
+  //     tapada por la hoja, más alta desde v1.4.48 con el selector de
+  //     personas). La píldora de la franja se quitó de los tres pasos de
+  //     precio (viaje, mandado Quiero y mandado Enviar) para que no quede
+  //     ninguna píldora tapada, y la hoja tiene max-height con scroll
+  //     interno para que el botón siempre quede al alcance.
+  check('v1.4.49: la hoja de precio trae "‹ Regresar" arriba de todo, dentro de la hoja (antes de "Tu precio")', priceSec48.includes('const backBtn =') && priceSec48.indexOf('‹ Regresar</button>') !== -1 && priceSec48.indexOf('‹ Regresar</button>') < priceSec48.indexOf("'Tu precio'") && priceSec48.includes('return backBtn'));
+  check('v1.4.49: el Regresar de la hoja vuelve al paso anterior del viaje (paso 3) y del mandado (paso anterior según el flujo)', priceSec48.includes("wiz.step=3;renderViajes()") && priceSec48.includes('mdBack(md.step-1)'));
+  check('v1.4.49: ya no queda ninguna píldora "‹ Regresar" en la franja de arriba de los tres pasos de precio (viaje, Quiero, Enviar)', !html.includes('style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="wiz.step=3;renderViajes()"') && !html.includes('style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(4)"') && !html.includes('style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(3)"'));
+  check('v1.4.49: las tres hojas de precio tienen max-height con scroll interno para que el botón Regresar siempre quede al alcance', html.split("max-height:calc(100dvh - 24px);overflow-y:auto\">' + priceSheetHtml").length - 1 === 3);
+  // Auditoría: cada paso del flujo de viajes y de mandados tiene una forma
+  // visible de volver (la hoja de precio, por el botón de dentro; el resto,
+  // por su píldora, que queda a la vista porque su hoja es corta o es una
+  // página normal).
+  const tripSec49 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
+  check('v1.4.49: auditoría del viaje — los pasos 0, 1, 3 y 5 tienen su píldora Regresar/Volver y el paso 4 el botón de dentro de la hoja', tripSec49.includes("backPill('Regresar al inicio'") && tripSec49.includes("backPill('Regresar', \"wiz.step=0;renderViajes()\")") && tripSec49.includes('onclick="wiz.step=2;renderViajes()">‹ Regresar</button>') && tripSec49.includes("backPill('Volver al inicio'"));
+  const mdSec49 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdNextEnviar2(){'));
+  check('v1.4.49: auditoría del mandado — el inicio, la pantalla de buscando y cada paso (Quiero 1-4 y Enviar 1-3) tienen su Regresar, y el precio el botón de dentro', mdSec49.includes("backPill('Regresar al inicio'") && mdSec49.includes("backPill('Regresar', \"mdBack(0)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(1)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(2)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(3)\")"));
+  const pickSec49 = html.slice(html.indexOf('function openPick(which, ret, startPos){'), html.indexOf('function closePickToViajes(){'));
+  check('v1.4.49: auditoría del selector de punto en el mapa — su franja de arriba trae "‹ Regresar" y la de abajo es solo el botón de confirmar (no hay hoja que lo tape)', pickSec49.includes('onclick="closePick()">‹ Regresar</button>') && pickSec49.includes("bot.innerHTML = '<div class=\"pickzone-wrap\""));
+  // Evaluando el botón real de la hoja: se extrae su onclick del código
+  // del cliente y se ejecuta con un asistente de mentira, para probar que
+  // volver al paso anterior no borra nada.
+  const backBtnSrc49 = priceSec48.slice(priceSec48.indexOf('const backBtn ='), priceSec48.indexOf('return backBtn'));
+  const backBtnTrip49 = new Function('isTrip', 'wiz', 'md', backBtnSrc49 + '; return backBtn;')(true, { step: 4 }, { step: 5 });
+  const backBtnMd49 = new Function('isTrip', 'wiz', 'md', backBtnSrc49 + '; return backBtn;')(false, { step: 4 }, { step: 5 });
+  const tripOnclick49 = (backBtnTrip49.match(/onclick="([^"]+)"/)||[])[1];
+  const mdOnclick49 = (backBtnMd49.match(/onclick="([^"]+)"/)||[])[1];
+  const wizStub49 = { step: 4, origin: { lat: 16.87291, lng: -93.21374 }, dest: { lat: 16.87137, lng: -93.20652 }, price: 30, pax: 3, suggested: 30, payment: 'efectivo' };
+  let renderedStep49 = null;
+  new Function('wiz', 'renderViajes', tripOnclick49)(wizStub49, ()=>{ renderedStep49 = wizStub49.step; });
+  check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del viaje se vuelve al paso 3 sin perder origen, destino, precio, personas ni pago', tripOnclick49 === 'wiz.step=3;renderViajes()' && wizStub49.step === 3 && renderedStep49 === 3 && wizStub49.price === 30 && wizStub49.pax === 3 && wizStub49.origin.lat === 16.87291 && wizStub49.dest.lng === -93.20652 && wizStub49.payment === 'efectivo', JSON.stringify({ onclick: tripOnclick49, step: wizStub49.step }));
+  const mdBackLine49 = html.split('\n').find(l => l.trim().startsWith('function mdBack(step){'));
+  const mdStub49 = { step: 5, price: 30, km: 1.5, eta: 5, kind: 'quiero' };
+  let mdRendered49 = null;
+  new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
+  check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Quiero (paso 5) se vuelve al paso 4 sin perder el precio ni los datos', mdOnclick49 === 'mdBack(md.step-1)' && mdStub49.step === 4 && mdRendered49 === 4 && mdStub49.price === 30 && mdStub49.km === 1.5, JSON.stringify({ onclick: mdOnclick49, step: mdStub49.step }));
+  mdStub49.step = 4;
+  new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
+  check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Enviar (paso 4) se vuelve al paso 3', mdStub49.step === 3 && mdRendered49 === 3, JSON.stringify({ step: mdStub49.step }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

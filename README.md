@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.48)
+# SanFerGo — versión pública (v1.4.49)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.49 (2026-11-23) — "‹ Regresar" dentro de la hoja de precio (ya no se puede quedar sin salida)
+
+- **Regresar en el paso de precio (reporte del usuario 21:58, captura 9:58 PM: "Al estar en esta página no me deja regresar"):** en "Tu precio" no había forma de volver — la píldora "‹ Regresar" flotaba en la franja de arriba y la hoja, más alta desde v1.4.48 con el selector de personas, la tapaba. Ahora el botón **"‹ Regresar" vive DENTRO de la hoja, arriba de todo**, antes de "Tu precio", en los tres pasos de precio (viaje, mandado Quiero y mandado Enviar): en el viaje vuelve al paso de detalles (paso 3) y en el mandado al paso anterior según el flujo (Quiero 5→4, Enviar 4→3), **sin borrar nada** (origen, destino, precio, personas y pago se quedan). La píldora de la franja de arriba se quitó de esos tres pasos para que no quede ninguna píldora tapada, y la hoja tiene max-height con scroll interno para que el botón siempre quede al alcance. Auditoría: cada paso del flujo de viajes (0, 1, 2 selector de punto, 3, 4 y 5 Buscando) y de mandados (inicio, Buscando y cada paso) tiene su forma visible de volver.
+- Pruebas: suite completa contra BD limpia: **652 OK, 0 FAIL** (642 de antes + 10 nuevas en la sección v1.4.49 — 7 estáticas y 3 evaluadas con el botón real. Los 7 checks de versión que decían 1.4.48 se actualizaron a 1.4.49).
 
 ## v1.4.48 (2026-11-23) — "Tarjeta · Próximamente" en vez de Transferencia + cuántas personas van
 
