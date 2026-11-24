@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.35)
+# SanFerGo — versión pública (v1.4.36)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.36 (2026-11-23) — La bandeja del chofer ya no parpadea y es lista, no páginas
+
+- Causa del parpadeo (reporte del usuario 17:52, con captura de Recibir Viajes en "Cargando…" y lista vacía mientras la insignia ya marcaba 1): `renderDriverInbox()` borraba TODA la pantalla con el encabezado + "Cargando…" al empezar CADA llamada, y el sondeo cada 5 s la llamaba siempre; con el servidor dormido o una llamada lenta, la lista desaparecía segundos y solo volvía en el siguiente ciclo. Además las tres llamadas iban seguidas (`driverCounts()`, mis servicios, abiertas) y el `catch` final reemplazaba la lista por "No se pudo cargar." ante cualquier error. Y la insignia venía de otra llamada (la del sondeo) distinta de la de la lista, así que podían discrepar: insignia 1 con lista vacía.
+- Arreglo: "Cargando…" solo en la PRIMERA carga (nueva bandera `inboxLoaded`); cada refresco guarda una firma de los datos (`inboxSig`: bloqueado, en línea, servicios de hoy, pestaña, contraoferta abierta, ids+estado+precio+ofertas de cada solicitud) y NO repinta si nada cambió — ni parpadeo, ni salto de scroll, ni formulario de contraoferta perdido; si una carga falla, la lista anterior se queda y se reintenta en silencio (nueva bandera `inboxLoading` evita llamadas solapadas). Las dos llamadas ahora van en paralelo con `Promise.all` (mis servicios + abiertas; los conteos se derivan de la primera, ya no hay llamada aparte), así la solicitud llega más rápido. La insignia y la lista salen del mismo ciclo. El sondeo cada 5 s llama al refresco silencioso `loadDriverInbox(false)`; los toques del usuario (entrar a la pestaña, aceptar, contraofertar, cambiar de pestaña) siguen forzando el repintado con `renderDriverInbox()`; y al volver a la app (pantalla encendida / pestaña visible) la bandeja se refresca al instante con un listener de `visibilitychange`.
+- Lista apilada (cambio pedido por el usuario junto con lo del parpadeo): en **Recibir Viajes** las solicitudes abiertas ya NO son una por una con paginador ("‹ Anterior / Siguiente ›" y "1 de 1 solicitudes" eliminados, junto con `driverPageIdx`); ahora son una LISTA hacia abajo, todas las tarjetas apiladas en la misma pantalla. El contador se mantiene en la pestaña "Solicitudes (N)" y en la insignia del botón. Solo cambia la lista de solicitudes abiertas del chofer; los paginadores del panel de admin quedan como estaban.
+- Pruebas: suite completa contra BD limpia: 522 OK, 0 FAIL (515 de antes + 7 nuevas: 6 estáticas — Cargando… solo en primera carga, firma de datos, error sin borrar lista, llamadas en paralelo, sondeo silencioso + visibilitychange, lista apilada sin paginador — y 1 en vivo de que dos solicitudes abiertas llegan juntas por `/api/requests?open=1`; la estática v1.4.27 del pintado antes de las llamadas se actualizó a `Promise.all`).
 
 ## v1.4.35 (2026-11-23) — Resumen del mandado al publicar y en la tarjeta del chofer
 
