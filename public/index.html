@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.35'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.36'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3749,7 +3749,7 @@ async function cancelMandado(){
 }
 
 /* ===== MODO CHOFER ===== */
-let driverTabName = 'inicio', driverPageIdx = 0;
+let driverTabName = 'inicio';
 function enterDriverMode(){
   if(!myDriver) return;
   store.mode = 'driver';
@@ -3757,7 +3757,7 @@ function enterDriverMode(){
 }
 function exitDriverMode(){ store.mode='passenger'; go('home'); }
 function driverTab(tab){
-  driverTabName = tab; driverPageIdx = 0;
+  driverTabName = tab;
   const suf = tab==='taximetro' ? 'taxi' : tab; // los botones se llaman cb-taxi/txb-taxi, no 'taximetro'
   ['inicio','taxi','recibir'].forEach(t=>{
     const b1 = document.getElementById('cb-'+t); if(b1) b1.classList.toggle('on', t===suf);
@@ -3985,33 +3985,55 @@ function mandadoDriverSummaryHtml(r){
   return '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px 12px;margin-top:8px"><b>Resumen del mandado</b>'
     + rows.map(x=>'<div class="kv"><span>'+x[0]+'</span><b style="text-align:right">'+x[1]+'</b></div>').join('') + '</div>';
 }
+// Estado de la bandeja del chofer (v1.4.36): la lista que ya se pintó no se
+// borra nunca en un refresco; solo se repinta si los datos cambiaron.
+let inboxLoaded = false, inboxSig = '', inboxLoading = false;
 async function renderDriverInbox(){
+  // Toques del usuario (entrar a la pestaña, aceptar, contraofertar,
+  // cambiar de pestaña): repintado forzado. El sondeo cada 5 s llama
+  // loadDriverInbox(false) y no toca la pantalla si nada cambió.
+  await loadDriverInbox(true);
+}
+async function loadDriverInbox(force){
+  if(inboxLoading) return;
   const p = $('#chofer-page');
-  // Se pinta la pantalla al instante (encabezado + Cargando…): antes la
-  // función no pintaba nada hasta que volvían las tres llamadas de red,
-  // y con el servidor dormido el toque parecía no hacer nada.
-  p.innerHTML = '<h2>Recibir Viajes</h2><p class="muted mt">Acepta al precio del pasajero o manda tu contraoferta.</p><p class="muted center mt">Cargando…</p>';
-  const sub = !!(myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date());
-  const counts = await driverCounts();
-  const atLimit = !sub && counts.today >= FREE_DAILY_LIMIT;
-  let active = [];
-  try {
-    const mj = await api('/api/requests?driver_id='+myDriver.id);
-    active = (mj.requests||[]).filter(r=>r.status==='aceptado');
-  } catch(e){}
+  if(!p) return;
   const head = '<h2>Recibir Viajes</h2><p class="muted mt">Acepta al precio del pasajero o manda tu contraoferta.</p>';
-  if(myDriver.is_blocked){
-    p.innerHTML = head + '<div class="card red"><b>Estás bloqueado por el administrador de SanFerGo: no puedes recibir viajes ni mandados nuevos. Tus servicios en curso siguen como están. Habla con el administrador para resolverlo.</b></div>';
-    return;
-  }
+  // 'Cargando…' SOLO en la primera carga, cuando aún no hay lista en
+  // pantalla. En cada refresco la lista anterior se queda puesta hasta
+  // que la nueva llega (v1.4.36: antes cada llamada borraba todo y la
+  // solicitud aparecía, desaparecía y volvía a aparecer).
+  if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">Cargando…</p>';
+  const sub = !!(myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date());
+  inboxLoading = true;
   try {
-    const j = await api('/api/requests?open=1');
-    const list = j.requests.filter(r => {
+    // Las dos llamadas en paralelo (antes eran tres seguidas: conteos,
+    // mis servicios y abiertas), así la solicitud llega más rápido.
+    const [mj, j] = await Promise.all([
+      api('/api/requests?driver_id='+myDriver.id),
+      api('/api/requests?open=1')
+    ]);
+    const myList = mj.requests||[];
+    const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
+    const todayCount = myList.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
+    const atLimit = !sub && todayCount >= FREE_DAILY_LIMIT;
+    const active = myList.filter(r=>r.status==='aceptado');
+    const list = (j.requests||[]).filter(r => {
       if(r.kind==='viaje' && myDriver.vehicle!=='mototaxi') return false;
       return true;
     });
     updateDriverBadge(list.length);
+    // Si nada cambió desde la última vez que se pintó, no se toca la
+    // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
+    // La insignia y la lista salen del mismo ciclo, así no discrepan.
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    if(inboxLoaded && !force && sig===inboxSig) return;
+    inboxSig = sig; inboxLoaded = true;
     let html = head;
+    if(myDriver.is_blocked){
+      p.innerHTML = head + '<div class="card red"><b>Estás bloqueado por el administrador de SanFerGo: no puedes recibir viajes ni mandados nuevos. Tus servicios en curso siguen como están. Habla con el administrador para resolverlo.</b></div>';
+      return;
+    }
     if(active.length && list.length){
       html += '<div style="display:flex;gap:8px;margin:12px 0"><button class="tabbtn'+(driverInboxTab==='curso'?' on':'')+'" onclick="driverInboxTab=\'curso\';renderDriverInbox()">En curso ('+active.length+')</button>'
         + '<button class="tabbtn'+(driverInboxTab==='sol'?' on':'')+'" onclick="driverInboxTab=\'sol\';renderDriverInbox()">Solicitudes ('+list.length+')</button></div>';
@@ -4032,13 +4054,14 @@ async function renderDriverInbox(){
       p.innerHTML = html;
       return;
     }
-    const idx = Math.min(driverPageIdx, list.length-1);
-    const r = list[idx];
-    const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
-    const counter = mine && mine.passenger_counter_price;
-    const highFare = r.price >= 80;
-    html += '<p class="muted center">'+(idx+1)+' de '+list.length+' solicitudes</p>'
-      + '<div class="card white">'
+    // Lista apilada (v1.4.36): todas las solicitudes una debajo de otra en
+    // la misma pantalla, sin paginador. El contador vive en la pestaña
+    // 'Solicitudes (N)' y en la insignia del botón Recibir Viajes.
+    html += list.map(r=>{
+      const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
+      const counter = mine && mine.passenger_counter_price;
+      const highFare = r.price >= 80;
+      let card = '<div class="card white">'
       + '<div class="flex">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
       + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div>'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span></div>'
@@ -4051,32 +4074,35 @@ async function renderDriverInbox(){
       + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
       + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
       + mandadoDriverSummaryHtml(r);
-    if(counter){
-      html += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
-        + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
-        + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
-        + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mine.id+')">Rechazar contraoferta</button></div></div>';
-    } else if(mine){
-      html += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mine.kind==='contraoferta' ? 'contraofertaste '+fmt$(mine.price) : 'aceptaste '+fmt$(mine.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
-    } else if(highFare && !sub){
-      html += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
-    } else if(atLimit){
-      html += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
-    } else if(driverCounter && driverCounter.rid===r.id){
-      html += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
-        + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
-        + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
-        + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
-    } else {
-      html += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
-        + '<button class="btn amber" onclick="driverCounter={rid:'+r.id+',price:roundUp5('+r.price+'*1.15)};renderDriverInbox()">Contraofertar</button></div>';
-    }
-    html += '</div>'
-      + '<div class="pager"><button class="btn ghost small" style="width:auto" '+(idx===0?'disabled':'')+' onclick="driverPageIdx--;renderDriverInbox()">‹ Anterior</button>'
-      + '<span class="pg">'+(idx+1)+' / '+list.length+'</span>'
-      + '<button class="btn ghost small" style="width:auto" '+(idx===list.length-1?'disabled':'')+' onclick="driverPageIdx++;renderDriverInbox()">Siguiente ›</button></div>';
+      if(counter){
+        card += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
+          + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
+          + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
+          + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mine.id+')">Rechazar contraoferta</button></div></div>';
+      } else if(mine){
+        card += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mine.kind==='contraoferta' ? 'contraofertaste '+fmt$(mine.price) : 'aceptaste '+fmt$(mine.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
+      } else if(highFare && !sub){
+        card += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
+      } else if(atLimit){
+        card += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
+      } else if(driverCounter && driverCounter.rid===r.id){
+        card += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
+          + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
+          + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
+          + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
+      } else {
+        card += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
+          + '<button class="btn amber" onclick="driverCounter={rid:'+r.id+',price:roundUp5('+r.price+'*1.15)};renderDriverInbox()">Contraofertar</button></div>';
+      }
+      return card + '</div>';
+    }).join('');
     p.innerHTML = html;
-  } catch(e){ p.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
+  } catch(e){
+    // Sin conexión o con el servidor dormido: la lista anterior se queda
+    // en pantalla y el siguiente ciclo reintenta en silencio. Solo en la
+    // primera carga se muestra el aviso.
+    if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">No se pudo cargar. Revisa tu conexión; se reintentará solo.</p>';
+  } finally { inboxLoading = false; }
 }
 function driverCounterStep(d){
   if(!driverCounter) return;
@@ -5508,7 +5534,7 @@ function startPolling(){
           fireAlert('new-trip', { title:'¡Nuevo viaje!', body:'Llegó una solicitud nueva de viaje o mandado.', btnText:'Ver', btnFn:()=>{ driverTab('recibir'); } });
         }
         lastOpenIds = ids;
-        if(currentView==='chofer' && driverTabName==='recibir') renderDriverInbox();
+        if(currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); // refresco silencioso: no borra la lista si nada cambió
         const mine = await api('/api/requests?driver_id='+myDriver.id);
         for(const r of mine.requests){
           const key = 'drv_'+r.id;
@@ -5532,6 +5558,10 @@ function startPolling(){
     } catch(e){ /* sin conexión: se reintenta solo */ }
   }, 5000);
 }
+
+// Al volver a la app (pantalla encendida / pestaña visible), la bandeja del
+// chofer se refresca al instante sin borrar la lista anterior (v1.4.36).
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && myDriver && store.mode==='driver' && currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); });
 
 /* ===== Inicio ===== */
 (async function init(){
