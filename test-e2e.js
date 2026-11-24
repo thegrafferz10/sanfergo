@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.60 en /api/health', h.ok && h.version === '1.4.60', JSON.stringify(h));
+  check('versión 1.4.61 en /api/health', h.ok && h.version === '1.4.61', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.60', h134.ok && h134.version === '1.4.60', JSON.stringify(h134));
+  check('versión 1.4.61', h134.ok && h134.version === '1.4.61', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -494,7 +494,7 @@ async function api(path, body) {
   check('orden corregido del viaje activo: aviso verde en la columna de abajo, no arriba', html.includes('.strip.bottom.paxbot .arrive') && !html.includes('.strip.top.paxcol .arrive') && !/top\.innerHTML = \(showArrive/.test(html));
   const bi = html.indexOf('bot.innerHTML = (canCancel');
   check('Cancelar, aviso verde y tarjeta del chofer van en la columna de abajo, en ese orden', bi > 0 && html.indexOf('+ arriveHtml', bi) > bi && html.indexOf('drivercard', bi) > html.indexOf('+ arriveHtml', bi));
-  check('encuadre del viaje activo deja más aire abajo que arriba', html.includes('bottom: botPad') && html.includes('offset: [0, -60]'));
+  check('encuadre del viaje activo deja más aire abajo que arriba (v1.4.61: el pasajero ya no usa botPad ni el zoom 16 fijo — chofer y pasajero encuadran la ruta con liveFollowPadding, arriba 170 y abajo 280)', (()=>{ const rl = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){')); return html.includes("function liveFollowPadding(){ return followPadding('live-top', 'live-bottom', 170, 280); }") && rl.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())') && !rl.includes('botPad'); })());
   // Seguimiento del taxímetro y del viaje en vivo (v1.4.4): el giro heading-up
   // es un easeTo programático que dispara rotatestart; los handlers solo
   // apagan el seguimiento con gesto real (e.originalEvent), si no el propio
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.60)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.60';") && h.version === '1.4.60', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.61)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.61';") && h.version === '1.4.61', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.60 en /api/health (sección)', h27.ok && h27.version === '1.4.60', JSON.stringify(h27));
+  check('versión 1.4.61 en /api/health (sección)', h27.ok && h27.version === '1.4.61', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.60 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.60', JSON.stringify(h28));
+  check('versión 1.4.61 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.61', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.60 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.60', JSON.stringify(h29));
+  check('versión 1.4.61 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.61', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.60 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.60', JSON.stringify(h30));
+  check('versión 1.4.61 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.61', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1815,7 +1815,7 @@ async function api(path, body) {
   const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function closestOnRoute'));
   const tzFn = eval('(' + tzSrc.replace('function liveTargetZoom(distM)', 'function(distM)') + ')');
   check('v1.4.44: en vivo, el zoom objetivo aumenta al acercarse (lejos no toca nada, cerca 16 → 17 → 18)', tzFn(1500) === null && tzFn(1001) === null && tzFn(1000) === 16 && tzFn(800) === 16 && tzFn(501) === 16 && tzFn(500) === 17 && tzFn(300) === 17 && tzFn(201) === 17 && tzFn(200) === 18 && tzFn(100) === 18 && tzFn(203) === 17, JSON.stringify({ lejos: tzFn(1500), mil: tzFn(1000), ocho: tzFn(800), tres: tzFn(300), doscientos3: tzFn(203), cien: tzFn(100) }));
-  check('v1.4.44: el zoom de proximidad solo vive en el mapa del chofer y solo sube (v1.4.60: también sube con el follow apagado — solo zoom, sin recentrar — porque el usuario lo vio quedarse ancho a 183 m tras tocar el mapa)', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.includes('if(liveFollow){') && apSec.includes('opts.zoom = proxZoom') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts2.zoom = proxZoom; opts2.duration = 800; }') && apSec.includes('liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000)') && apSec.includes('if(liveAsDriver){') && pollSec.includes('liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng)'); })());
+  check('v1.4.44: el zoom de proximidad vive en el mapa del chofer Y del pasajero y solo sube (v1.4.61: antes solo el chofer lo tenía — el del pasajero se quedaba a lo ancho de todo el pueblo; v1.4.60: también sube con el follow apagado — solo zoom, sin recentrar — porque el usuario lo vio quedarse ancho a 183 m tras tocar el mapa)', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.includes('if(liveFollow){') && apSec.includes('opts.zoom = proxZoom') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts2.zoom = proxZoom; opts2.duration = 800; }') && apSec.includes('liveTargetZoom(havKm(lat, lng, tgtZoom.lat, tgtZoom.lng) * 1000)') && !apSec.includes('if(liveAsDriver){') && pollSec.includes('liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng)'); })());
   // En vivo: el estado del tramo de recogida existe para viaje y mandado
   // (aceptado en camino + ubicación del chofer compartida: de ahí sale la
   // línea chofer → recogida).
@@ -1992,7 +1992,7 @@ async function api(path, body) {
   const bizPaySec48 = html.slice(html.indexOf('function bizOrderFormHtml(b, sub, fee, total){'), html.indexOf('let bizOrderPay'));
   check('v1.4.48: el pedido del negocio también muestra "Tarjeta · Próximamente" deshabilitada y ya no ofrece Transferencia', bizPaySec48.includes('>Tarjeta · Próximamente</button>') && bizPaySec48.includes('class="pay-opt" disabled') && !bizPaySec48.includes('Transferencia'));
   check('v1.4.48: el viaje en curso ya no tiene el enlace "Cambiar" de pago (el pago es efectivo desde que se publica) y muestra cuántas personas van', !liveSec43.includes('changePayLive') && liveSec43.includes('Pagas con ') && liveSec43.includes("paxText(r.passenger_count)") && !liveSec43.includes('Cambiar</a>'));
-  check('v1.4.48: el detalle del chofer, el resumen y el recibo muestran cuántas personas van', inboxSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && sumSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && html.slice(html.indexOf('async function showReceipt(requestId){'), html.indexOf('/* ===== VIAJE EN CURSO')).includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'"));
+  check('v1.4.48: el detalle del chofer, el resumen y el recibo muestran cuántas personas van', inboxSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && sumSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && html.slice(html.indexOf('async function showReceipt(requestId, asDriver){'), html.indexOf('/* ===== VIAJE EN CURSO')).includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'"));
   check('v1.4.48: suscripciones y Premium siguen por transferencia ("Ya hice la transferencia · Activar" en los dos flujos, sin tocar)', (html.match(/Ya hice la transferencia · Activar/g)||[]).length === 2);
   // Evaluando las funciones reales del cliente: el ejemplo del usuario
   // ($22/$25/$27 con 3 personas → $30; si pasa de $30, normal).
@@ -3137,7 +3137,7 @@ async function api(path, body) {
   check('v1.4.60: evaluado — whoStrip con perfil no pinta nada y sin perfil solo el formulario (sin "Pides como")', !!who60 && who60.withProfile === '' && who60.withoutProfile.includes('Sin perfil de pasajero') && !who60.withoutProfile.includes('Pides como'), JSON.stringify(who60 && { with: who60.withProfile, without: who60.withoutProfile.slice(0, 120) }));
   // --- Estáticas: detalle del historial con mini mapa y repetir solo si terminó. ---
   const histSec60 = html.slice(html.indexOf('async function showHistDetail(id){'), html.indexOf('function drawHistMiniMap(r){'));
-  const histMapSec60 = html.slice(html.indexOf('function drawHistMiniMap(r){'), html.indexOf('async function showReceipt(requestId){'));
+  const histMapSec60 = html.slice(html.indexOf('function drawHistMiniMap(r){'), html.indexOf('async function showReceipt(requestId, asDriver){'));
   check('v1.4.60: el detalle del historial lleva mini mapa + datos + "Ver recibo" y "Repetir este viaje" solo si terminó', histSec60.includes('hist-minimap') && histSec60.includes('Detalle del viaje') && histSec60.includes('Repetir este viaje') && histSec60.includes('Ver recibo del viaje') && histSec60.includes("r.status==='finalizado'") && histSec60.includes('drawHistMiniMap(r)'));
   check('v1.4.60: drawHistMiniMap pinta origen verde, destino rojo y línea azul (misma receta que el resumen)', histMapSec60.includes("dotEl('#22c55e', 16)") && histMapSec60.includes("dotEl('#dc2626', 16)") && histMapSec60.includes("setRouteLine(histDetailMap, 'route', rt.coords, '#2b7de9', 5)") && histMapSec60.includes("setRouteLine(histDetailMap, 'route', straightRouteCoords(o, d, []), '#2b7de9', 5)"));
   // --- Evaluado: el detalle real con una lista de mentira (un viaje
@@ -3357,6 +3357,255 @@ async function api(path, body) {
   await api('/api/advance-stage', { driver_id: drv60.driver.id, request_id: trip60c.request.id, stage: 'llego' });
   const cancel60 = await api('/api/cancel-request', { request_id: trip60c.request.id });
   check('v1.4.60: en vivo, cancelar en llego (antes de iniciar el recorrido) sí se puede', cancel60.ok, JSON.stringify(cancel60));
+
+  // ===== v1.4.61 (2026-11-24): mapa en vivo del PASAJERO como el del chofer + recibo naranja flotante =====
+  // El usuario terminó un viaje entero ($25, 1.6 km, 5 min) y dijo: del
+  // lado del chofer todo perfecto, NO se toca nada; del pasajero el mapa
+  // no actualizaba en tiempo real, se veía muy grande y aparecían DOS
+  // mototaxis; y el recibo no le gustó para nada.
+  // Diagnóstico (leyendo el código): (1) el duplicado venía de que
+  // renderLiveMap es async y se solapaba consigo misma — la apertura y el
+  // cambio de etapa en el sondeo corrían a la vez y cada una creaba su
+  // propio marcador tras esperar la ruta; la última ganaba la variable y
+  // la otra quedaba huérfana y congelada en la recogida. (2) El encuadre
+  // del pasajero metía los DOS puntos del viaje (recogida + destino) en
+  // la vista: un viaje de 1.6 km se veía a lo ancho de todo el pueblo.
+  // (3) El zoom de proximidad solo se calculaba dentro de
+  // if(liveAsDriver): para el pasajero siempre era null. (4) El sondeo
+  // SÍ mueve el marcador (liveApplyDriverPos en cada tick) y las tiras
+  // de distancia SÍ se actualizaban entre sus capturas (781 m → 705 m):
+  // lo que se veía "congelado" era la mototaxi huérfana + el mapa ancho.
+  // El recibo del pasajero (viaje) ahora es una tarjeta flotante NARANJA
+  // completa, sin tabla de detalles ni "Generar recibo": solo título,
+  // gracias, precio enorme centrado y el recordatorio (solo efectivo),
+  // más grande. El del chofer y el del mandado NO se tocan.
+  const renderSec61 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
+  check('v1.4.61: renderLiveMap tiene guardia de generación — un render viejo no crea marcadores huérfanos (la mototaxi duplicada)', html.includes('let liveRenderGen = 0;') && renderSec61.includes('const gen61 = ++liveRenderGen;') && renderSec61.includes('if(gen61 !== liveRenderGen) return;'));
+  check('v1.4.61: la mototaxi del mapa se pinta en la posición MÁS FRESCA del chofer y se quita la vieja antes de crear la nueva (una sola)', renderSec61.includes('const dPos = (liveReq.driver_lat && liveReq.driver_lng)') && renderSec61.includes('if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }') && renderSec61.includes('liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() })'));
+  check('v1.4.61: el encuadre del pasajero ya NO es ancho (sin los dos puntos del viaje ni el zoom 16 fijo en la recogida): es la ruta restante como el chofer', !renderSec61.includes('fitPoints(liveMap, pts, { top: 170, bottom: botPad, left: 50, right: 50 })') && !renderSec61.includes("if(!inTrip) liveMap.easeTo({ center: [pick.lng, pick.lat], zoom: 16") && !renderSec61.includes('botPad') && renderSec61.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())'));
+  check('v1.4.61: el recibo del pasajero es una tarjeta NARANJA completa (CSS: fondo degradado ámbar, precio 56px, recordatorio en banda naranja oscura)', html.includes('#trip-summary-overlay .sumfloat.orange{background:linear-gradient(180deg,#fbbf24,#f59e0b)}') && html.includes('.sumprice-big{text-align:center;font-size:56px;font-weight:900;color:#111827') && html.includes('.sumremind{background:#c2410c;color:#fff;font-size:18px;font-weight:800'));
+  const sumSec61 = html.slice(html.indexOf('function showTripSummary(r, asDriver){'), html.indexOf('function startLivePolling(){'));
+  const paxStart61 = html.indexOf("if(!asDriver && r.kind==='viaje'){", html.indexOf('function showTripSummary(r, asDriver){'));
+  const paxBranch61 = html.slice(paxStart61, html.indexOf("\n  }\n  ov.innerHTML = '<div class=\"sumwrap\">", paxStart61));
+  check('v1.4.61: el recibo del PASAJERO (viaje) es solo título + gracias + precio enorme centrado + recordatorio: sin tabla de detalles ni "Generar recibo"', paxBranch61.includes('sumfloat orange') && paxBranch61.includes('¡Viaje terminado!') && paxBranch61.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && paxBranch61.includes('sumprice-big') && paxBranch61.includes('sumremind') && paxBranch61.includes('class="adx"') && paxBranch61.includes('return;') && !paxBranch61.includes('>Generar recibo</button>') && !paxBranch61.includes('downloadReceipt') && !paxBranch61.includes('class="kv"') && !paxBranch61.includes('Cerrar</button>'));
+  check('v1.4.61: el recibo del CHOFER y el del MANDADO siguen intactos (mini mapa + tabla + Generar recibo + Cerrar)', sumSec61.includes('Gracias por concluir el viaje') && sumSec61.includes('id="sum-minimap"') && sumSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && sumSec61.includes("'Cerrar y volver a recibir viajes'") && sumSec61.includes('<span>Pasajero</span>') && sumSec61.includes('<span>Precio final</span>'));
+  // --- Evaluado: el recibo real (función showTripSummary) en sus 4 casos. ---
+  let receipt61 = null;
+  try {
+    const sumSrc61 = html.slice(html.indexOf('function showTripSummary(r, asDriver){'), html.indexOf('function closeTripSummary(){'));
+    const cashSrc61 = html.slice(html.indexOf('function summaryCashNote(r){'), html.indexOf('function showTripSummary(r, asDriver){'));
+    const cashFn61 = eval('(' + cashSrc61.replace('function summaryCashNote(r)', 'function(r)') + ')');
+    const runReceipt61 = (r, asDriver) => {
+      let captured = null;
+      const doc = {
+        getElementById: () => null,
+        createElement: () => ({ innerHTML: '', addEventListener() {}, appendChild() {} }),
+        body: { appendChild(el) { captured = el; } }
+      };
+      let miniCalled = 0;
+      const f = new Function('document', 'window', 'fmtDateTime', 'esc', 'paxText', 'fmt$', 'summaryCashNote', 'drawSummaryMiniMap', sumSrc61 + '\nreturn showTripSummary;');
+      const show = f(doc, {}, () => '24 nov 2026, 08:52', s => String(s == null ? '' : s), p => { const n = Math.max(1, Math.min(3, Number(p) || 1)); return n + (n === 1 ? ' persona' : ' personas'); }, n => '$' + Math.round(Number(n) || 0), cashFn61, () => { miniCalled++; });
+      show(r, asDriver);
+      return { html: captured ? captured.innerHTML : '', miniCalled };
+    };
+    const tripEf61 = { id: 201, kind: 'viaje', origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, created_at: '2026-11-24 08:47:00', finished_at: '2026-11-24 08:52:00', trip_started_at: '2026-11-24 08:47:00', distance_km: 1.6, price: 25, final_price: 25, passenger_count: 1, driver_name: 'Josué Eduardo', driver_unit: 'Hahaha', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo' };
+    const tripTr61 = { ...tripEf61, payment_method: 'transferencia' };
+    const mandEf61 = { ...tripEf61, kind: 'mandado', id: 202 };
+    receipt61 = {
+      paxEf: runReceipt61(tripEf61, false),
+      paxTr: runReceipt61(tripTr61, false),
+      drvEf: runReceipt61(tripEf61, true),
+      mandEf: runReceipt61(mandEf61, false)
+    };
+  } catch(e){ receipt61 = null; }
+  check('v1.4.61: evaluado — el recibo del PASAJERO (viaje, efectivo) es la tarjeta naranja: título, gracias, precio $25 enorme centrado y recordatorio grande; sin tabla ni "Generar recibo"', !!receipt61 && receipt61.paxEf.html.includes('sumfloat orange') && receipt61.paxEf.html.includes('¡Viaje terminado!') && receipt61.paxEf.html.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && receipt61.paxEf.html.includes('sumprice-big') && receipt61.paxEf.html.includes('$25') && receipt61.paxEf.html.includes('sumremind') && receipt61.paxEf.html.includes('Recuerda pagar con cambio al conductor') && receipt61.paxEf.html.includes('class="adx"') && !receipt61.paxEf.html.includes('Generar recibo') && !receipt61.paxEf.html.includes('class="kv"') && !receipt61.paxEf.html.includes('downloadReceipt') && !receipt61.paxEf.html.includes('Cerrar</button>') && receipt61.paxEf.miniCalled === 0, JSON.stringify(receipt61 && { paxEf: receipt61.paxEf.html.slice(0, 220), mini: receipt61.paxEf.miniCalled }));
+  check('v1.4.61: evaluado — el recibo del PASAJERO con pago por transferencia NO lleva recordatorio (solo efectivo) pero sí el precio naranja', !!receipt61 && receipt61.paxTr.html.includes('sumfloat orange') && receipt61.paxTr.html.includes('$25') && !receipt61.paxTr.html.includes('sumremind') && !receipt61.paxTr.html.includes('Recuerda pagar con cambio'), JSON.stringify(receipt61 && receipt61.paxTr.html.slice(0, 200)));
+  check('v1.4.61: evaluado — el recibo del CHOFER sigue igual (mini mapa + tabla + Generar recibo + Cerrar y volver a recibir viajes), sin naranja', !!receipt61 && receipt61.drvEf.html.includes('Gracias por concluir el viaje') && receipt61.drvEf.html.includes('sum-minimap') && receipt61.drvEf.html.includes('Generar recibo') && receipt61.drvEf.html.includes('Precio final') && receipt61.drvEf.html.includes('Pasajero') && receipt61.drvEf.html.includes('Cerrar y volver a recibir viajes') && !receipt61.drvEf.html.includes('sumfloat orange') && !receipt61.drvEf.html.includes('sumprice-big') && receipt61.drvEf.miniCalled === 1, JSON.stringify(receipt61 && { drv: receipt61.drvEf.html.slice(0, 200), mini: receipt61.drvEf.miniCalled }));
+  check('v1.4.61: evaluado — el recibo del MANDADO del pasajero sigue igual (tabla + Generar recibo + Cerrar), sin naranja', !!receipt61 && receipt61.mandEf.html.includes('Generar recibo') && receipt61.mandEf.html.includes('class="kv"') && receipt61.mandEf.html.includes('Cerrar</button>') && !receipt61.mandEf.html.includes('sumfloat orange') && !receipt61.mandEf.html.includes('sumprice-big'), JSON.stringify(receipt61 && receipt61.mandEf.html.slice(0, 200)));
+  // --- v1.4.61 (hueco): "Ver recibo" del historial del PASAJERO (viaje)
+  // abría showReceipt, un diálogo APARTE con su propia tabla + "Generar
+  // recibo" (el recibo VIEJO), mientras la app real ya muestra ahí la
+  // tarjeta naranja. Ahora showReceipt enruta el viaje del pasajero a
+  // showTripSummary (la misma tarjeta naranja del final del viaje) y el
+  // recibo del chofer + el del mandado siguen con el diálogo viejo,
+  // intactos. El lado lo decide el sitio que llama: el historial del
+  // chofer pasa asDriver=true; el del pasajero no pasa nada. NO se decide
+  // por driver_id: el mismo usuario puede ser chofer y pasajero a la vez
+  // (su propio viaje lo conduciría él) y caería en el diálogo viejo.
+  // Al cerrar el recibo abierto desde el historial hay que quedarse en
+  // el historial: closeTripSummary ya no llama exitLive() en ese caso
+  // (la página sigue debajo del flotante).
+  const receiptSec61 = html.slice(html.indexOf('async function showReceipt(requestId, asDriver){'), html.indexOf('/* ===== VIAJE EN CURSO'));
+  check('v1.4.61: showReceipt enruta el VIAJE del pasajero a la tarjeta naranja (showTripSummary) en vez del diálogo viejo', receiptSec61.includes("if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }") && receiptSec61.includes('const r = j.requests.find(x=>x.id===requestId);'));
+  check('v1.4.61: el diálogo VIEJO de showReceipt sigue intacto para el chofer y el mandado (tabla + Generar recibo + Cerrar)', receiptSec61.includes("openDialog('<h2>Recibo del '") && receiptSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && receiptSec61.includes('onclick="closeDialog()">Cerrar</button>') && receiptSec61.includes("<div class=\"kv\"><span>De</span><b>"));
+  check('v1.4.61: el historial del CHOFER pasa asDriver=true y el del PASAJERO no pasa el lado (sus botones siguen como antes)', html.includes("showReceipt('+r.id+', true)") && html.includes("onclick=\"event.stopPropagation();showReceipt('+r.id+')\"") && html.includes("onclick=\"showReceipt('+r.id+')\""));
+  const closeSec61 = html.slice(html.indexOf('function closeTripSummary(){'), html.indexOf('function drawSummaryMiniMap(r){'));
+  check('v1.4.61: closeTripSummary se queda en el historial cuando el recibo se abrió desde ahí (sin exitLive) y sigue volviendo a donde toca en el flujo en vivo', closeSec61.includes('if(receiptFromHist){ receiptFromHist = false; return; }') && closeSec61.includes('exitLive();') && html.includes('let receiptFromHist = false;'));
+  // --- Evaluado: showReceipt en sus 3 casos + closeTripSummary desde el historial. ---
+  let histReceipt61 = null;
+  try {
+    const recSrc61 = html.slice(html.indexOf('async function showReceipt(requestId, asDriver){'), html.indexOf('/* ===== VIAJE EN CURSO'));
+    // El viaje lo condujo EL MISMO usuario (driver_id 1 = su chofer y su
+    // pasajero son la misma persona): si el lado se decidiera por
+    // driver_id, el recibo del pasajero caería en el diálogo viejo.
+    const tripH61 = { id: 201, kind: 'viaje', origin_zone: 'Madero', dest_zone: 'Centro', created_at: '2026-11-24 08:47:00', finished_at: '2026-11-24 08:52:00', trip_started_at: '2026-11-24 08:47:00', distance_km: 1.6, price: 25, final_price: 25, passenger_count: 1, driver_id: 1, driver_name: 'Josué Eduardo', driver_unit: 'Hahaha', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo' };
+    const mandH61 = { ...tripH61, id: 202, kind: 'mandado' };
+    const calls61 = { sum: [], dlg: [] };
+    const apiH61 = async () => ({ requests: [tripH61, mandH61] });
+    const showH61 = (r, asDriver) => { calls61.sum.push({ id: r.id, asDriver }); };
+    const dlgH61 = (h) => { calls61.dlg.push(h); };
+    const fH61 = new Function('api', 'toast', 'showTripSummary', 'openDialog', 'window', 'fmtDateTime', 'esc', 'paxText', 'fmt$', 'let receiptFromHist = false;\n' + recSrc61 + '\nreturn { showReceipt: showReceipt, getFlag: function(){ return receiptFromHist; } };');
+    const h61 = fH61(apiH61, () => {}, showH61, dlgH61, {}, () => '24 nov 2026, 08:52', s => String(s == null ? '' : s), p => { const n = Math.max(1, Math.min(3, Number(p) || 1)); return n + (n === 1 ? ' persona' : ' personas'); }, n => '$' + Math.round(Number(n) || 0));
+    await h61.showReceipt(201);
+    const afterPax61 = { sum: calls61.sum.slice(), dlg: calls61.dlg.slice(), flag: h61.getFlag() };
+    await h61.showReceipt(201, true);
+    const afterDrv61 = { sum: calls61.sum.slice(), dlg: calls61.dlg.slice() };
+    await h61.showReceipt(202);
+    const afterMand61 = { sum: calls61.sum.slice(), dlg: calls61.dlg.slice() };
+    const closeSrc61 = html.slice(html.indexOf('function closeTripSummary(){'), html.indexOf('function drawSummaryMiniMap(r){'));
+    const mkClose61 = (flag) => {
+      let exitCalls = 0;
+      const ov = { removed: false, remove() { this.removed = true; } };
+      const doc = { getElementById: () => ov };
+      const f = new Function('document', 'summaryMiniMap', 'receiptFromHist', 'exitLive', closeSrc61 + '\nreturn closeTripSummary;');
+      const close = f(doc, null, flag, () => { exitCalls++; });
+      close();
+      return { exitCalls, ovRemoved: ov.removed };
+    };
+    histReceipt61 = { afterPax61, afterDrv61, afterMand61, closeHist61: mkClose61(true), closeLive61: mkClose61(false) };
+  } catch(e){ histReceipt61 = null; }
+  check('v1.4.61: evaluado — "Ver recibo" del PASAJERO (viaje, aunque el chofer sea él mismo) abre la tarjeta naranja, no el diálogo viejo', !!histReceipt61 && histReceipt61.afterPax61.sum.length === 1 && histReceipt61.afterPax61.sum[0].id === 201 && histReceipt61.afterPax61.sum[0].asDriver === false && histReceipt61.afterPax61.dlg.length === 0 && histReceipt61.afterPax61.flag === true, JSON.stringify(histReceipt61 && histReceipt61.afterPax61));
+  check('v1.4.61: evaluado — "Ver recibo" del CHOFER (viaje) sigue con el diálogo viejo (tabla + Generar recibo), no la naranja', !!histReceipt61 && histReceipt61.afterDrv61.sum.length === 1 && histReceipt61.afterDrv61.dlg.length === 1 && histReceipt61.afterDrv61.dlg[0].includes('Generar recibo') && histReceipt61.afterDrv61.dlg[0].includes('class="kv"') && histReceipt61.afterDrv61.dlg[0].includes('Recibo del viaje'), JSON.stringify(histReceipt61 && { dlg: histReceipt61.afterDrv61.dlg[0] && histReceipt61.afterDrv61.dlg[0].slice(0, 150) }));
+  check('v1.4.61: evaluado — "Ver recibo" del MANDADO del pasajero sigue con el diálogo viejo (tabla + Generar recibo)', !!histReceipt61 && histReceipt61.afterMand61.sum.length === 1 && histReceipt61.afterMand61.dlg.length === 2 && histReceipt61.afterMand61.dlg[1].includes('Generar recibo') && histReceipt61.afterMand61.dlg[1].includes('Recibo del mandado'), JSON.stringify(histReceipt61 && { dlg: histReceipt61.afterMand61.dlg[1] && histReceipt61.afterMand61.dlg[1].slice(0, 150) }));
+  check('v1.4.61: evaluado — cerrar el recibo abierto desde el historial se queda en el historial (NO llama exitLive) y en el flujo en vivo sí vuelve a donde toca', !!histReceipt61 && histReceipt61.closeHist61.exitCalls === 0 && histReceipt61.closeHist61.ovRemoved === true && histReceipt61.closeLive61.exitCalls === 1 && histReceipt61.closeLive61.ovRemoved === true, JSON.stringify(histReceipt61 && { hist: histReceipt61.closeHist61, live: histReceipt61.closeLive61 }));
+  // --- Evaluado: el mapa en vivo del PASAJERO (funciones reales) — una sola mototaxi, encuadre como el chofer, zoom de proximidad. ---
+  let live61 = null;
+  try {
+    const fn61 = (start, end) => {
+      const a = html.indexOf(start);
+      if (a < 0) throw new Error('sin ' + start);
+      let b = end ? html.indexOf(end, a) : html.indexOf('\nfunction ', a + 1);
+      if (b < 0) b = html.length;
+      return html.slice(a, b);
+    };
+    const liveSrc61 = [
+      fn61('function havKm(a,b,c,d){'),
+      fn61('function liveHeadingToDest(r){', '/* Paradas intermedias'),
+      fn61('function liveRouteWaypoints(r, toDest){', 'function straightRouteCoords'),
+      fn61('function straightRouteCoords(from, target, via){', '/* Zoom de proximidad'),
+      fn61('function liveTargetZoom(distM){', 'function closestOnRoute'),
+      fn61('function closestOnRoute(lat, lng, coords){', 'function ensureLiveRoute'),
+      fn61('function ensureLiveRoute(){', 'function nextStage(r){'),
+      fn61('function setRouteLine(map, id, coords, color, width){', 'function removeRouteLine'),
+      fn61('function removeRouteLine(map, id){', 'function fitPoints'),
+      fn61('function fitPoints(map, pts, pad){', 'function smoothTrack'),
+      fn61('function applyHeading(heading){', 'function renderLiveStrips(){'),
+      fn61('function followPadding(topId, botId, defTop, defBot){'),
+      'function liveFollowPadding(){ return followPadding(\'live-top\', \'live-bottom\', 170, 280); }',
+      fn61('function dotEl(color, size){', 'function motoIconEl'),
+      fn61('function motoIconEl(){', 'async function osrmRoute(a, b, via){'),
+      fn61('async function renderLiveMap(){', 'function showLiveRecenter(){'),
+      html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'"))
+    ].join('\n');
+    const el61 = () => ({ classList: { add(){}, remove(){} }, style: {}, textContent: '', innerHTML: '', className: '', offsetTop: 0, offsetHeight: 0, closest: () => null, appendChild(){}, querySelector: () => null, remove(){} });
+    const doc61 = { getElementById: () => el61(), createElement: () => el61(), querySelector: () => el61() };
+    const tick61 = () => new Promise(r => setTimeout(r, 0));
+    const mkMap61 = () => {
+      const sources = {}, layers = {};
+      return {
+        _zoom: 15, _center: null, easeCalls: [], fitCalls: [], sources, layers,
+        getZoom() { return this._zoom; },
+        easeTo(o) { if (o.zoom != null) this._zoom = o.zoom; if (o.center) this._center = o.center; this.easeCalls.push(o); },
+        fitBounds(b, opts) { this.fitCalls.push({ pts: b.pts.slice(), pad: opts && opts.padding, maxZoom: opts && opts.maxZoom }); this._zoom = 15; },
+        addSource(id, def) { sources[id] = def.data; },
+        getSource(id) { return sources[id] ? { setData(d) { sources[id] = d; } } : null; },
+        addLayer(l) { layers[l.id] = l; },
+        getLayer(id) { return layers[id] || null; },
+        removeLayer(id) { delete layers[id]; },
+        removeSource(id) { delete sources[id]; },
+        on() {}, resize() {}, remove() {}
+      };
+    };
+    const mkLib61 = (markers) => ({
+      Marker: class {
+        constructor(opts) { this.el = opts.element; this.removed = false; this.lngLat = null; markers.push(this); }
+        setLngLat(l) { this.lngLat = l; return this; }
+        addTo(m) { this.map = m; return this; }
+        remove() { this.removed = true; }
+        getLngLat() { return this.lngLat ? { lng: this.lngLat[0], lat: this.lngLat[1] } : null; }
+      },
+      LngLatBounds: class {
+        constructor(p1, p2) { this.pts = [p1, p2]; }
+        extend(p) { this.pts.push(p); return this; }
+      }
+    });
+    const build61 = (osrmImpl, markers) => {
+      const osrmCalls = [];
+      const osrmRoute = async (a, b, via) => { osrmCalls.push({ a, b }); return osrmImpl ? await osrmImpl(a, b, via) : null; };
+      const src = 'let liveReq = null, liveMap = null, liveAsDriver = false, liveFollow = true;\nlet liveRouteCoords = null, liveRouteFallback = false, liveOsrmRetryTick = 0;\nlet liveDriverMarker = null, liveLastStripAt = 0, liveLastHeading = null, liveGpsPos = null;\nlet liveRerouting = false, liveLastRerouteAt = 0;\nlet liveRenderGen = 0;\nlet liveMarkers = {};\n' + liveSrc61 + '\nreturn { setReq(r){ liveReq = r; }, getReq(){ return liveReq; }, setMap(m){ liveMap = m; }, setMarker(m){ liveDriverMarker = m; }, setFollow(f){ liveFollow = f; }, getRoute(){ return liveRouteCoords; }, getMarker(){ return liveDriverMarker; }, getGen(){ return liveRenderGen; }, apply: liveApplyDriverPos, render: renderLiveMap };';
+      const factory = new Function('document', 'maplibregl', '$', 'osrmRoute', 'renderLiveStrips', src);
+      const api61 = factory(doc61, mkLib61(markers), () => el61(), osrmRoute, () => {});
+      api61.osrmCalls = osrmCalls;
+      return api61;
+    };
+    const PICK61 = { lat: 16.8709, lng: -93.2063 };
+    const DEST61 = { lat: 16.8675, lng: -93.2105 };
+    const approx61 = (a, b, tol) => Math.abs(a - b) < (tol || 1e-5);
+    // A) Dos renders solapados (apertura + cambio de etapa en el sondeo):
+    // solo UNA mototaxi, en la posición MÁS FRESCA, y el encuadre es la
+    // ruta restante con el padding del chofer (no los dos puntos del viaje).
+    const markersA = [];
+    let resolveRouteA = null;
+    const routeAPromise = new Promise(res => { resolveRouteA = res; });
+    const hA61 = build61(() => routeAPromise, markersA);
+    const mapA61 = mkMap61();
+    const reqA61 = { id: 301, kind: 'viaje', trip_stage: 'en_viaje', origin_lat: PICK61.lat, origin_lng: PICK61.lng, dest_lat: DEST61.lat, dest_lng: DEST61.lng, origin_zone: 'Madero', dest_zone: 'Centro', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo', price: 25, final_price: 25, passenger_count: 1, driver_lat: 16.8727, driver_lng: -93.2081 };
+    hA61.setReq(reqA61); hA61.setMap(mapA61);
+    const posB61 = { lat: 16.8715, lng: -93.2090 };
+    const pA1 = hA61.render();
+    // El sondeo actualiza la posición del chofer mientras el render espera la ruta.
+    reqA61.driver_lat = posB61.lat; reqA61.driver_lng = posB61.lng;
+    const pA2 = hA61.render();
+    const routeACoords = [[posB61.lng, posB61.lat], [-93.2095, 16.8700], [DEST61.lng, DEST61.lat]];
+    resolveRouteA({ coords: routeACoords });
+    await pA1; await pA2; await tick61();
+    const motoA = markersA.filter(m => m.el && typeof m.el.innerHTML === 'string' && m.el.innerHTML.includes('<svg'));
+    const motoAliveA = motoA.filter(m => !m.removed);
+    const fitA = mapA61.fitCalls[mapA61.fitCalls.length - 1];
+    live61 = {
+      motoTotalA: motoA.length, motoAliveA: motoAliveA.length,
+      motoPosA: motoAliveA[0] ? motoAliveA[0].lngLat : null,
+      fitPtsA: fitA ? fitA.pts : null, fitPadA: fitA ? fitA.pad : null,
+      routeA: mapA61.sources.route ? mapA61.sources.route.geometry.coordinates : null
+    };
+    // B) El pasajero en viaje (en_viaje): el marcador se mueve con cada
+    // lectura del sondeo y el zoom de proximidad sube 16→17→18 al
+    // acercarse al destino, igual que el chofer.
+    const markersB = [];
+    const hB61 = build61(null, markersB);
+    const mapB61 = mkMap61();
+    const reqB61 = { id: 302, kind: 'viaje', trip_stage: 'en_viaje', origin_lat: PICK61.lat, origin_lng: PICK61.lng, dest_lat: DEST61.lat, dest_lng: DEST61.lng, origin_zone: 'Madero', dest_zone: 'Centro', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo', price: 25, final_price: 25, passenger_count: 1, driver_lat: null, driver_lng: null };
+    hB61.setReq(reqB61); hB61.setMap(mapB61);
+    const markerPosB = [];
+    hB61.setMarker({ pos: null, setLngLat(l) { this.pos = l; markerPosB.push(l); }, remove() {} });
+    const posDest61 = (distM) => ({ lat: DEST61.lat + distM / 110540, lng: DEST61.lng });
+    const zoomsB61 = [];
+    for (const d of [800, 600, 400, 300, 183, 100]) {
+      const p = posDest61(d);
+      hB61.apply(p.lat, p.lng); await tick61();
+      zoomsB61.push(mapB61.getZoom());
+    }
+    live61.zoomsB = zoomsB61;
+    live61.markerMovesB = markerPosB;
+    live61.markerLastB = markerPosB[markerPosB.length - 1];
+    live61.motoPosOk = !!(live61.motoPosA && approx61(live61.motoPosA[0], -93.2090) && approx61(live61.motoPosA[1], 16.8715));
+    live61.fitOk = !!(live61.fitPadA && live61.fitPadA.left === 16 && live61.fitPadA.right === 16 && live61.fitPtsA && approx61(live61.fitPtsA[0][0], -93.2090) && approx61(live61.fitPtsA[0][1], 16.8715) && live61.routeA && live61.routeA.length === 3);
+    live61.movesOk = markerPosB.length === 6 && markerPosB.every((l, i) => { const d = [800, 600, 400, 300, 183, 100][i]; const p = { lat: 16.8675 + d / 110540, lng: -93.2105 }; return approx61(l[0], p.lng) && approx61(l[1], p.lat); }) && zoomsB61[0] === 16 && zoomsB61[2] === 17 && zoomsB61[4] === 18;
+  } catch(e){ live61 = null; }
+  check('v1.4.61: evaluado — dos renders solapados del mapa del pasajero dejan UNA sola mototaxi (la huérfana ya no existe)', !!live61 && live61.motoTotalA === 1 && live61.motoAliveA === 1, JSON.stringify(live61 && { motoTotalA: live61.motoTotalA, motoAliveA: live61.motoAliveA }));
+  check('v1.4.61: evaluado — esa única mototaxi queda en la posición MÁS FRESCA del chofer (la del sondeo, no la de cuando abrió el mapa)', !!live61 && live61.motoPosOk, JSON.stringify(live61 && { motoPosA: live61.motoPosA }));
+  check('v1.4.61: evaluado — el encuadre del pasajero es la ruta restante con el padding del chofer (no los dos puntos del viaje a lo ancho del pueblo)', !!live61 && live61.fitOk, JSON.stringify(live61 && { fitPadA: live61.fitPadA, fit0: live61.fitPtsA && live61.fitPtsA[0], routeLen: live61.routeA && live61.routeA.length }));
+  check('v1.4.61: evaluado — en el mapa del PASAJERO el marcador se mueve con cada lectura del sondeo (tiempo real) y el zoom de proximidad sube 16→17→18 al acercarse al destino', !!live61 && live61.movesOk, JSON.stringify(live61 && { moves: live61.markerMovesB.length, zoomsB: live61.zoomsB }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

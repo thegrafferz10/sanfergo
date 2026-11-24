@@ -1,9 +1,18 @@
-# SanFerGo — versión pública (v1.4.60)
+# SanFerGo — versión pública (v1.4.61)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.61 (2026-11-24) — Mapa en vivo del PASAJERO como el del chofer + recibo naranja flotante
+
+- LADO DEL CHOFER INTACTO (decisión del usuario: lo probó y está perfecto — no se tocó nada de su mapa, su recibo, su flujo ni sus botones).
+- Mapa en vivo del pasajero: (1) se quitó la mototaxi duplicada — el mapa mostraba DOS mototaxis porque renderLiveMap es async y se solapaba consigo misma (apertura + cambio de etapa en el sondeo): cada render creaba su propio marcador y el viejo quedaba huérfano y congelado en la recogida. Ahora hay guardia de generación (el render viejo ya no crea nada) y la mototaxi se pinta en la posición MÁS FRESCA del chofer; solo hay UNA mototaxi (la del chofer; la posición del pasajero, si se muestra, es un punto, nunca una mototaxi). (2) El encuadre ya no es ancho: el pasajero encuadraba los DOS puntos del viaje (recogida + destino) y el mapa se veía a lo ancho de todo el pueblo; ahora encuadra la ruta restante con el mismo padding del chofer. (3) El zoom de proximidad (16/17/18) también vive en el mapa del pasajero (antes solo el chofer lo tenía). El sondeo SÍ movía el marcador en cada tick — lo que se veía "congelado" era la mototaxi huérfana + el mapa ancho.
+- Recibo del pasajero (viaje) rediseñado: tarjeta flotante NARANJA completa (todo el fondo naranja, no solo el recordatorio), como el anuncio de entrada — sin tabla de detalles ni botón "Generar recibo": solo el título "¡Viaje terminado!", la línea de gracias, el precio enorme centrado y abajo el recordatorio "Recuerda pagar con cambio al conductor", más grande (solo cuando el pago es en efectivo, como antes). La X grande de arriba cierra al instante. El recibo del chofer (mini mapa + "Gracias por concluir el viaje") y el del mandado NO se tocan.
+- "Ver recibo" del historial del pasajero (viaje) muestra la misma tarjeta naranja del final del viaje — antes abría un diálogo aparte con el recibo viejo (tabla + "Generar recibo"), distinto al de la app real. El lado lo decide el sitio que llama (el historial del chofer pasa asDriver=true; el del pasajero no pasa nada), NO el driver_id: el mismo usuario puede ser chofer y pasajero a la vez. Al cerrar el recibo desde el historial te quedas en el historial (antes exitLive() te sacaba al inicio de Viajes). El recibo del chofer y el del mandado siguen con el diálogo viejo, intactos.
+- Nada más cambia: la tarifa, el flujo de pedir y el resto de la app siguen igual.
+- Pruebas: suite completa contra BD limpia: **989 OK, 0 FAIL** (967 de antes + 22 nuevas: 14 de la v1.4.61 original — 6 estáticas, 4 evaluadas del recibo con la función real, 4 evaluadas del mapa en vivo del pasajero con las funciones reales — + 8 del recibo del historial — 4 estáticas y 4 evaluadas con la función real; 3 checks viejos actualizados a la nueva firma de showReceipt y al ancla de la rama naranja del recibo).
 
 ## v1.4.60 (2026-11-24) — Viajes: pantalla limpia, detalle del historial con mini mapa, "Iniciar recorrido" y línea azul siempre
 
