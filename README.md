@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.53)
+# SanFerGo — versión pública (v1.4.54)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.54 (2026-11-23) — Nombre y categoría del negocio en su propio paso; deslizar para quitar en Recibir Viajes + aviso naranja de Rechazado
+
+- **Asistente de crear negocio (reporte del usuario 22:52, captura 10:52 PM con el círculo rojo sobre "Nombre del negocio" y "Categoría"):** el nombre y la categoría salen del paso 1 ("¿De qué tipo es tu negocio?") y viven en su propio paso con botones bonitos — la categoría ya no es un menú desplegable: son tarjetas en rejilla de 2 columnas, con icono, nombre y descripción corta, borde verde y palomita verde en la elegida, igual que las tarjetas del tipo. El asistente pasa de 4 a 5 pasos (0=tipo, 1=nombre+categoría, 2=qué vende+WhatsApp, 3=colonia/horario/envío, 4=foto+enviar); el indicador "Paso N de 5" y la barra de avance se actualizan, y la navegación (Siguiente verde + Regresar) y la validación (nombre y categoría obligatorios para avanzar) siguen el mismo patrón. El envío final ("Enviar la solicitud de mi negocio") y los datos que se mandan no cambian; el aviso amarillo de la versión gratis queda como está.
+- **Bandeja del chofer: deslizar para quitar + aviso de Rechazado (reporte del usuario 22:53-22:54):** cuando el pasajero rechaza la contraoferta de un chofer, ese chofer ve en "Recibir Viajes" el aviso NARANJA "Rechazado" ("El pasajero rechazó tu oferta de $X", o "Rechazaste su contraoferta de $X" si fue el chofer quien rechazó la contraoferta del pasajero) en la fila y en el detalle; la oferta rechazada ya no se puede responder (el servidor la da por contestada). TODAS las filas de la bandeja (viajes y mandados) se pueden deslizar a la izquierda para revelar la X roja a la derecha: al tocarla, la solicitud se quita de ESA bandeja y no vuelve ni tras refrescar (nueva tabla driver_dismissed + endpoint /api/dismiss-request; la lista /api/requests?open=1 acepta ?dismissed_for=<driver_id>). La solicitud sigue buscando para los demás choferes y nada se cancela. La fila compacta no cambia de diseño (chip + foto + nombre + precio, ruta, línea km·min·Pago·personas): el gesto es solo una envoltura (.swipe-wrap/.swipe-inner) con pointer events; un toque normal sigue abriendo el detalle.
+- Pruebas: suite completa contra BD limpia: **769 OK, 0 FAIL** (731 de antes + 38 nuevas en la sección v1.4.54 — 13 estáticas, 10 evaluadas con el armado real (validación del paso y filas de la bandeja) y 15 en vivo. Los 7 checks de versión que decían 1.4.53 se actualizaron a 1.4.54; además se actualizaron 2 checks viejos que la nueva bandeja tocó: v1.4.36 (la URL de la lista abierta ahora lleva ?dismissed_for=) y v1.4.38 (el aviso ámbar ahora es (counter && !rejected?...), y la extracción del constructor de la línea tenue en v1.4.51 ahora termina en el return del swipe-wrap).
 
 ## v1.4.51 (2026-11-23) — Cuántas personas van, en la fila compacta del chofer
 

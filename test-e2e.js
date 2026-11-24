@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.53 en /api/health', h.ok && h.version === '1.4.53', JSON.stringify(h));
+  check('versión 1.4.54 en /api/health', h.ok && h.version === '1.4.54', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.53', h134.ok && h134.version === '1.4.53', JSON.stringify(h134));
+  check('versión 1.4.54', h134.ok && h134.version === '1.4.54', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.53)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.53';") && h.version === '1.4.53', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.54)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.54';") && h.version === '1.4.54', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,10 +1409,10 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.53 en /api/health (sección)', h27.ok && h27.version === '1.4.53', JSON.stringify(h27));
+  check('versión 1.4.54 en /api/health (sección)', h27.ok && h27.version === '1.4.54', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
-  check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
+  check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
   check('sin selector de perfiles en los formularios (corrección v1.4.21 intacta)', !html.includes('Elige tu perfil') && !html.includes('pickRegDriver') && !html.includes('pickRegPassenger'));
   const wizAcc = await api('/api/register-account', { name: 'Wiz Cuenta', username: 'wiz_' + RUN, phone: '961114' + RUN.slice(0, 4), password: 'secreta123' });
   check('endpoint de crear cuenta sigue funcionando', wizAcc.ok && wizAcc.account && wizAcc.account.username === 'wiz_' + RUN, JSON.stringify(wizAcc));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.53 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.53', JSON.stringify(h28));
+  check('versión 1.4.54 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.54', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.53 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.53', JSON.stringify(h29));
+  check('versión 1.4.54 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.54', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.53 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.53', JSON.stringify(h30));
+  check('versión 1.4.54 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.54', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1619,7 +1619,7 @@ async function api(path, body) {
   check('v1.4.36: Recibir Viajes pinta Cargando… SOLO en la primera carga (lista anterior intacta)', html.includes('let inboxLoaded = false, inboxSig = ') && html.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">Cargando…</p>'") && html.includes('async function loadDriverInbox(force){'));
   check('v1.4.36: el refresco no repinta si nada cambió (firma de datos) y no se solapa', inboxSec.includes('inboxSig') && inboxSec.includes('if(inboxLoaded && !force && sig===inboxSig) return;') && inboxSec.includes('if(inboxLoading) return;') && inboxSec.includes('} finally { inboxLoading = false; paintDriverActiveBanners(); }'));
   check('v1.4.36: un error de red no borra la lista anterior (solo avisa en primera carga)', inboxSec.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">No se pudo cargar."));
-  check('v1.4.36: las dos llamadas de la bandeja van en paralelo y la insignia sale del mismo ciclo que la lista', inboxSec.includes('await Promise.all') && inboxSec.includes("api('/api/requests?driver_id='+myDriver.id+'&light=1')") && inboxSec.includes("api('/api/requests?open=1&light=1')") && inboxSec.includes('updateDriverBadge(list.length)'));
+  check('v1.4.36: las dos llamadas de la bandeja van en paralelo y la insignia sale del mismo ciclo que la lista', inboxSec.includes('await Promise.all') && inboxSec.includes("api('/api/requests?driver_id='+myDriver.id+'&light=1')") && inboxSec.includes("api('/api/requests?open=1&light=1&dismissed_for='+myDriver.id)") && inboxSec.includes('updateDriverBadge(list.length)'));
   check('v1.4.36: el sondeo llama al refresco silencioso y al volver a la app se refresca al instante', html.includes("loadDriverInbox(false); // refresco silencioso") && html.includes("document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && myDriver && store.mode==='driver' && currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); })"));
   check('v1.4.36: las solicitudes son lista apilada, sin paginador; el contador vive en la pestaña', inboxSec.includes('list.map(r=>') && inboxSec.includes("Solicitudes ('+list.length+')") && !inboxSec.includes('driverPageIdx') && !inboxSec.includes('‹ Anterior') && !inboxSec.includes('Siguiente ›') && !inboxSec.includes("de '+list.length+' solicitudes"));
   // --- v1.4.37: solicitudes compactas en Recibir Viajes, toca para ver el detalle ---
@@ -1632,7 +1632,7 @@ async function api(path, body) {
   check('v1.4.37: el detalle abierto sobrevive al refresco (el id entra en la firma) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('driverInboxTab, inboxExpandedId, driverCounter?') && inboxSec.includes('if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;') && inboxSec.includes('if(inboxExpandedId===rid){ closeInboxOverlay(); return; }') && inboxSec.includes('inboxExpandedId = rid;'));
   // --- v1.4.38: aviso de contraoferta en la fila colapsada ---
   check('v1.4.38: la fila colapsada muestra el aviso ámbar "Te contraofertó $X · Toca para responder" cuando el pasajero contraofertó', compactSec.includes('Te contraofertó ') && compactSec.includes("fmt$(counter)") && compactSec.includes('· Toca para responder') && compactSec.includes('#fef3c7') && compactSec.includes('passenger_counter_price'));
-  check('v1.4.38: el aviso solo sale cuando hay contraoferta (condicionado a counter) y tocar la fila sigue abriendo el detalle', compactSec.includes("(counter?'<div") && compactSec.includes(":'')") && compactSec.includes("inboxToggle('+r.id+')"));
+  check('v1.4.38: el aviso solo sale cuando hay contraoferta (condicionado a counter) y tocar la fila sigue abriendo el detalle', compactSec.includes("(counter && !rejected?'<div") && compactSec.includes(":'')") && compactSec.includes("inboxToggle('+r.id+')"));
   // --- v1.4.39: nombres de lugar en la fila compacta + botón para cerrar el detalle ---
   check('v1.4.39: la zona genérica se resuelve a la zona conocida más cercana por coordenadas (displayZoneName, radio 1.5 km)', html.includes('function displayZoneName(stored, lat, lng){') && html.includes('GENERIC_ZONES') && html.includes("'Mi ubicación'") && html.includes("'Punto de WhatsApp'") && html.includes('function nearestZoneWithin(pos, maxKm){') && html.includes('nearestZoneWithin({ lat, lng }, 1.5)'));
   check('v1.4.39: la fila compacta y el detalle usan el nombre resuelto (no la etiqueta genérica) y el nombre entra en la firma', inboxSec.includes('displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng)') && inboxSec.includes('displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng)') && inboxSec.includes('esc(r._dispO)') && inboxSec.includes('esc(r._dispD)') && inboxSec.includes("r._dispO+'>'+r._dispD") && !inboxSec.includes("esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')"));
@@ -2149,7 +2149,7 @@ async function api(path, body) {
   //     Pago: efectivo', sin el dato de personas). Solo viajes: los
   //     mandados son siempre de 1 persona y no llevan el dato. El
   //     detalle expandido ya lo mostraba desde v1.4.48 y no se toca.
-  const compactSec51 = html.slice(html.indexOf("const rowMeta = [];"), html.indexOf("return '<div class=\"card white\">'"));
+  const compactSec51 = html.slice(html.indexOf("const rowMeta = [];"), html.indexOf("return '<div class=\"swipe-wrap\"")); // v1.4.54: la fila ahora vuelve envuelta (swipe-wrap); la tarjeta compacta vive dentro
   check('v1.4.51: la fila compacta agrega el conteo de personas solo para viajes (paxText(r.passenger_count), con kind===\'viaje\')', compactSec51.includes("if(r.kind==='viaje') rowMeta.push(paxText(r.passenger_count));"));
   check('v1.4.51: el conteo va al final de la línea tenue (después de km · ETA y Pago)', compactSec51.indexOf("paxText(r.passenger_count)") > compactSec51.indexOf("Pago: '+esc(r.payment_method)"));
   check('v1.4.51: la firma de repintado de la bandeja incluye passenger_count (la fila se repinta si cambia el dato)', html.includes("':'+(r.passenger_count||'')"));
@@ -2325,6 +2325,140 @@ async function api(path, body) {
   check('v1.4.53: en vivo, cancelar desde el apartado propio cancela el mandado (mismo botón, mismo endpoint)', can53.ok, JSON.stringify(can53));
   const list53 = await api('/api/requests?passenger_id=' + pax53.passenger.id + '&light=1');
   check('v1.4.53: en vivo, tras cancelar ya no hay mandado en espera: la pantalla se levanta', list53.ok && !list53.requests.some(r=>r.kind==='mandado' && r.status==='buscando'), JSON.stringify(list53.requests && list53.requests.map(r=>r.status)));
+
+  // --- v1.4.54: el asistente de crear negocio pone nombre y categoría
+  //     en su propio paso con botones bonitos; la bandeja del chofer se
+  //     puede deslizar a la izquierda para quitar filas con la X, y la
+  //     oferta rechazada se ve en naranja con "Rechazado".
+  //     (A) Asistente (reporte del usuario 22:52, captura 10:52 PM con el
+  //     círculo rojo sobre "Nombre del negocio" y "Categoría"): nombre y
+  //     categoría salen del paso 1 y viven en su propio paso; la categoría
+  //     son tarjetas en rejilla de 2 columnas (icono + nombre + descripción
+  //     corta, palomita verde en la elegida) en vez del menú desplegable.
+  //     El asistente pasa de 4 a 5 pasos; el envío final no cambia.
+  //     (B) Bandeja (reporte del usuario 22:53-22:54): al rechazar el
+  //     pasajero la contraoferta, el chofer ve el aviso NARANJA
+  //     "Rechazado" en la fila y en el detalle; todas las filas se pueden
+  //     deslizar a la izquierda para revelar la X roja, que quita la
+  //     solicitud de ESA bandeja (tabla driver_dismissed + endpoint
+  //     /api/dismiss-request; la lista acepta ?dismissed_for=); la
+  //     solicitud sigue buscando para los demás choferes.
+  const bizFormSec54 = html.slice(html.indexOf('function renderBizCreateForm(){'), html.indexOf('function showBizStep(n){'));
+  const bizStep0Sec54 = bizFormSec54.slice(bizFormSec54.indexOf("'<div id=\"nb-step0\">'"), bizFormSec54.indexOf('id="nb-step1"'));
+  const bizStep1Sec54 = bizFormSec54.slice(bizFormSec54.indexOf('id="nb-step1"'), bizFormSec54.indexOf('id="nb-step2"'));
+  check('v1.4.54: el paso 1 del asistente trae SOLO el tipo (las 3 tarjetas): nombre y categoría ya no están ahí', bizStep0Sec54.includes('¿De qué tipo es tu negocio?') && bizStep0Sec54.includes("typeCard('entrega'") && bizStep0Sec54.includes("typeCard('catalogo'") && bizStep0Sec54.includes("typeCard('citas'") && !bizStep0Sec54.includes('nb-name') && !bizStep0Sec54.includes('nb-cat'));
+  check('v1.4.54: nombre y categoría viven en su propio paso (paso 2) con el campo de nombre, la rejilla de 2 columnas de tarjetas y el valor oculto', bizStep1Sec54.includes('id="nb-name"') && bizStep1Sec54.includes('grid-template-columns:1fr 1fr') && bizStep1Sec54.includes('catCard(c)') && bizStep1Sec54.includes('<input type="hidden" id="nb-cat"'));
+  check('v1.4.54: la categoría ya no es un menú desplegable (sin <select id="nb-cat">) y las tarjetas son botones bonitos con palomita (radio-card + cat-check + setBizCat)', !bizFormSec54.includes('<select id="nb-cat">') && html.includes('function setBizCat(c){') && html.includes('class="cat-check"') && html.includes('.radio-card.sel .cat-check{display:inline-block}'));
+  const showBizSec54 = html.slice(html.indexOf('function showBizStep(n){'), html.indexOf('function nbNext(step){'));
+  check('v1.4.54: el asistente tiene 5 pasos (indicador "Paso N de 5" y barra con 5 segmentos)', showBizSec54.includes('i<5') && showBizSec54.includes('wizSteps(n, 5)') && showBizSec54.includes("getElementById('nb-step'+i)"));
+  const valBizSec54 = html.slice(html.indexOf('function validateBizStep(step){'), html.indexOf('function setBizCat(c){'));
+  check('v1.4.54: el paso de nombre+categoría valida los dos antes de avanzar (nombre y categoría obligatorios)', valBizSec54.includes('if(step===1){') && valBizSec54.includes("Escribe el nombre de tu negocio.") && valBizSec54.includes('Elige la categoría de tu negocio.'));
+  const submitBizSec54 = html.slice(html.indexOf('async function submitBusiness(){'), html.indexOf('async function renderBizMine(){'));
+  check('v1.4.54: el envío final no cambia (lee #nb-name y #nb-cat y manda name+category al mismo endpoint)', submitBizSec54.includes("($('#nb-name').value||'')") && submitBizSec54.includes("($('#nb-cat').value||'')") && submitBizSec54.includes("'/api/request-business'") && submitBizSec54.includes('category, colony, schedule'));
+  // Evaluando la validación real del paso: se ejecuta validateBizStep con
+  // un $ y un toast de mentira (pasos 0, 1 y 2; el 3 es el de envío, que
+  // no se toca y usa document).
+  const valSrc54 = html.slice(html.indexOf('function validateBizStep(step){'), html.indexOf('function setBizCat(c){'));
+  function runValidate54(step, values, type){
+    let lastToast = '';
+    const $stub = (id)=>({ value: (values && values[id] !== undefined) ? values[id] : '' });
+    const toastStub = (m)=>{ lastToast = m; return false; };
+    const fn = new Function('$', 'toast', 'bizCreateType', 'step', valSrc54 + '; return validateBizStep(step);');
+    const ok = fn($stub, toastStub, type || 'entrega', step);
+    return { ok, lastToast };
+  }
+  check('v1.4.54: evaluado — paso 1 (tipo) siempre pasa', runValidate54(0, {}).ok === true);
+  check('v1.4.54: evaluado — paso 2 sin nombre no avanza ("Escribe el nombre de tu negocio.")', (()=>{ const r = runValidate54(1, { '#nb-name': '', '#nb-cat': 'Comida' }); return r.ok === false && r.lastToast === 'Escribe el nombre de tu negocio.'; })());
+  check('v1.4.54: evaluado — paso 2 con nombre pero sin categoría no avanza ("Elige la categoría de tu negocio.")', (()=>{ const r = runValidate54(1, { '#nb-name': 'Taquería', '#nb-cat': '' }); return r.ok === false && r.lastToast === 'Elige la categoría de tu negocio.'; })());
+  check('v1.4.54: evaluado — paso 2 con nombre y categoría sí avanza', runValidate54(1, { '#nb-name': 'Taquería', '#nb-cat': 'Comida' }).ok === true);
+  check('v1.4.54: evaluado — paso 3 (qué vende + WhatsApp) pasa con datos completos y frena con WhatsApp corto', runValidate54(2, { '#nb-desc': 'Tacos de pastor', '#nb-wa': '9610000000' }).ok === true && runValidate54(2, { '#nb-desc': 'Tacos de pastor', '#nb-wa': '961' }).ok === false);
+  // La bandeja del chofer: estáticas.
+  check('v1.4.54: cada fila de Recibir Viajes va envuelta para deslizar (swipe-wrap + X roja + dismissInboxRow) sin cambiar la tarjeta compacta', html.includes('class="swipe-wrap"') && html.includes('class="swipe-x"') && html.includes('onclick="dismissInboxRow(') && html.includes('class="card white swipe-inner"'));
+  check('v1.4.54: la lista de solicitudes abiertas se pide con ?dismissed_for= (el servidor quita las descartadas de ESE chofer)', html.includes("api('/api/requests?open=1&light=1&dismissed_for='+myDriver.id)"));
+  check('v1.4.54: el gesto existe (swipeDown/Move/Up/Cancel con pointer events y setPointerCapture) y el toque no abre el detalle tras arrastrar (swipeDragged)', html.includes('function swipeDown(e){') && html.includes('function swipeMove(e){') && html.includes('function swipeUp(e){') && html.includes('function swipeCancel(e){') && html.includes('setPointerCapture') && html.includes('function dismissInboxRow(rid, ev){'));
+  const inboxToggleSec54 = html.slice(html.indexOf('function inboxToggle(rid){'), html.indexOf('async function loadDriverInbox(force){'));
+  check('v1.4.54: inboxToggle no abre el detalle si el toque fue un arrastre', inboxToggleSec54.includes('if(swipeDragged){ swipeDragged = false; return; }'));
+  check('v1.4.54: la fila lleva el aviso NARANJA "Rechazado" con lo que se rechazó (fondo #ffedd5, texto #9a3412)', html.includes('Rechazado · ') && html.includes('background:#ffedd5') && html.includes('color:#9a3412') && html.includes('El pasajero rechazó tu oferta de ') && html.includes('Rechazaste su contraoferta de '));
+  check('v1.4.54: el aviso de contraoferta del pasajero ya no se muestra cuando la oferta quedó rechazada (no se ofrece responder lo ya contestado)', html.includes("(counter && !rejected?'<div style=\"margin-top:6px;background:#fef3c7"));
+  check('v1.4.54: el detalle también muestra el aviso naranja de Rechazado en vez de los botones muertos de la contraoferta', html.includes("const rejectedD = mine && mine.status==='rechazada';") && html.includes("Rechazado: el pasajero rechazó tu oferta de '+fmt$(mine.price)") && html.includes("Rechazaste su contraoferta de '+fmt$(counter)"));
+  // Evaluando el armado real de la fila compacta: se extrae el map de
+  // loadDriverInbox y se ejecuta con solicitudes de mentira (sin oferta,
+  // oferta rechazada, rechazada tras contraoferta del pasajero,
+  // contraoferta pendiente y mandado), con los ayudantes reales en
+  // versión de mentira y sin DOM.
+  const rowMapStart54 = html.indexOf('html += list.map(r=>{');
+  const rowMapEnd54 = html.indexOf("}).join('');", rowMapStart54);
+  const rowSec54 = html.slice(rowMapStart54, rowMapEnd54 + "}).join('');".length);
+  function runRow54(r){
+    const stubs = {
+      esc: (s)=>String(s==null?'':s),
+      fmt$: (n)=>'$'+Math.round(Number(n)||0),
+      paxText: (p)=>{ const n=Math.max(1,Math.min(3,Number(p)||1)); return n===1?'1 persona':n+' personas'; },
+      myDriver: { id: 777 },
+      inboxToggle: ()=>{}, swipeDown: ()=>{}, swipeMove: ()=>{}, swipeUp: ()=>{}, swipeCancel: ()=>{}, dismissInboxRow: ()=>{}
+    };
+    const fn = new Function('list', ...Object.keys(stubs), 'let html="";' + rowSec54 + '; return html;');
+    return fn([r], ...Object.values(stubs));
+  }
+  function reqRow54(offers, kind){
+    return { id: 999, kind: kind || 'viaje', passenger_name: 'Pax Prueba', price: 30, distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 3, _refO: 'cerca de Madero', _refD: 'cerca de Centro', order_payment: null, order_amount: 0, offers: offers || [] };
+  }
+  function offRow54(status, price, counter){
+    return { id: 1, driver_id: 777, status, kind: 'contraoferta', price, passenger_counter_price: (counter == null ? null : counter) };
+  }
+  let row54a = '', row54aErr = '';
+  try { row54a = runRow54(reqRow54([])); } catch(e){ row54aErr = String(e && e.message || e); }
+  check('v1.4.54: evaluado — fila sin oferta: envuelta para deslizar (swipe-wrap + X + dismissInboxRow), con su ruta y línea tenue, sin "Rechazado"', !!row54a && row54a.includes('swipe-wrap') && row54a.includes('swipe-x') && row54a.includes('dismissInboxRow(999, event)') && row54a.includes('Viaje') && row54a.includes('cerca de Madero') && row54a.includes('0.8 km · ~5 min · Pago: efectivo · 3 personas') && !row54a.includes('Rechazado'), row54aErr || row54a.slice(0, 200));
+  let row54b = '', row54bErr = '';
+  try { row54b = runRow54(reqRow54([offRow54('rechazada', 35, null)])); } catch(e){ row54bErr = String(e && e.message || e); }
+  check('v1.4.54: evaluado — oferta rechazada por el pasajero: la fila lleva el aviso naranja "Rechazado · El pasajero rechazó tu oferta de $35" y ya no dice "Te contraofertó"', !!row54b && row54b.includes('Rechazado · El pasajero rechazó tu oferta de $35') && row54b.includes('background:#ffedd5') && !row54b.includes('Te contraofertó'), row54bErr || row54b.slice(0, 300));
+  let row54c = '', row54cErr = '';
+  try { row54c = runRow54(reqRow54([offRow54('rechazada', 40, 35)])); } catch(e){ row54cErr = String(e && e.message || e); }
+  check('v1.4.54: evaluado — contraoferta del pasajero rechazada por el chofer: la fila dice "Rechazaste su contraoferta de $35"', !!row54c && row54c.includes('Rechazado · Rechazaste su contraoferta de $35'), row54cErr || row54c.slice(0, 300));
+  let row54d = '', row54dErr = '';
+  try { row54d = runRow54(reqRow54([offRow54('pendiente', 35, 35)])); } catch(e){ row54dErr = String(e && e.message || e); }
+  check('v1.4.54: evaluado — contraoferta del pasajero pendiente: la fila sigue con el aviso ámbar "Te contraofertó $35" y sin "Rechazado"', !!row54d && row54d.includes('Te contraofertó $35') && !row54d.includes('Rechazado'), row54dErr || row54d.slice(0, 300));
+  let row54e = '', row54eErr = '';
+  try { row54e = runRow54(reqRow54([], 'mandado')); } catch(e){ row54eErr = String(e && e.message || e); }
+  check('v1.4.54: evaluado — mandado: la fila también se puede deslizar (swipe-wrap + X) y no lleva personas', !!row54e && row54e.includes('swipe-wrap') && row54e.includes('Mandado') && !row54e.includes('personas'), row54eErr || row54e.slice(0, 200));
+  console.log('== v1.4.54: nombre+categoría en su paso; deslizar para quitar + Rechazado ==');
+  const pax54 = await api('/api/register-passenger', { name: 'Pax Cincuentacuatro', phone: '9610000059', face_photo: PHOTO });
+  check('v1.4.54: en vivo, pasajera de prueba registrada', pax54.ok && pax54.passenger.id, JSON.stringify(pax54));
+  const drv54a = await api('/api/register-driver', { name: 'Chofer 54A', phone: '9610000060', vehicle: 'mototaxi', unit: 'V54A', selfie: PHOTO, vehicle_photo: PHOTO });
+  const drv54b = await api('/api/register-driver', { name: 'Chofer 54B', phone: '9610000061', vehicle: 'mototaxi', unit: 'V54B', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.54: en vivo, dos choferes de prueba registrados con fotos', drv54a.ok && drv54a.driver.id && drv54b.ok && drv54b.driver.id, JSON.stringify([drv54a.driver && drv54a.driver.id, drv54b.driver && drv54b.driver.id]));
+  await approveDriver(drv54a.driver.id);
+  await approveDriver(drv54b.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv54a.driver.id, online: true });
+  await api('/api/set-driver-online', { driver_id: drv54b.driver.id, online: true });
+  const trip54 = await api('/api/create-request', { passenger_id: pax54.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.54: en vivo, el viaje de la prueba queda BUSCANDO ($30, 3 personas, 0.8 km)', trip54.ok && trip54.request.status === 'buscando' && trip54.request.price === 30 && trip54.request.passenger_count === 3, JSON.stringify(trip54.request && { st: trip54.request.status, p: trip54.request.price }));
+  const off54a = await api('/api/driver-respond', { driver_id: drv54a.driver.id, request_id: trip54.request.id, kind: 'contraoferta', price: 35 });
+  check('v1.4.54: en vivo, el primer chofer contraoferta $35 (queda pendiente)', off54a.ok && off54a.offer.status === 'pendiente', JSON.stringify(off54a));
+  const rej54 = await api('/api/respond-offer', { passenger_id: pax54.passenger.id, request_id: trip54.request.id, offer_id: off54a.offer.id, action: 'rechaza' });
+  check('v1.4.54: en vivo, el pasajero rechaza la contraoferta del chofer ($35)', rej54.ok, JSON.stringify(rej54));
+  const open54 = await api('/api/requests?open=1&light=1');
+  const trip54live = open54.ok ? open54.requests.find(r=>r.id===trip54.request.id) : null;
+  const off54live = trip54live ? (trip54live.offers||[]).find(o=>o.driver_id===drv54a.driver.id) : null;
+  check('v1.4.54: en vivo, la oferta rechazada llega al chofer con status rechazada (de ahí sale el aviso naranja) y el viaje sigue buscando', trip54live && trip54live.status === 'buscando' && off54live && off54live.status === 'rechazada' && off54live.price === 35, JSON.stringify({ st: trip54live && trip54live.status, off: off54live && { s: off54live.status, p: off54live.price } }));
+  const off54b = await api('/api/driver-respond', { driver_id: drv54b.driver.id, request_id: trip54.request.id, kind: 'contraoferta', price: 40 });
+  check('v1.4.54: en vivo, el segundo chofer contraoferta $40: la solicitud sigue viva para los demás', off54b.ok && off54b.offer.status === 'pendiente', JSON.stringify(off54b));
+  const dis54 = await api('/api/dismiss-request', { driver_id: drv54a.driver.id, request_id: trip54.request.id });
+  check('v1.4.54: en vivo, el chofer A descarta la solicitud con la X (/api/dismiss-request)', dis54.ok, JSON.stringify(dis54));
+  const dis54again = await api('/api/dismiss-request', { driver_id: drv54a.driver.id, request_id: trip54.request.id });
+  check('v1.4.54: en vivo, descartar dos veces no falla (idempotente)', dis54again.ok, JSON.stringify(dis54again));
+  const open54a = await api('/api/requests?open=1&light=1&dismissed_for=' + drv54a.driver.id);
+  check('v1.4.54: en vivo, la lista del chofer A ya NO trae la solicitud descartada (ni tras refrescar)', open54a.ok && !open54a.requests.some(r=>r.id===trip54.request.id), JSON.stringify(open54a.requests && open54a.requests.map(r=>r.id)));
+  const open54b = await api('/api/requests?open=1&light=1&dismissed_for=' + drv54b.driver.id);
+  check('v1.4.54: en vivo, la lista del chofer B SÍ trae la solicitud (el descarte es solo de A)', open54b.ok && open54b.requests.some(r=>r.id===trip54.request.id), JSON.stringify(open54b.requests && open54b.requests.map(r=>r.id)));
+  const dis54bad = await api('/api/dismiss-request', { driver_id: drv54a.driver.id, request_id: 999999 });
+  check('v1.4.54: en vivo, descartar una solicitud que no existe da error (404)', !dis54bad.ok, JSON.stringify(dis54bad));
+  const dis54badDrv = await api('/api/dismiss-request', { driver_id: 999999, request_id: trip54.request.id });
+  check('v1.4.54: en vivo, descartar con un chofer que no existe da error (404)', !dis54badDrv.ok, JSON.stringify(dis54badDrv));
+  const acc54 = await api('/api/register-account', { name: 'Cuenta 54', username: 'cta54_' + RUN, phone: '961119' + RUN.slice(0, 4), password: 'secreta123' });
+  check('v1.4.54: en vivo, cuenta nueva para probar el envío del asistente', acc54.ok && !!acc54.token, JSON.stringify(acc54));
+  const biz54 = await api('/api/request-business', { token: acc54.token, name: 'Negocio 54 ' + RUN, type: 'entrega', whatsapp: '961120' + RUN.slice(0, 4), category: 'Panadería', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Pan y repostería' });
+  check('v1.4.54: en vivo, crear negocio con nombre+categoría sigue guardando la categoría (el envío del asistente no cambia)', biz54.ok && biz54.business && biz54.business.category === 'Panadería', JSON.stringify(biz54));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

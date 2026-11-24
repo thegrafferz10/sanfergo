@@ -130,6 +130,11 @@ CREATE TABLE IF NOT EXISTS offers (
   is_premium INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS driver_dismissed (
+  driver_id INTEGER NOT NULL, request_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY(driver_id, request_id)
+);
 CREATE TABLE IF NOT EXISTS lost_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_type TEXT NOT NULL, reporter_name TEXT, reporter_phone TEXT,
@@ -724,7 +729,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.53' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.54' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1858,7 +1863,16 @@ async function api(req, res, pathname) {
     if (q.get('id')) { const one = db.prepare('SELECT * FROM requests WHERE id=?').get(q.get('id')); rows = one ? [one] : []; }
     else if (q.get('passenger_id')) rows = db.prepare('SELECT * FROM requests WHERE passenger_id=? ORDER BY id DESC LIMIT 50').all(q.get('passenger_id'));
     else if (q.get('driver_id')) rows = db.prepare('SELECT * FROM requests WHERE driver_id=? ORDER BY id DESC LIMIT 50').all(q.get('driver_id'));
-    else if (q.get('open')) rows = db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY id DESC LIMIT 50`).all();
+    else if (q.get('open')) {
+      // v1.4.54: ?dismissed_for=<driver_id> quita de la lista las
+      // solicitudes que ese chofer descartó con la X (deslizar a la
+      // izquierda en Recibir Viajes). Es solo de su bandeja: la
+      // solicitud sigue abierta para los demás choferes.
+      const df = q.get('dismissed_for');
+      rows = df
+        ? db.prepare(`SELECT * FROM requests WHERE status='buscando' AND id NOT IN (SELECT request_id FROM driver_dismissed WHERE driver_id=?) ORDER BY id DESC LIMIT 50`).all(df)
+        : db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY id DESC LIMIT 50`).all();
+    }
     else rows = db.prepare('SELECT * FROM requests ORDER BY id DESC LIMIT 50').all();
     // v1.4.42: ?light=1 quita las fotos base64 de las filas y de las ofertas:
     // las listas solo necesitan zonas, precio y estado, y con las fotos cada
@@ -2009,6 +2023,19 @@ async function api(req, res, pathname) {
     if (peR) return send(res, 400, { ok: false, error: peR });
     db.prepare('UPDATE requests SET price=? WHERE id=?').run(price, request_id);
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(request_id) });
+  }
+  if (pathname === '/api/dismiss-request') {
+    // v1.4.54: el chofer descarta una solicitud de SU bandeja (deslizar a
+    // la izquierda → X en Recibir Viajes). No cancela nada: la solicitud
+    // sigue 'buscando' para los demás choferes; solo se oculta para este
+    // chofer y el descarte sobrevive al refresco (tabla driver_dismissed).
+    const { driver_id, request_id } = body;
+    const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
+    if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
+    const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
+    if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
+    db.prepare(`INSERT OR IGNORE INTO driver_dismissed (driver_id, request_id) VALUES (?,?)`).run(driver_id, request_id);
+    return send(res, 200, { ok: true });
   }
   if (pathname === '/api/cancel-request') {
     const { request_id } = body;
