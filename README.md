@@ -1,9 +1,23 @@
-# SanFerGo — versión pública (v1.4.59)
+# SanFerGo — versión pública (v1.4.60)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.60 (2026-11-24) — Viajes: pantalla limpia, detalle del historial con mini mapa, "Iniciar recorrido" y línea azul siempre
+
+- Inicio de Viajes más limpio: se quitó el título "¿A dónde vas?" y la tarjeta "Pides como…" (con perfil ya no se muestra nada; sin perfil sigue el formulario de nombre + teléfono). También se quitó la tarjeta "Tu último viaje" de esta pantalla.
+- Solo quedan los botones, en este orden: "Solicitar el viaje" (naranja), "🔒 Programar un viaje · Próximamente" (bloqueado, no hace nada: el viaje programado es una función futura, no está construida), la ayuda ("Primero eliges de dónde sales…") y "Historial de viajes" (verde).
+- Historial: la lista sigue igual (ruta, fecha, precio, estado, chofer/unidad y "Ver recibo del viaje" en los terminados). Al tocar un viaje se abre un detalle GRANDE: mini mapa con el origen en verde, el destino en rojo y la línea azul de la ruta (misma receta que el mini mapa del resumen), los datos del viaje (ruta, fecha, precio, estado, personas, chofer, pago) y "Ver recibo del viaje" si terminó.
+- "Repetir este viaje" ahora vive en ese detalle (mismo repeatTrip de siempre, con los mismos puntos exactos) y solo sale en los viajes FINALIZADOS; los cancelados muestran mapa + datos, sin repetir.
+- Nuevo paso del chofer en VIAJES (mandados igual que antes): "Ya estoy afuera" es solo la llegada (avisa al pasajero, el recorrido NO empieza ahí); luego aparece "Iniciar recorrido", que se toca cuando sube el pasajero y ahí sí empieza el viaje (se marca trip_started_at). Flujo: aceptar → En camino → "Ya estoy afuera" → "Iniciar recorrido" → "Llegué a destino". El precio acordado y la tarifa no cambian; cancelar sigue siendo posible en llego (antes de iniciar).
+- Botón verde de llamar: después de "Ya estoy afuera" aparece un botón verde "📞 Llamar a {pasajero}" en la tarjeta del chofer y se queda durante todo el recorrido (llego y en_viaje), hasta el destino. El enlace chico de antes de llegar queda como estaba.
+- Se quitó el botón azul "Cómo llegar" de TODOS lados (mapa en vivo del chofer en recogida y en viaje, mandados y pasajero) junto con la función que abría Google Maps. La tarjeta de arriba queda con el destino en negrita y la distancia/ETA en renglón aparte.
+- Línea azul siempre en el mapa en vivo: antes el mapa abría sin posición del chofer y nunca se dibujaba la línea (solo aparecía al cambiar de etapa). Ahora, en cuanto llega la primera posición, se dibuja la recta al instante y se pide la ruta real en segundo plano. El zoom de proximidad (16/17/18) también sigue subiendo aunque el chofer haya tocado el mapa (solo zoom, sin recentrar).
+- Re-ruta al desviarse y sin estela: si la mototaxi agarra otra calle (más de ~40 m de la ruta), se recalcula la ruta desde su posición actual (máximo 1 vez cada 10 s) y la línea azul siempre arranca en la mototaxi — lo ya recorrido se borra, sin dejar la línea azul atrás. Vale para las dos piernas (recogida y destino) y para la vista del chofer y del pasajero.
+- Nada más cambia: la tarifa, el flujo de pedir y el resto de la app siguen igual.
+- Pruebas: suite completa contra BD limpia: **967 OK, 0 FAIL**.
 
 ## v1.4.59 (2026-11-24) — Confirmación antes de activar la suscripción de un chofer
 

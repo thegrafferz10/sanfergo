@@ -66,11 +66,16 @@ async function api(path, body) {
   check('chofer comparte ubicación en vivo', loc.ok);
 
   console.log('== Etapas del viaje ==');
-  // v1.4.43: al aceptar ya va automáticamente en camino (sin botón "Voy
-  // en camino"); "Ya estoy afuera" lleva directo a en_viaje (ahí empieza
-  // el recorrido y se marca trip_started_at) y "Llegué a destino" cierra.
+  // v1.4.60: al aceptar ya va automáticamente en camino (sin botón "Voy
+  // en camino"); "Ya estoy afuera" es SOLO la llegada (llego: el
+  // recorrido NO empieza ahí, sin trip_started_at) y "Iniciar recorrido"
+  // (en_viaje) es lo que marca el inicio; "Llegué a destino" cierra.
   const rAfterAcc = (await api('/api/requests?id=' + rid)).requests[0];
   check('al aceptar, el viaje ya va automáticamente en camino (sin botón)', rAfterAcc.trip_stage === 'en_camino', JSON.stringify(rAfterAcc.trip_stage));
+  const aLlego = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: rid, stage: 'llego' });
+  check('avanzar a llego (Ya estoy afuera)', aLlego.ok && aLlego.request.trip_stage === 'llego', JSON.stringify(aLlego));
+  const rLlego = (await api('/api/requests?id=' + rid)).requests[0];
+  check('en llego el recorrido NO ha empezado (sin trip_started_at)', !rLlego.trip_started_at, JSON.stringify(rLlego.trip_started_at));
   for (const st of ['en_viaje', 'finalizado']) {
     const a = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: rid, stage: st });
     check('avanzar a ' + st, a.ok && a.request.trip_stage === st, JSON.stringify(a));
@@ -159,8 +164,11 @@ async function api(path, body) {
   const c1 = await api('/api/cancel-request', { request_id: rc1 });
   check('cancelar en camino (antes de empezar) sí se puede', c1.ok, JSON.stringify(c1));
   const rc2 = await acceptedTrip(25);
-  // v1.4.43: "Ya estoy afuera" lleva directo a en_viaje (ahí empieza el
-  // recorrido); ya no hay etapa 'llego' en viajes nuevos.
+  // v1.4.60: "Ya estoy afuera" (llego) NO empieza el recorrido; el viaje
+  // empieza con "Iniciar recorrido" (en_viaje) y ahí se marca
+  // trip_started_at (antes de eso se puede cancelar).
+  const rc2Llego = await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc2, stage: 'llego' });
+  check('Ya estoy afuera deja el viaje en llego sin empezar el recorrido', rc2Llego.ok && rc2Llego.request.trip_stage === 'llego' && !rc2Llego.request.trip_started_at, JSON.stringify(rc2Llego.request && { st: rc2Llego.request.trip_stage, started: rc2Llego.request.trip_started_at }));
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc2, stage: 'en_viaje' });
   const r2 = (await api('/api/requests?driver_id=' + drv3.driver.id)).requests.find(r => r.id === rc2);
   check('trip_started_at se marca al iniciar el viaje', !!r2.trip_started_at, JSON.stringify(r2.trip_started_at));
@@ -359,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.59 en /api/health', h.ok && h.version === '1.4.59', JSON.stringify(h));
+  check('versión 1.4.60 en /api/health', h.ok && h.version === '1.4.60', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -460,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.59', h134.ok && h134.version === '1.4.59', JSON.stringify(h134));
+  check('versión 1.4.60', h134.ok && h134.version === '1.4.60', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -622,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.59)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.59';") && h.version === '1.4.59', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.60)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.60';") && h.version === '1.4.60', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -981,13 +989,13 @@ async function api(path, body) {
   // iniciado el viaje ya no se marca la recogida (solo el destino, que
   // sigue con su píldora .pass-pin "Destino · zona").
   check('mapa en vivo chofer: el marcador de recogida dice "Recoge aquí" (pin compacto, no el nombre) (v1.4.15)', html.includes("pinLbl.textContent = 'Recoge aquí'") && html.includes("pinWrap.className = 'pickup-pin'") && html.includes("pinLbl.className = 'pickup-lbl'") && html.includes('.pickup-lbl{background:#14532d;color:#fff;border:2px solid #fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35)}') && html.includes('.pickup-dot{width:14px;height:14px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}') && html.includes("if(!inTrip){") && !html.includes("pinEl.textContent = r.kind==='viaje'") && !html.includes('Aquí recoges al pasajero') && html.includes("destEl.textContent = 'Destino · ' + (r.dest_zone||'')"));
-  // "Cómo llegar" como BOTÓN AZUL (v1.4.15, referencia de la app): era un
-  // enlace <a> de texto azul que se partía en dos líneas ("Cómo /
-  // llegar"); ahora es un botón azul compacto de una línea, con la misma
-  // acción openGmaps. Ojo: .strip button{width:100%} lo habría vuelto
-  // ámbar y de ancho completo — el selector .strip button.howbtn se
-  // impone (misma trampa que aplastó el chip en v1.4.13).
-  check('"Cómo llegar" es un botón azul compacto de una línea, no un enlace (v1.4.15)', html.includes('<button type="button" class="howbtn" onclick="openGmaps(') && html.includes('>Cómo llegar</button>') && html.includes('.strip button.howbtn{width:auto;margin:0;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px;white-space:nowrap;flex-shrink:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}') && !html.includes('>Cómo llegar</a>') && !html.includes('<a href="#" style="font-weight:700;color:var(--blue)" onclick="openGmaps('));
+  // v1.4.60: el botón azul "Cómo llegar" se quitó DE TODOS LADOS (petición
+  // del usuario 08:16): ya no existe en el mapa en vivo del chofer (ni en
+  // recogida ni en viaje, ni en mandados) ni en ningún otro lado, y se fue
+  // también la función que abría Google Maps. La tarjeta de arriba queda
+  // con el destino en negrita y la distancia/ETA en renglón aparte.
+  const stripsSec60 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+  check('v1.4.60: cero botones "Cómo llegar" en toda la app (ni el botón ni openGmaps ni su CSS)', !html.includes('Cómo llegar') && !html.includes('openGmaps') && !html.includes('howbtn') && !html.includes('google.com/maps/dir') && stripsSec60.includes('Dirígete ') && stripsSec60.includes('faltan '));
   // Centrado de los dos puntos en el mapa del paso "Tu recorrido"
   // (v1.4.15, petición del usuario + foto de la app): el encuadre usaba
   // padding fijo 70 y los puntos quedaban tapados tras las tarjetas. La
@@ -1414,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.59 en /api/health (sección)', h27.ok && h27.version === '1.4.59', JSON.stringify(h27));
+  check('versión 1.4.60 en /api/health (sección)', h27.ok && h27.version === '1.4.60', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1459,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.59 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.59', JSON.stringify(h28));
+  check('versión 1.4.60 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.60', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1473,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.59 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.59', JSON.stringify(h29));
+  check('versión 1.4.60 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.60', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1482,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.59 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.59', JSON.stringify(h30));
+  check('versión 1.4.60 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.60', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1715,7 +1723,7 @@ async function api(path, body) {
   check('v1.4.43: al aceptar el servidor deja el servicio automáticamente en camino (sin botón "Voy en camino")', srv.includes("trip_stage='en_camino', trip_stage_at=datetime('now')"));
   check('v1.4.43: el mapa de transiciones salta las etapas viejas pero las sigue aceptando (servicios en curso)', srv.includes("en_camino: ['llego', 'en_viaje']") && srv.includes("llego: ['recogido', 'en_viaje']") && srv.includes("recogido: ['en_viaje', 'entregado']"));
   check('v1.4.43: avanzar a la etapa en la que ya está es éxito (doble toque no es error)', srv.includes("if (stage === r.trip_stage) return send(res, 200, { ok: true, request: r });"));
-  check('v1.4.43: el cliente simplificó los botones ("Ya estoy afuera" → "Ya voy en camino" → "Entregado"/"Llegué a destino") y ya no trae los viejos', html.includes("if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino' || r.trip_stage==='llego') return 'en_viaje';") && html.includes("llego:'Ya estoy afuera para recoger el paquete'") && html.includes("en_viaje:'Ya voy en camino'") && html.includes("entregado:'Entregado'") && !html.includes("'Voy en camino'") && !html.includes("'Iniciar viaje'") && !html.includes("'Ya llegué a recoger'") && !html.includes("'Ya recogí el encargo'") && !html.includes("'En camino a entregarlo'") && !html.includes("'Ya lo entregué'") && !html.includes("'Voy por el encargo'"));
+  check('v1.4.43: el cliente simplificó los botones ("Ya estoy afuera" → "Iniciar recorrido" → "Llegué a destino" en viajes; "Ya estoy afuera para recoger el paquete" → "Ya voy en camino" → "Entregado" en mandados) y ya no trae los viejos', html.includes("if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino') return 'llego';") && html.includes("if(r.trip_stage==='llego') return 'en_viaje';") && html.includes("llego:'Ya estoy afuera'") && html.includes("en_viaje:'Iniciar recorrido'") && html.includes("finalizado:'Llegué a destino'") && html.includes("llego:'Ya estoy afuera para recoger el paquete'") && html.includes("en_viaje:'Ya voy en camino'") && html.includes("entregado:'Entregado'") && !html.includes("'Voy en camino'") && !html.includes("'Iniciar viaje'") && !html.includes("'Ya llegué a recoger'") && !html.includes("'Ya recogí el encargo'") && !html.includes("'En camino a entregarlo'") && !html.includes("'Ya lo entregué'") && !html.includes("'Voy por el encargo'"));
   const liveSec43 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
   check('v1.4.43: la pantalla en vivo del chofer ya no trae la caja verde de resumen ni el botón ancho de pegar ubicación: Recibe y Pedido son renglones chicos y pegar ubicación es un enlace chico', liveSec43.includes('live-mini') && liveSec43.includes('minilink') && liveSec43.includes('Recibe: ') && !liveSec43.includes('mandadoDriverSummaryHtml(r)') && !liveSec43.includes('class="ghostb"') && !liveSec43.includes('Pedir ubicación por WhatsApp a quien recibe') && !liveSec43.includes('Punto de entrega marcado en el mapa'));
   check('v1.4.43: la ruta azul ya va al destino cuando el servicio empezó (recogido/en_viaje) y no de vuelta a la recogida', html.includes('function liveHeadingToDest(r){') && html.includes("return ['recogido','en_viaje','entregado'].includes(r.trip_stage||'');") && html.includes('const inTrip = liveHeadingToDest(r);'));
@@ -1729,10 +1737,16 @@ async function api(path, body) {
   const one43 = await api('/api/requests?id=' + req43.request.id);
   const row43 = one43.requests[0];
   check('v1.4.43: seis toques en Aceptar producen UN solo viaje aceptado y UNA sola oferta (sin duplicar ni romper)', req43.ok && taps43.filter(t=>t.ok).length === 1 && row43 && row43.status === 'aceptado' && row43.trip_stage === 'en_camino' && (row43.offers||[]).filter(o=>o.driver_id===drv.driver.id).length === 1, JSON.stringify({ ok: taps43.filter(t=>t.ok).length, st: row43 && row43.status, stage: row43 && row43.trip_stage, offers: row43 && (row43.offers||[]).length }));
-  // Seis toques seguidos en "Ya estoy afuera": todos éxito, UN solo avance.
-  const tapsAdv = await Promise.all(Array.from({ length: 6 }, () => api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'en_viaje' })));
+  // Seis toques seguidos en "Ya estoy afuera": todos éxito, UN solo
+  // avance a llego, y el recorrido NO empieza ahí (v1.4.60: empieza con
+  // "Iniciar recorrido"). Seis toques en "Iniciar recorrido": todos
+  // éxito, UN solo avance a en_viaje y el recorrido marcado como iniciado.
+  const tapsAdv = await Promise.all(Array.from({ length: 6 }, () => api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'llego' })));
   const row43b = (await api('/api/requests?id=' + req43.request.id)).requests[0];
-  check('v1.4.43: seis toques en "Ya estoy afuera" dan éxito en los seis, un solo avance y el recorrido marcado como iniciado', tapsAdv.every(t=>t.ok) && row43b.trip_stage === 'en_viaje' && !!row43b.trip_started_at, JSON.stringify({ ok: tapsAdv.filter(t=>t.ok).length, stage: row43b.trip_stage, started: row43b.trip_started_at }));
+  check('v1.4.43: seis toques en "Ya estoy afuera" dan éxito en los seis, un solo avance a llego y el recorrido SIN empezar (v1.4.60)', tapsAdv.every(t=>t.ok) && row43b.trip_stage === 'llego' && !row43b.trip_started_at, JSON.stringify({ ok: tapsAdv.filter(t=>t.ok).length, stage: row43b.trip_stage, started: row43b.trip_started_at }));
+  const tapsStart = await Promise.all(Array.from({ length: 6 }, () => api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'en_viaje' })));
+  const row43c = (await api('/api/requests?id=' + req43.request.id)).requests[0];
+  check('v1.4.60: seis toques en "Iniciar recorrido" dan éxito en los seis, un solo avance a en_viaje y el recorrido marcado como iniciado', tapsStart.every(t=>t.ok) && row43c.trip_stage === 'en_viaje' && !!row43c.trip_started_at, JSON.stringify({ ok: tapsStart.filter(t=>t.ok).length, stage: row43c.trip_stage, started: row43c.trip_started_at }));
   const fin43 = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'finalizado' });
   check('v1.4.43: "Llegué a destino" finaliza el viaje', fin43.ok && fin43.request.trip_stage === 'finalizado' && fin43.request.status === 'finalizado' && !!fin43.request.finished_at, JSON.stringify(fin43.request && { st: fin43.request.trip_stage, fin: fin43.request.finished_at }));
   // En vivo: mandado con el flujo nuevo (el pasajero ve cada etapa igual).
@@ -1798,10 +1812,10 @@ async function api(path, body) {
   check('v1.4.44: el sondeo reintenta la ruta OSRM cada ~15 s mientras la línea sea recta y la cambia al responder', pollSec.includes('liveRouteFallback') && pollSec.includes('liveOsrmRetryTick >= 3') && pollSec.includes('osrmRoute(frm, tgt, liveRouteWaypoints(rr, inT))') && pollSec.includes('liveRouteCoords = rt2.coords; liveRouteFallback = false;'));
   // En vivo (evaluando la función real): el zoom objetivo sube cuando la
   // distancia baja, y lejos no toca el encuadre de la ruta completa.
-  const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function nextStage(r){'));
+  const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function closestOnRoute'));
   const tzFn = eval('(' + tzSrc.replace('function liveTargetZoom(distM)', 'function(distM)') + ')');
   check('v1.4.44: en vivo, el zoom objetivo aumenta al acercarse (lejos no toca nada, cerca 16 → 17 → 18)', tzFn(1500) === null && tzFn(1001) === null && tzFn(1000) === 16 && tzFn(800) === 16 && tzFn(501) === 16 && tzFn(500) === 17 && tzFn(300) === 17 && tzFn(201) === 17 && tzFn(200) === 18 && tzFn(100) === 18 && tzFn(203) === 17, JSON.stringify({ lejos: tzFn(1500), mil: tzFn(1000), ocho: tzFn(800), tres: tzFn(300), doscientos3: tzFn(203), cien: tzFn(100) }));
-  check('v1.4.44: el zoom de proximidad solo vive con seguimiento activo y solo en el mapa del chofer (un gesto manual lo apaga con el follow)', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.indexOf('if(liveFollow){') < apSec.indexOf('opts.zoom = proxZoom') && apSec.indexOf('opts.zoom = proxZoom') < apSec.indexOf("} else if(liveBearing!=null){") && apSec.includes('liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000)') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && apSec.includes('if(liveAsDriver){') && pollSec.includes('liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng)'); })());
+  check('v1.4.44: el zoom de proximidad solo vive en el mapa del chofer y solo sube (v1.4.60: también sube con el follow apagado — solo zoom, sin recentrar — porque el usuario lo vio quedarse ancho a 183 m tras tocar el mapa)', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.includes('if(liveFollow){') && apSec.includes('opts.zoom = proxZoom') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts2.zoom = proxZoom; opts2.duration = 800; }') && apSec.includes('liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000)') && apSec.includes('if(liveAsDriver){') && pollSec.includes('liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng)'); })());
   // En vivo: el estado del tramo de recogida existe para viaje y mandado
   // (aceptado en camino + ubicación del chofer compartida: de ahí sale la
   // línea chofer → recogida).
@@ -1868,9 +1882,11 @@ async function api(path, body) {
   //     Historial — en la pantalla de Viajes está vacío ([]). Ahora busca
   //     también en el servidor (?id=) y, si ese id ya no existe, usa el
   //     último viaje finalizado del pasajero.
+  //     v1.4.60: la tarjeta "Tu último viaje" ya no existe y el botón
+  //     Repetir vive solo en el detalle del historial (showHistDetail).
   const repSec = html.slice(html.indexOf('async function repeatTrip(id){'), html.indexOf('async function repeatLastTrip(){'));
   check('v1.4.46: repeatTrip ya no depende solo de histReqs: busca el viaje por id en el servidor y si no existe usa el último finalizado (el error solo sale al final)', repSec.includes("api('/api/requests?id='+id)") && repSec.includes("api('/api/requests?passenger_id='+myPassenger.id+'&light=1')") && repSec.includes("r.kind==='viaje' && r.status==='finalizado'") && repSec.indexOf("toast('No se encontró ese viaje para repetirlo.')") > repSec.indexOf("api('/api/requests?id='+id)"));
-  check('v1.4.46: la tarjeta "Tu último viaje" y el historial siguen llamando a repeatTrip(id)', html.includes('onclick="repeatTrip(\'+fin.id+\')"') && html.includes('onclick="event.stopPropagation();repeatTrip(\'+r.id+\')"'));
+  check('v1.4.46: repetir vive SOLO en el detalle del historial (v1.4.60: ni la tarjeta de Viajes ni la fila del historial llaman a repeatTrip)', !html.includes('onclick="repeatTrip(\'+fin.id+\')"') && !html.includes('onclick="event.stopPropagation();repeatTrip(\'+r.id+\')"') && html.includes('async function showHistDetail(id)') && html.includes('onclick="repeatTrip(\'+r.id+\')"'));
   // En vivo (evaluando la función real con la API real): el bug era que en
   // la pantalla de Viajes histReqs está vacío porque la tarjeta no carga
   // el historial.
@@ -1948,8 +1964,8 @@ async function api(path, body) {
   //     pendiente antes del formulario — verificado en código, sin cambio.
   const viaSec = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('let wizMap = null;'));
   const viaStep5 = viaSec.slice(viaSec.indexOf('// paso 5: buscando'));
-  check('v1.4.47: la pantalla "Buscando tu mototaxi…" tiene botón "‹ Volver al inicio" que vuelve al inicio sin cancelar, en los dos caminos que la muestran (paso 5 y reentrada por paso 0)', viaStep5.includes("backPill('Volver al inicio', \"go('home')\")") && !viaStep5.includes('cancelMyRequest') && viaSec.indexOf("backPill('Volver al inicio', \"go('home')\")") < viaSec.indexOf('¿A dónde vas?'));
-  check('v1.4.47: al volver a entrar a Viajes con un viaje pendiente se muestra la pantalla de Buscando (el paso 0 revisa el viaje activo antes del formulario)', viaSec.indexOf("myActiveRequest('viaje')") > 0 && viaSec.indexOf("myActiveRequest('viaje')") < viaSec.indexOf('¿A dónde vas?') && viaSec.includes('wiz.step = 5;') && viaSec.includes('renderSearching();'));
+  check('v1.4.47: la pantalla "Buscando tu mototaxi…" tiene botón "‹ Volver al inicio" que vuelve al inicio sin cancelar, en los dos caminos que la muestran (paso 5 y reentrada por paso 0)', viaStep5.includes("backPill('Volver al inicio', \"go('home')\")") && !viaStep5.includes('cancelMyRequest') && viaSec.includes('wiz.step = 5;') && viaSec.indexOf("backPill('Volver al inicio'") < viaSec.indexOf('renderSearching();'));
+  check('v1.4.47: al volver a entrar a Viajes con un viaje pendiente se muestra la pantalla de Buscando (el paso 0 revisa el viaje activo antes del formulario)', viaSec.indexOf("myActiveRequest('viaje')") > 0 && viaSec.indexOf("myActiveRequest('viaje')") < viaSec.indexOf('Solicitar el viaje') && viaSec.includes('wiz.step = 5;') && viaSec.includes('renderSearching();'));
   const mdSec = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step)'));
   const mdActSec = mdSec.slice(mdSec.indexOf('if(active){'), mdSec.indexOf('renderMandadoSearching(active)'));
   check('v1.4.47: la pantalla de buscando del mandado ya tenía su botón "‹ Regresar al inicio" sin cancelar, y el pendiente se revisa antes del formulario (sin cambio necesario)', mdActSec.includes("backPill('Regresar al inicio', \"go('home')\")") && mdActSec.includes('id="md-searching"') && mdSec.indexOf("myActiveRequest('mandado')") < mdSec.indexOf('md.step===0'));
@@ -2534,7 +2550,7 @@ async function api(path, body) {
   const manLock55 = tripSec55.slice(tripSec55.indexOf('// v1.4.55:'), tripSec55.indexOf("page.innerHTML = backPill('Regresar al inicio'"));
   check('v1.4.55: con mandado aceptado, entrar a Viajes va al mapa en vivo (goLive) en vez del formulario', manLock55.includes("if(man55.status==='aceptado'){ goLive(man55.id, false); return; }"));
   check('v1.4.55: con mandado buscando, entrar a Viajes muestra la misma pantalla de espera del mandado (md.requestId, \"Volver al inicio\", <div id=\"md-searching\">, renderMandadoSearching)', manLock55.includes('md.requestId = man55.id;') && manLock55.includes("backPill('Volver al inicio'") && manLock55.includes("'<h2>Tu mandado</h2><div id=\"md-searching\"></div>'") && manLock55.includes('renderMandadoSearching(man55);'));
-  check('v1.4.55: el formulario del viaje sigue intacto detrás del candado (\"¿A dónde vas?\", Solicitar el viaje)', tripSec55.includes('¿A dónde vas?') && tripSec55.includes('Solicitar el viaje'));
+  check('v1.4.55: el formulario del viaje sigue intacto detrás del candado (Solicitar el viaje + Historial, sin título "¿A dónde vas?" desde v1.4.60)', tripSec55.includes('Solicitar el viaje') && tripSec55.includes('Historial de viajes') && !tripSec55.includes('<h1>¿A dónde vas?</h1>'));
   check('v1.4.55: el sondeo refresca la pantalla de espera del mandado también cuando se ve desde Viajes (sin pintar la del viaje encima)', html.includes("if((currentView==='mandados' || currentView==='viajes') && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
   check('v1.4.55: si el mandado se cancela o finaliza estando en Viajes, se vuelve a pintar Viajes (se levanta el candado)', html.includes("if(r.status==='cancelado' || r.status==='finalizado'){ md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); return; }"));
   check('v1.4.55: al cancelar el mandado desde Viajes, se vuelve a pintar Viajes (no Mandados)', html.includes("md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); toast('Mandado cancelado.');"));
@@ -2577,7 +2593,7 @@ async function api(path, body) {
   check('v1.4.55: evaluado — con mandado ACEPTADO, entrar a Viajes va al mapa en vivo (goLive con el id del mandado)', !!sim55b && sim55b.calls.goLive === 888 && !sim55b.calls.mandadoSearching && sim55b.html === '', sim55bErr || JSON.stringify(sim55b && sim55b.calls));
   let sim55c = null, sim55cErr = '';
   try { sim55c = await runRenderViajes55(null, null); } catch(e){ sim55cErr = String(e && e.message || e); }
-  check('v1.4.55: evaluado — sin nada activo, entrar a Viajes abre el formulario normal (\"¿A dónde vas?\")', !!sim55c && sim55c.html.includes('¿A dónde vas?') && !sim55c.calls.mandadoSearching && !sim55c.calls.goLive, sim55cErr || JSON.stringify(sim55c && { html: sim55c.html.slice(0, 120) }));
+  check('v1.4.55: evaluado — sin nada activo, entrar a Viajes abre el formulario normal (Solicitar + Programar + Historial, sin "¿A dónde vas?" desde v1.4.60)', !!sim55c && sim55c.html.includes('Solicitar el viaje') && sim55c.html.includes('Programar un viaje') && sim55c.html.includes('Próximamente') && sim55c.html.includes('Historial de viajes') && sim55c.html.includes('Primero eliges de dónde sales') && !sim55c.html.includes('¿A dónde vas?') && !sim55c.html.includes('Tu último viaje') && !sim55c.html.includes('Repetir este viaje') && !sim55c.calls.mandadoSearching && !sim55c.calls.goLive, sim55cErr || JSON.stringify(sim55c && { html: sim55c.html.slice(0, 200) }));
   let sim55d = null, sim55dErr = '';
   try { sim55d = await runRenderViajes55('buscando', 'buscando'); } catch(e){ sim55dErr = String(e && e.message || e); }
   check('v1.4.55: evaluado — con viaje BUSCANDO y mandado BUSCANDO, gana el viaje (la pantalla de espera del viaje, como en renderMandados)', !!sim55d && sim55d.calls.searching && sim55d.wiz.requestId === 999 && sim55d.wiz.step === 5 && !sim55d.calls.mandadoSearching, sim55dErr || JSON.stringify(sim55d && { calls: sim55d.calls, wiz: sim55d.wiz }));
@@ -3093,6 +3109,254 @@ async function api(path, body) {
   await approveDriver(drv59.driver.id);
   const sub59 = await api('/api/admin/set-subscription', { token: admLogin.token, driver_id: drv59.driver.id, plan: 'monthly' });
   check('v1.4.59: en vivo, el admin activa la suscripción mensual: plan suscripcion y fin ~30 días', sub59.ok && sub59.driver.plan === 'suscripcion' && Math.abs((new Date(sub59.driver.subscription_until) - Date.now()) / 864e5 - 30) < 0.5, JSON.stringify(sub59));
+
+  // ===== v1.4.60 (2026-11-24): Viajes limpia + detalle del historial con
+  // mini mapa + "Iniciar recorrido" + botón verde de llamar + sin "Cómo
+  // llegar" + línea azul siempre + re-ruta al desviarse + sin estela =====
+  // --- Estáticas: pantalla de Viajes limpia (sin Pides como, sin Tu
+  // último viaje, sin "¿A dónde vas?"; Solicitar naranja, Programar
+  // bloqueado, Historial verde, en ese orden). ---
+  const tripSec60 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
+  // El paso 0 en concreto (el resto de renderViajes trae comentarios que
+  // nombran lo quitado): solo los dos botones, la ayuda y el historial.
+  const step060 = html.slice(html.indexOf("page.innerHTML = backPill('Regresar al inicio'"), html.indexOf('if(wiz.step===1){'));
+  check('v1.4.60: Viajes sin "Pides como", sin "Tu último viaje" y sin título "¿A dónde vas?"', !step060.includes('Pides como') && !step060.includes('Tu último viaje') && !step060.includes('¿A dónde vas?') && !step060.includes('Repetir este viaje') && !step060.includes('renderLastTripCard'));
+  check('v1.4.60: Viajes con Solicitar naranja + Programar bloqueado + ayuda + Historial verde, en ese orden', step060.indexOf('Solicitar el viaje') !== -1 && step060.indexOf('Solicitar el viaje') < step060.indexOf('Programar un viaje') && step060.indexOf('Programar un viaje') < step060.indexOf('Primero eliges de dónde sales') && step060.indexOf('Primero eliges de dónde sales') < step060.indexOf('Historial de viajes') && step060.includes('class="btn amber"') && step060.includes("go(\\'historia\\')") && html.includes('.btn{display:block;width:100%;text-align:center;padding:15px 18px;border-radius:14px;font-size:17px;font-weight:700;background:var(--green);color:#fff;margin-top:12px}') && html.includes('.btn.amber{background:var(--amber);color:#111}'));
+  check('v1.4.60: "Programar un viaje" está bloqueado (disabled, dice Próximamente, sin acción)', tripSec60.includes('<button class="btn" disabled style="background:#d1d5db;color:#4b5563">🔒 Programar un viaje · Próximamente</button>'));
+  // Evaluado: whoStrip con perfil no pinta nada y sin perfil solo el
+  // formulario (sin "Pides como").
+  let who60 = null;
+  try {
+    const whoSrc60 = html.slice(html.indexOf('function whoStrip(){'), html.indexOf('async function ensureNoProfilePassenger(){'));
+    const mkWho60 = (hasProfile) => {
+      const f = new Function('myPassenger', 'openRegistro', whoSrc60 + '\nreturn whoStrip;');
+      return f(hasProfile ? { id: 1 } : null, () => {})();
+    };
+    who60 = { withProfile: mkWho60(true), withoutProfile: mkWho60(false) };
+  } catch(e){ who60 = null; }
+  check('v1.4.60: evaluado — whoStrip con perfil no pinta nada y sin perfil solo el formulario (sin "Pides como")', !!who60 && who60.withProfile === '' && who60.withoutProfile.includes('Sin perfil de pasajero') && !who60.withoutProfile.includes('Pides como'), JSON.stringify(who60 && { with: who60.withProfile, without: who60.withoutProfile.slice(0, 120) }));
+  // --- Estáticas: detalle del historial con mini mapa y repetir solo si terminó. ---
+  const histSec60 = html.slice(html.indexOf('async function showHistDetail(id){'), html.indexOf('function drawHistMiniMap(r){'));
+  const histMapSec60 = html.slice(html.indexOf('function drawHistMiniMap(r){'), html.indexOf('async function showReceipt(requestId){'));
+  check('v1.4.60: el detalle del historial lleva mini mapa + datos + "Ver recibo" y "Repetir este viaje" solo si terminó', histSec60.includes('hist-minimap') && histSec60.includes('Detalle del viaje') && histSec60.includes('Repetir este viaje') && histSec60.includes('Ver recibo del viaje') && histSec60.includes("r.status==='finalizado'") && histSec60.includes('drawHistMiniMap(r)'));
+  check('v1.4.60: drawHistMiniMap pinta origen verde, destino rojo y línea azul (misma receta que el resumen)', histMapSec60.includes("dotEl('#22c55e', 16)") && histMapSec60.includes("dotEl('#dc2626', 16)") && histMapSec60.includes("setRouteLine(histDetailMap, 'route', rt.coords, '#2b7de9', 5)") && histMapSec60.includes("setRouteLine(histDetailMap, 'route', straightRouteCoords(o, d, []), '#2b7de9', 5)"));
+  // --- Evaluado: el detalle real con una lista de mentira (un viaje
+  // finalizado y uno cancelado): el finalizado lleva mini mapa, recibo y
+  // repetir; el cancelado lleva mini mapa y datos, sin repetir ni recibo. ---
+  let histDetail60 = null;
+  try {
+    const histSrc60 = html.slice(html.indexOf('async function showHistDetail(id){'), html.indexOf('function drawHistMiniMap(r){'));
+    const fin60 = { id: 101, status: 'finalizado', origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, created_at: '2026-11-24 08:00:00', price: 20, final_price: 20, passenger_count: 2, driver_name: 'Josué Prueba', driver_unit: 'Hg67h', payment_method: 'efectivo' };
+    const can60 = { id: 102, status: 'cancelado', origin_zone: 'Centro', dest_zone: 'Mercado', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, created_at: '2026-11-24 09:00:00', price: 25, final_price: null, passenger_count: 1, driver_name: null, driver_unit: null, payment_method: 'efectivo' };
+    const page60 = { innerHTML: '' };
+    let drawn60 = null;
+    const mkHist60 = () => {
+      const f = new Function('$', 'backPill', 'esc', 'fmtDateTime', 'fmt$', 'paxText', 'toast', 'api', 'drawHistMiniMap', 'let histReqs = ' + JSON.stringify([fin60, can60]) + ';\nlet histDetailMap = null;\n' + histSrc60 + '\nreturn showHistDetail;');
+      return f(() => page60, () => '<button>Regresar</button>', s => String(s == null ? '' : s), () => '24 nov 2026, 08:00', n => '$' + Math.round(Number(n) || 0), p => { const n = Math.max(1, Math.min(3, Number(p) || 1)); return n + (n === 1 ? ' persona' : ' personas'); }, () => {}, async () => ({ requests: [] }), r => { drawn60 = r; });
+    };
+    const runHist60 = mkHist60();
+    await runHist60(101);
+    const finHtml60 = page60.innerHTML;
+    const finDraw60 = drawn60;
+    page60.innerHTML = ''; drawn60 = null;
+    await runHist60(102);
+    const canHtml60 = page60.innerHTML;
+    histDetail60 = { finHtml60, finDraw60, canHtml60 };
+  } catch(e){ histDetail60 = null; }
+  check('v1.4.60: evaluado — el detalle de un viaje FINALIZADO lleva mini mapa, "Ver recibo" y "Repetir este viaje"', !!histDetail60 && histDetail60.finHtml60.includes('hist-minimap') && histDetail60.finHtml60.includes('Ver recibo del viaje') && histDetail60.finHtml60.includes('Repetir este viaje') && histDetail60.finHtml60.includes('Finalizado') && histDetail60.finDraw60 && histDetail60.finDraw60.id === 101, JSON.stringify(histDetail60 && { draw: histDetail60.finDraw60 && histDetail60.finDraw60.id, html: histDetail60.finHtml60.slice(0, 150) }));
+  check('v1.4.60: evaluado — el detalle de un viaje CANCELADO lleva mini mapa y datos, pero NI "Repetir este viaje" NI "Ver recibo"', !!histDetail60 && histDetail60.canHtml60.includes('hist-minimap') && histDetail60.canHtml60.includes('Cancelado') && !histDetail60.canHtml60.includes('Repetir este viaje') && !histDetail60.canHtml60.includes('Ver recibo del viaje'), JSON.stringify(histDetail60 && { html: histDetail60.canHtml60.slice(0, 150) }));
+  // --- Evaluado: repetir pre-llena los puntos EXACTOS del viaje viejo. ---
+  let rpt60 = null;
+  try {
+    const rptSrc60 = html.slice(html.indexOf('async function repeatTripFrom(last){'), html.indexOf('async function repeatTrip(id){'));
+    const last60 = { origin_lat: 16.8709, origin_lng: -93.2063, origin_zone: 'Madero', origin_detail: 'Madero', dest_lat: 16.8675, dest_lng: -93.2105, dest_zone: 'Mercado', dest_detail: 'Mercado', passenger_count: 2, payment_method: 'efectivo' };
+    const f = new Function('newWizard', 'computeTrip', 'renderViajes', 'toast', 'let wiz = null;\n' + rptSrc60 + '\nreturn { run: repeatTripFrom, getWiz(){ return wiz; } };');
+    const h60 = f(() => ({ step: 0 }), async () => {}, () => {}, () => {});
+    await h60.run(last60);
+    rpt60 = h60.getWiz();
+  } catch(e){ rpt60 = null; }
+  check('v1.4.60: evaluado — repetir pre-llena el origen y el destino EXACTOS del viaje viejo (y sus personas)', !!rpt60 && rpt60.origin && rpt60.origin.lat === 16.8709 && rpt60.origin.lng === -93.2063 && rpt60.dest && rpt60.dest.lat === 16.8675 && rpt60.dest.lng === -93.2105 && rpt60.pax === 2, JSON.stringify(rpt60));
+  // --- Evaluado: la tarjeta del chofer en vivo con el botón verde de llamar. ---
+  let strips60 = null;
+  try {
+    const liveSec60 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+    const stageLabelSrc60 = html.slice(html.indexOf('const STAGE_LABEL'), html.indexOf('/* Hacia el destino'));
+    const htdSrc60 = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+    const nextSrc60 = html.slice(html.indexOf('function nextStage(r){'), html.indexOf('function passengerStageTitle(r){'));
+    const compassSrc60 = html.slice(html.indexOf('function compassDir(from, to){'), html.indexOf('async function cancelLiveRequest(rid){'));
+    function runStrips60(r) {
+      const mkEl = () => ({ classList: { add(){}, remove(){} }, style: {}, innerHTML: '', textContent: '' });
+      const top = mkEl(), bot = mkEl(), pill = mkEl(), compass = mkEl(), recenter = mkEl();
+      const els = { '#live-top': top, '#live-bottom': bot, '#live-pill': pill, '#live-compass': compass, '#live-recenter': recenter };
+      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = true;\nlet liveReq = null;\n' + stageLabelSrc60 + '\n' + htdSrc60 + '\n' + nextSrc60 + '\n' + compassSrc60 + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec60 + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
+      const h = f(sel => els[sel] || mkEl(), top, bot);
+      h.run(r);
+      return { top: top.innerHTML, bot: bot.innerHTML };
+    }
+    const base60 = { kind: 'viaje', origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, driver_lat: 16.8727, driver_lng: -93.2081, passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo', price: 20, final_price: 20, passenger_count: 1 };
+    strips60 = {
+      camino: runStrips60({ ...base60, trip_stage: 'en_camino' }),
+      llego: runStrips60({ ...base60, trip_stage: 'llego' }),
+      viaje: runStrips60({ ...base60, trip_stage: 'en_viaje' }),
+      fin: runStrips60({ ...base60, trip_stage: 'finalizado' })
+    };
+  } catch(e){ strips60 = null; }
+  check('v1.4.60: evaluado — en camino NO hay botón verde (solo el enlace chico "Llamar a") y el botón es "Ya estoy afuera"', !!strips60 && !strips60.camino.bot.includes('callbtn') && strips60.camino.bot.includes('minilink') && strips60.camino.bot.includes('Llamar a The Noob Gamer') && strips60.camino.bot.includes('Ya estoy afuera'), JSON.stringify(strips60 && strips60.camino.bot.slice(0, 200)));
+  check('v1.4.60: evaluado — al llegar (llego) aparece el botón VERDE "Llamar a The Noob Gamer" (tel:) y el botón es "Iniciar recorrido"', !!strips60 && strips60.llego.bot.includes('class="callbtn"') && strips60.llego.bot.includes('href="tel:9614868605"') && strips60.llego.bot.includes('Llamar a The Noob Gamer') && strips60.llego.bot.includes('Iniciar recorrido') && strips60.llego.top.includes('Dirígete al punto de encuentro en Madero') && strips60.llego.top.includes('faltan '), JSON.stringify(strips60 && strips60.llego.bot.slice(0, 300)));
+  check('v1.4.60: evaluado — en viaje (en_viaje) el botón verde SIGUE y el botón es "Llegué a destino"', !!strips60 && strips60.viaje.bot.includes('class="callbtn"') && strips60.viaje.bot.includes('href="tel:9614868605"') && strips60.viaje.bot.includes('Llegué a destino'), JSON.stringify(strips60 && strips60.viaje.bot.slice(0, 300)));
+  check('v1.4.60: evaluado — al terminar ya no hay botón verde de llamar', !!strips60 && !strips60.fin.bot.includes('callbtn'), JSON.stringify(strips60 && strips60.fin.bot.slice(0, 200)));
+  // --- Evaluado: el mapa en vivo (línea siempre, zoom, desvío, sin estela). ---
+  // Se extraen las funciones reales del cliente y se ejecutan con un mapa
+  // de mentira (sin DOM ni red): el caso del usuario era un mapa que abrió
+  // sin posición del chofer (from==null) y nunca dibujó la línea — la línea
+  // solo aparecía al cambiar de etapa. Aquí OSRM falla siempre salvo que
+  // se indique lo contrario.
+  let live60 = null;
+  try {
+    const fn60 = (start, end) => {
+      const a = html.indexOf(start);
+      if (a < 0) throw new Error('sin ' + start);
+      let b = end ? html.indexOf(end, a) : html.indexOf('\nfunction ', a + 1);
+      if (b < 0) b = html.length;
+      return html.slice(a, b);
+    };
+    const liveSrc60 = [
+      fn60('function havKm(a,b,c,d){'),
+      fn60('function liveHeadingToDest(r){', '/* Paradas intermedias'),
+      fn60('function liveRouteWaypoints(r, toDest){', 'function straightRouteCoords'),
+      fn60('function straightRouteCoords(from, target, via){', '/* Zoom de proximidad'),
+      fn60('function liveTargetZoom(distM){', 'function closestOnRoute'),
+      fn60('function closestOnRoute(lat, lng, coords){', 'function ensureLiveRoute'),
+      fn60('function ensureLiveRoute(){', 'function nextStage(r){'),
+      fn60('function setRouteLine(map, id, coords, color, width){', 'function removeRouteLine'),
+      fn60('function smoothTrack(coords){', 'function myLocation'),
+      fn60('function applyHeading(heading){', 'function renderLiveStrips(){'),
+      fn60('function followPadding(topId, botId, defTop, defBot){'),
+      'function liveFollowPadding(){ return followPadding(\'live-top\', \'live-bottom\', 170, 280); }',
+      html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'"))
+    ].join('\n');
+    const mkMap60 = () => {
+      const sources = {}, layers = {};
+      return {
+        _zoom: 15, _center: null, easeCalls: [], sources, layers,
+        getZoom() { return this._zoom; },
+        easeTo(o) { if (o.zoom != null) this._zoom = o.zoom; if (o.center) this._center = o.center; this.easeCalls.push(o); },
+        fitBounds() { this._zoom = 15; },
+        addSource(id, def) { sources[id] = def.data; },
+        getSource(id) { return sources[id] ? { setData(d) { sources[id] = d; } } : null; },
+        addLayer(l) { layers[l.id] = l; },
+        getLayer(id) { return layers[id] || null; },
+        removeLayer(id) { delete layers[id]; },
+        removeSource(id) { delete sources[id]; },
+        on() {}, resize() {}, remove() {}
+      };
+    };
+    const el60 = () => ({ classList: { add(){}, remove(){} }, style: {}, textContent: '', innerHTML: '', offsetTop: 0, offsetHeight: 0, closest: () => null, appendChild(){}, querySelector: () => null, remove(){} });
+    const doc60 = { getElementById: () => el60(), createElement: () => el60() };
+    const tick60 = () => new Promise(r => setTimeout(r, 0));
+    const build60 = (osrmImpl) => {
+      const osrmCalls = [];
+      const osrmRoute = async (a, b, via) => { osrmCalls.push({ a, b }); return osrmImpl ? await osrmImpl(a, b, via) : null; };
+      const src = 'let liveReq = null, liveMap = null, liveAsDriver = true, liveFollow = true;\nlet liveRouteCoords = null, liveRouteFallback = false, liveOsrmRetryTick = 0;\nlet liveDriverMarker = null, liveLastStripAt = 0, liveLastHeading = null, liveGpsPos = null;\nlet liveRerouting = false, liveLastRerouteAt = 0;\n' + liveSrc60 + '\nreturn { setReq(r){ liveReq = r; }, setMap(m){ liveMap = m; }, setMarker(m){ liveDriverMarker = m; }, setFollow(f){ liveFollow = f; }, getRoute(){ return liveRouteCoords; }, getFallback(){ return liveRouteFallback; }, apply: liveApplyDriverPos, ensure: ensureLiveRoute, closest: closestOnRoute, targetZoom: liveTargetZoom };';
+      const factory = new Function('document', 'osrmRoute', 'renderLiveStrips', src);
+      const api60 = factory(doc60, osrmRoute, () => {});
+      api60.osrmCalls = osrmCalls;
+      return api60;
+    };
+    const PICK60 = { lat: 16.8709, lng: -93.2063 };
+    const DEST60 = { lat: 16.8675, lng: -93.2105 };
+    const pos60 = (distM, eastM) => ({ lat: PICK60.lat + distM / 110540, lng: PICK60.lng + (eastM || 0) / (111320 * Math.cos(PICK60.lat * Math.PI / 180)) });
+    const req60 = () => ({ id: 1, kind: 'viaje', trip_stage: 'en_camino', origin_lat: PICK60.lat, origin_lng: PICK60.lng, dest_lat: DEST60.lat, dest_lng: DEST60.lng, origin_zone: 'Madero', dest_zone: 'Centro', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo', price: 20, passenger_count: 1, driver_lat: null, driver_lng: null });
+    const route60 = (map) => { const s = map.sources.route; return s ? s.geometry.coordinates : null; };
+    const approx60 = (a, b, tol) => Math.abs(a - b) < (tol || 1e-5);
+    // A) Mapa abrió SIN posición del chofer + GPS acercándose, follow ON:
+    // la línea aparece desde la 1ª lectura y el zoom sube 16→17→18.
+    const hA = build60(null);
+    const mapA = mkMap60();
+    hA.setReq(req60()); hA.setMap(mapA); hA.setMarker({ pos: null, setLngLat(l) { this.pos = l; }, remove() {} });
+    const zoomsA = [], firstPtA = [];
+    for (const d of [800, 600, 400, 300, 183, 100]) {
+      const p = pos60(d);
+      hA.apply(p.lat, p.lng); await tick60();
+      zoomsA.push(mapA.getZoom());
+      const rc = route60(mapA);
+      firstPtA.push(rc && rc.length >= 2 && approx60(rc[0][0], p.lng) && approx60(rc[0][1], p.lat));
+    }
+    // B) Igual que A con follow OFF (el chofer tocó el mapa): la línea
+    // aparece y el zoom TAMBIÉN sube (solo zoom, sin recentrar).
+    const hB = build60(null);
+    const mapB = mkMap60();
+    hB.setReq(req60()); hB.setMap(mapB); hB.setMarker({ pos: null, setLngLat(l) { this.pos = l; }, remove() {} });
+    hB.setFollow(false);
+    const zoomsB = [];
+    for (const d of [800, 400, 183, 100]) { const p = pos60(d); hB.apply(p.lat, p.lng); await tick60(); zoomsB.push(mapB.getZoom()); }
+    const routeB = route60(mapB);
+    // C) Desvío: la mototaxi agarra otra calle (>40 m de la ruta) → se
+    // recalcula la ruta desde su posición actual y la línea arranca ahí.
+    const hC = build60(async (a) => ({ coords: [[a.lng, a.lat], [PICK60.lng, PICK60.lat]] }));
+    const mapC = mkMap60();
+    hC.setReq(req60()); hC.setMap(mapC); hC.setMarker({ pos: null, setLngLat(l) { this.pos = l; }, remove() {} });
+    for (const d of [800, 600, 500]) { const p = pos60(d); hC.apply(p.lat, p.lng); await tick60(); }
+    const callsC0 = hC.osrmCalls.length;
+    const devC = pos60(400, 100);
+    hC.apply(devC.lat, devC.lng); await tick60(); await tick60();
+    const callsC1 = hC.osrmCalls.length;
+    const routeC = route60(mapC);
+    const devC2 = pos60(380, 100);
+    hC.apply(devC2.lat, devC2.lng); await tick60(); await tick60();
+    const callsC2 = hC.osrmCalls.length;
+    // D) Avance por una ruta OSRM con varios puntos: la línea siempre
+    // arranca en la mototaxi (nada de estela azul atrás) y no hay 'traveled'.
+    const routePtsD = [pos60(800), pos60(600), pos60(400), pos60(200), PICK60].map(p => [p.lng, p.lat]);
+    const hD = build60(async () => ({ coords: routePtsD }));
+    const mapD = mkMap60();
+    hD.setReq(req60()); hD.setMap(mapD); hD.setMarker({ pos: null, setLngLat(l) { this.pos = l; }, remove() {} });
+    let pD = pos60(800); hD.apply(pD.lat, pD.lng); await tick60(); await tick60();
+    const routeDLen0 = (hD.getRoute() || []).length;
+    const trimD = [];
+    for (const d of [600, 400, 200]) {
+      pD = pos60(d);
+      hD.apply(pD.lat, pD.lng); await tick60();
+      const rc = route60(mapD);
+      trimD.push(!!rc && rc.length >= 2 && approx60(rc[0][0], pD.lng) && approx60(rc[0][1], pD.lat) && !mapD.sources.traveled);
+    }
+    // E) closestOnRoute: distancia y proyección sobre la línea.
+    const hE = build60(null);
+    const routeE = [[-93.2063, 16.8782], [-93.2063, 16.8709]];
+    const onE = hE.closest(pos60(400).lat, pos60(400).lng, routeE);
+    const offE = hE.closest(pos60(400, 100).lat, pos60(400, 100).lng, routeE);
+    live60 = { zoomsA, firstPtA, zoomsB, routeB: !!routeB, centerB: mapB._center, callsC0, callsC1, callsC2, routeC, devC, devOk: !!(routeC && approx60(routeC[0][0], devC.lng) && approx60(routeC[0][1], devC.lat)), trimD, routeDLen0, traveledD: !!mapD.sources.traveled, onE: onE.d, offE: offE.d, osrmA: hA.osrmCalls.length };
+  } catch(e){ live60 = null; }
+  check('v1.4.60: evaluado — con OSRM caído y el mapa abierto sin posición, la línea azul aparece desde la 1ª lectura del GPS (no espera al cambio de etapa)', !!live60 && live60.firstPtA.every(Boolean), JSON.stringify(live60 && { firstPtA: live60.firstPtA, osrmA: live60.osrmA }));
+  check('v1.4.60: evaluado — el zoom de proximidad sube al acercarse (16→17→18) con follow ON', !!live60 && live60.zoomsA[0] === 16 && live60.zoomsA[2] === 17 && live60.zoomsA[4] === 18, JSON.stringify(live60 && live60.zoomsA));
+  check('v1.4.60: evaluado — con follow OFF (el chofer tocó el mapa) la línea aparece y el zoom TAMBIÉN sube, sin recentrar', !!live60 && live60.routeB && live60.zoomsB[0] === 16 && live60.zoomsB[1] === 17 && live60.zoomsB[2] === 18 && live60.centerB === null, JSON.stringify(live60 && { zoomsB: live60.zoomsB, centerB: live60.centerB }));
+  check('v1.4.60: evaluado — el desvío a otra calle (>40 m de la ruta) dispara UN recálculo OSRM desde la posición actual y la línea arranca ahí', !!live60 && live60.callsC1 > live60.callsC0 && live60.devOk, JSON.stringify(live60 && { callsC0: live60.callsC0, callsC1: live60.callsC1, first: live60.routeC && live60.routeC[0] }));
+  check('v1.4.60: evaluado — el recálculo por desvío no se repite en bucle (máximo 1 vez cada 10 s)', !!live60 && live60.callsC2 === live60.callsC1, JSON.stringify(live60 && { callsC1: live60.callsC1, callsC2: live60.callsC2 }));
+  check('v1.4.60: evaluado — al avanzar por la ruta, la línea siempre arranca en la mototaxi y NO queda estela (sin línea "traveled")', !!live60 && live60.routeDLen0 === 5 && live60.trimD.every(Boolean) && !live60.traveledD, JSON.stringify(live60 && { routeDLen0: live60.routeDLen0, trimD: live60.trimD, traveledD: live60.traveledD }));
+  check('v1.4.60: evaluado — closestOnRoute mide bien (sobre la ruta ~0 m, a 100 m al este ~100 m)', !!live60 && live60.onE < 1 && Math.abs(live60.offE - 100) < 3, JSON.stringify(live60 && { onE: live60.onE, offE: live60.offE }));
+  // --- En vivo: el flujo nuevo del chofer + cancelar en llego ---
+  const pax60 = await api('/api/register-passenger', { name: 'Pax Sesenta', phone: '961600' + RUN.slice(0, 4), face_photo: PHOTO });
+  check('v1.4.60: en vivo, pasajera de prueba registrada', pax60.ok && pax60.passenger.id, JSON.stringify(pax60));
+  const drv60 = await api('/api/register-driver', { name: 'Chofer Sesenta', phone: '961601' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'V60', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.60: en vivo, chofer de prueba registrado', drv60.ok && drv60.driver.id, JSON.stringify(drv60));
+  await approveDriver(drv60.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv60.driver.id, online: true });
+  const trip60 = await api('/api/create-request', { passenger_id: pax60.passenger.id, kind: 'viaje', origin_zone: 'Madero', origin_detail: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 20, payment_method: 'efectivo', passenger_count: 1 });
+  check('v1.4.60: en vivo, el viaje queda BUSCANDO ($20, 1 persona)', trip60.ok && trip60.request.status === 'buscando', JSON.stringify(trip60.request && { st: trip60.request.status }));
+  const acc60 = await api('/api/driver-respond', { driver_id: drv60.driver.id, request_id: trip60.request.id, kind: 'acepta', price: 20 });
+  check('v1.4.60: en vivo, al aceptar el viaje ya va en camino', acc60.ok && acc60.request.status === 'aceptado' && acc60.request.trip_stage === 'en_camino', JSON.stringify(acc60.request && { st: acc60.request.status, stage: acc60.request.trip_stage }));
+  const llego60 = await api('/api/advance-stage', { driver_id: drv60.driver.id, request_id: trip60.request.id, stage: 'llego' });
+  check('v1.4.60: en vivo, "Ya estoy afuera" deja el viaje en llego SIN empezar el recorrido', llego60.ok && llego60.request.trip_stage === 'llego' && !llego60.request.trip_started_at, JSON.stringify(llego60.request && { stage: llego60.request.trip_stage, started: llego60.request.trip_started_at }));
+  const viaje60 = await api('/api/advance-stage', { driver_id: drv60.driver.id, request_id: trip60.request.id, stage: 'en_viaje' });
+  check('v1.4.60: en vivo, "Iniciar recorrido" empieza el viaje (trip_started_at marcado)', viaje60.ok && viaje60.request.trip_stage === 'en_viaje' && !!viaje60.request.trip_started_at, JSON.stringify(viaje60.request && { stage: viaje60.request.trip_stage, started: viaje60.request.trip_started_at }));
+  const fin60b = await api('/api/advance-stage', { driver_id: drv60.driver.id, request_id: trip60.request.id, stage: 'finalizado' });
+  check('v1.4.60: en vivo, "Llegué a destino" finaliza el viaje con el precio acordado ($20, tarifa intacta)', fin60b.ok && fin60b.request.trip_stage === 'finalizado' && fin60b.request.status === 'finalizado' && !!fin60b.request.finished_at && fin60b.request.final_price === 20, JSON.stringify(fin60b.request && { stage: fin60b.request.trip_stage, fin: fin60b.request.finished_at, price: fin60b.request.final_price }));
+  // Cancelar en llego (el recorrido no empezó) sí se puede.
+  const trip60c = await api('/api/create-request', { passenger_id: pax60.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 20, payment_method: 'efectivo', passenger_count: 1 });
+  await api('/api/driver-respond', { driver_id: drv60.driver.id, request_id: trip60c.request.id, kind: 'acepta', price: 20 });
+  await api('/api/advance-stage', { driver_id: drv60.driver.id, request_id: trip60c.request.id, stage: 'llego' });
+  const cancel60 = await api('/api/cancel-request', { request_id: trip60c.request.id });
+  check('v1.4.60: en vivo, cancelar en llego (antes de iniciar el recorrido) sí se puede', cancel60.ok, JSON.stringify(cancel60));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
