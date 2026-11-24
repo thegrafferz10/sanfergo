@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.49)
+# SanFerGo — versión pública (v1.4.50)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.50 (2026-11-23) — Con un viaje en espera o en curso ya no se puede entrar a Mandados
+
+- **Candado de Mandados (reporte del usuario 22:11, capturas 10:08 PM: con el viaje BUSCANDO — $30, sugerido $20, 0.8 km — la entrada de Mandados se abría normal):** mientras el pasajero tiene un viaje en espera (buscando) o en curso (aceptado), entrar a Mandados ya NO muestra el formulario: se ve la misma pantalla de espera / en vivo del viaje (\"Buscando tu mototaxi…\" o el mapa en vivo si ya está aceptado) hasta que el viaje termine o se cancele. El botón \"‹ Volver al inicio\" de esa pantalla sigue funcionando (sale al inicio sin cancelar). El candado se levanta solo: al cancelar o finalizar el viaje, Mandados abre normal. El sondeo refresca esa pantalla también desde Mandados (ofertas, aceptación y cancelación se ven ahí mismo). Sin tocar: el candado del mismo apartado sigue igual (viaje pendiente → Viajes muestra Buscando; mandado pendiente → Mandados muestra el mandado), y NO se agregó el candado inverso (mandado pendiente → Viajes), que el usuario no pidió.
+- Pruebas: suite completa contra BD limpia: **676 OK, 0 FAIL** (652 de antes + 24 nuevas en la sección v1.4.50 — 10 estáticas, 4 evaluadas con renderMandados real y 10 en vivo. Los 7 checks de versión que decían 1.4.49 se actualizaron a 1.4.50).
 
 ## v1.4.49 (2026-11-23) — "‹ Regresar" dentro de la hoja de precio (ya no se puede quedar sin salida)
 

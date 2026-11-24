@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.49 en /api/health', h.ok && h.version === '1.4.49', JSON.stringify(h));
+  check('versión 1.4.50 en /api/health', h.ok && h.version === '1.4.50', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.49', h134.ok && h134.version === '1.4.49', JSON.stringify(h134));
+  check('versión 1.4.50', h134.ok && h134.version === '1.4.50', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.49)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.49';") && h.version === '1.4.49', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.50)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.50';") && h.version === '1.4.50', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.49 en /api/health (sección)', h27.ok && h27.version === '1.4.49', JSON.stringify(h27));
+  check('versión 1.4.50 en /api/health (sección)', h27.ok && h27.version === '1.4.50', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.49 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.49', JSON.stringify(h28));
+  check('versión 1.4.50 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.50', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.49 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.49', JSON.stringify(h29));
+  check('versión 1.4.50 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.50', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.49 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.49', JSON.stringify(h30));
+  check('versión 1.4.50 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.50', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2058,6 +2058,88 @@ async function api(path, body) {
   mdStub49.step = 4;
   new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
   check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Enviar (paso 4) se vuelve al paso 3', mdStub49.step === 3 && mdRendered49 === 3, JSON.stringify({ step: mdStub49.step }));
+
+  // --- v1.4.50: con un viaje en espera o en curso, entrar a Mandados NO
+  //     muestra el formulario: se ve la misma pantalla de espera / en
+  //     vivo del viaje hasta que termine o se cancele (captura del
+  //     usuario 22:11: la entrada de Mandados se abría con el viaje
+  //     BUSCANDO, $30, sugerido $20, 0.8 km). El candado es solo en este
+  //     sentido (no se agrega el inverso: mandado pendiente → Viajes).
+  const mdSec50 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step){'));
+  check('v1.4.50: renderMandados consulta primero el viaje en curso (myActiveRequest(\'viaje\')) antes que el mandado', mdSec50.indexOf("myActiveRequest('viaje')") !== -1 && mdSec50.indexOf("myActiveRequest('viaje')") < mdSec50.indexOf("myActiveRequest('mandado')"));
+  const tripLock50 = mdSec50.slice(mdSec50.indexOf('// v1.4.50:'), mdSec50.indexOf("const active = await myActiveRequest('mandado');"));
+  check('v1.4.50: con viaje aceptado, entrar a Mandados va al mapa en vivo (goLive) en vez del formulario', tripLock50.includes("if(trip50.status==='aceptado'){ goLive(trip50.id, false); return; }"));
+  check('v1.4.50: con viaje buscando, entrar a Mandados muestra la misma pantalla de espera del viaje (wiz.step=5, <div id="searching">, renderSearching)', tripLock50.includes('wiz.requestId = trip50.id; wiz.step = 5;') && tripLock50.includes("backPill('Volver al inicio'") && tripLock50.includes("'<div id=\"searching\"></div>'") && tripLock50.includes('renderSearching();'));
+  check('v1.4.50: el formulario del mandado sigue intacto detrás del candado ("¿Qué quieres hacer?", Quiero/Enviar)', mdSec50.includes('¿Qué quieres hacer?') && mdSec50.includes("md.kind=\\'quiero\\'") && mdSec50.includes("md.kind=\\'enviar\\'"));
+  const tripSec50 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
+  check('v1.4.50: NO se agrega el candado inverso (Viajes no consulta el mandado pendiente)', !tripSec50.includes("myActiveRequest('mandado')"));
+  check('v1.4.50: el sondeo refresca la pantalla de espera del viaje también cuando se ve desde Mandados', html.includes("(currentView==='viajes' || currentView==='mandados') && wiz && wiz.step===5) renderSearching();"));
+  check('v1.4.50: el sondeo de Mandados no pinta la pantalla del mandado cuando se está viendo la del viaje', html.includes("if(currentView==='mandados' && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
+  check('v1.4.50: si el viaje se cancela o finaliza estando en Mandados, se vuelve a pintar Mandados (se levanta el candado)', html.includes("if(r.status==='cancelado' || r.status==='finalizado'){ wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); return; }"));
+  check('v1.4.50: al cancelar el viaje desde Mandados, se vuelve a pintar Mandados (no Viajes)', html.includes("wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); toast('Viaje cancelado.');"));
+  check('v1.4.50: refreshSearching refresca la pantalla del viaje cuando se ve desde Mandados', html.includes("if(currentView==='mandados' && wiz && wiz.step===5 && wiz.requestId){ renderSearching(); return; }"));
+  // Evaluando el candado real: se extrae renderMandados y se ejecuta con
+  // estado de mentira (sin DOM real) en cuatro casos: viaje buscando,
+  // viaje aceptado, sin viaje, y sin viaje pero con mandado buscando.
+  const mdFnSrc50 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step){'));
+  async function runRenderMandados50(tripStatus, mdReqId){
+    const pageStub = { innerHTML: '' };
+    const calls = { goLive: null, searching: false, mandadoSearching: false };
+    const wizObj = { step: 0, requestId: null };
+    const stubs = {
+      $: (sel) => sel === '#mandados-page' ? pageStub : null,
+      mdMap: null,
+      md: { step: 0, requestId: mdReqId || null, kind: 'quiero' },
+      newMandado: () => ({ step: 0, requestId: null, kind: 'quiero' }),
+      setPageNoScroll: () => {},
+      myActiveRequest: async (kind) => kind === 'viaje' ? (tripStatus ? { id: 999, status: tripStatus } : null) : (mdReqId ? { id: mdReqId, status: 'buscando' } : null),
+      goLive: (id) => { calls.goLive = id; },
+      renderMandadoSearching: () => { calls.mandadoSearching = true; },
+      backPill: (label) => '<button>' + label + '</button>',
+      wiz: null,
+      newWizard: () => wizObj,
+      renderSearching: () => { calls.searching = true; },
+      renderMandadoQuiero: () => {},
+      renderMandadoEnviar: () => {},
+    };
+    const fn = new Function(...Object.keys(stubs), mdFnSrc50 + '; return renderMandados;')(...Object.values(stubs));
+    await fn();
+    return { html: pageStub.innerHTML, calls, wiz: wizObj };
+  }
+  let sim50 = null, sim50Err = '';
+  try { sim50 = await runRenderMandados50('buscando', null); } catch(e){ sim50Err = String(e && e.message || e); }
+  check('v1.4.50: evaluado — con viaje BUSCANDO, entrar a Mandados muestra la pantalla de espera del viaje, no el formulario', !!sim50 && sim50.html.includes('id="searching"') && !sim50.html.includes('¿Qué quieres hacer?') && sim50.calls.searching && !sim50.calls.mandadoSearching && sim50.wiz.requestId === 999 && sim50.wiz.step === 5, sim50Err || JSON.stringify(sim50 && { html: sim50.html.slice(0, 120), wiz: sim50.wiz }));
+  let sim50b = null, sim50bErr = '';
+  try { sim50b = await runRenderMandados50('aceptado', null); } catch(e){ sim50bErr = String(e && e.message || e); }
+  check('v1.4.50: evaluado — con viaje ACEPTADO, entrar a Mandados va al mapa en vivo (goLive con el id del viaje)', !!sim50b && sim50b.calls.goLive === 999 && !sim50b.calls.searching && sim50b.html === '', sim50bErr || JSON.stringify(sim50b && sim50b.calls));
+  let sim50c = null, sim50cErr = '';
+  try { sim50c = await runRenderMandados50(null, null); } catch(e){ sim50cErr = String(e && e.message || e); }
+  check('v1.4.50: evaluado — sin viaje en curso, entrar a Mandados abre el formulario normal ("¿Qué quieres hacer?")', !!sim50c && sim50c.html.includes('¿Qué quieres hacer?') && !sim50c.calls.searching && !sim50c.calls.goLive, sim50cErr || JSON.stringify(sim50c && { html: sim50c.html.slice(0, 120) }));
+  let sim50d = null, sim50dErr = '';
+  try { sim50d = await runRenderMandados50(null, 777); } catch(e){ sim50dErr = String(e && e.message || e); }
+  check('v1.4.50: evaluado — sin viaje pero con mandado BUSCANDO, entrar a Mandados sigue mostrando el mandado (el candado del mismo apartado no se toca)', !!sim50d && sim50d.html.includes('Tu mandado') && sim50d.calls.mandadoSearching && !sim50d.calls.searching, sim50dErr || JSON.stringify(sim50d && { html: sim50d.html.slice(0, 120) }));
+  console.log('== v1.4.50: candado de Mandados con viaje en espera/en curso ==');
+  const pax50 = await api('/api/register-passenger', { name: 'Pax Cincuenta', phone: '9610000050', face_photo: PHOTO });
+  check('v1.4.50: en vivo, pasajera de prueba registrada', pax50.ok && pax50.passenger.id, JSON.stringify(pax50));
+  const drv50 = await api('/api/register-driver', { name: 'Chofer Cincuenta', phone: '9610000051', vehicle: 'mototaxi', unit: 'V50', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.50: en vivo, chofer de prueba registrado con fotos', drv50.ok && drv50.driver.id, JSON.stringify(drv50));
+  await approveDriver(drv50.driver.id);
+  const on50 = await api('/api/set-driver-online', { driver_id: drv50.driver.id, online: true });
+  check('v1.4.50: en vivo, chofer de prueba en línea', on50.ok && on50.driver.online === 1, JSON.stringify(on50));
+  const trip50 = await api('/api/create-request', { passenger_id: pax50.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
+  check('v1.4.50: en vivo, el viaje de la prueba queda BUSCANDO ($30, 0.8 km, como la captura del usuario)', trip50.ok && trip50.request.status === 'buscando' && trip50.request.price === 30, JSON.stringify(trip50.request && { st: trip50.request.status, p: trip50.request.price }));
+  const list50 = await api('/api/requests?passenger_id=' + pax50.passenger.id + '&light=1');
+  check('v1.4.50: en vivo, myActiveRequest(\'viaje\') encontraría ese viaje buscando (el candado lo vería)', list50.ok && list50.requests.some(r=>r.kind==='viaje' && r.status==='buscando'), JSON.stringify(list50.requests && list50.requests.length));
+  const acc50 = await api('/api/driver-respond', { driver_id: drv50.driver.id, request_id: trip50.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.50: en vivo, el chofer acepta: el viaje queda ACEPTADO y en camino (el candado cubre el viaje en curso)', acc50.ok && acc50.request.status === 'aceptado' && acc50.request.trip_stage === 'en_camino', JSON.stringify(acc50.request && { st: acc50.request.status, stage: acc50.request.trip_stage }));
+  const list50b = await api('/api/requests?passenger_id=' + pax50.passenger.id + '&light=1');
+  check('v1.4.50: en vivo, con el viaje aceptado myActiveRequest(\'viaje\') lo sigue viendo (candado en curso)', list50b.ok && list50b.requests.some(r=>r.kind==='viaje' && r.status==='aceptado'), JSON.stringify(list50b.requests && list50b.requests[0] && list50b.requests[0].status));
+  const can50 = await api('/api/cancel-request', { request_id: trip50.request.id });
+  check('v1.4.50: en vivo, el viaje se cancela antes de empezar', can50.ok, JSON.stringify(can50));
+  const list50c = await api('/api/requests?passenger_id=' + pax50.passenger.id + '&light=1');
+  check('v1.4.50: en vivo, tras cancelar ya no hay viaje en espera ni activo: el candado se levanta y Mandados abre normal', list50c.ok && !list50c.requests.some(r=>r.kind==='viaje' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(list50c.requests && list50c.requests.map(r=>r.status)));
+  const man50 = await api('/api/create-request', { passenger_id: pax50.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  check('v1.4.50: en vivo, tras cancelar el viaje el mandado sí se publica (el formulario vuelve a estar disponible)', man50.ok && man50.request.status === 'buscando', JSON.stringify(man50.request && man50.request.status));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
