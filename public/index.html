@@ -99,6 +99,12 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .strip button.howbtn{width:auto;margin:0;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px;white-space:nowrap;flex-shrink:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .strip .exit{position:absolute;top:-34px;right:0;background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12px}
 .strip a.telbtn{display:block;text-align:center;background:#16a34a;color:#fff;border-radius:12px;padding:13px;width:100%;font-weight:800;font-size:16px;margin-top:8px;text-decoration:none}
+/* v1.4.43: renglones chicos del viaje en vivo (el mapa manda) y enlaces
+   secundarios: llamar y pegar ubicación ya no son botones de ancho
+   completo sobre el mapa. */
+.strip .live-mini{font-size:13px;padding:2px 0}
+.strip .live-mini-links{display:flex;gap:16px;margin-top:6px}
+.strip a.minilink{color:var(--green2);font-weight:700;font-size:13px;text-decoration:none}
 .mapwrap{position:relative;height:calc(100dvh - 210px);min-height:300px;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-top:12px}
 .mapwrap .map{position:absolute;inset:0}
 .mapfloat{position:absolute;left:12px;right:12px;top:10px;z-index:5;background:rgba(255,255,255,.95);border-radius:12px;padding:10px 12px;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
@@ -494,7 +500,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.42'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.43'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -905,8 +911,12 @@ function motoIconEl(){
     + '</svg>';
   return el;
 }
-async function osrmRoute(a, b){
-  const url = 'https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson';
+async function osrmRoute(a, b, via){
+  // via: paradas intermedias en orden (mandado "Varios lados"): la ruta
+  // completa pasa por todas antes del destino, para que la línea azul no
+  // se corte en la primera parada (v1.4.43).
+  const pts = [a].concat(via||[]).concat([b]);
+  const url = 'https://router.project-osrm.org/route/v1/driving/' + pts.map(p=>p.lng + ',' + p.lat).join(';') + '?overview=full&geometries=geojson';
   const r = await fetch(url);
   const j = await r.json();
   if(!j.routes || !j.routes[0]) return null;
@@ -2468,7 +2478,7 @@ async function showReceipt(requestId){
 
 /* ===== VIAJE EN CURSO — un solo mapa claro a pantalla completa ===== */
 let liveMap = null, liveMarkers = {}, liveReq = null, liveAsDriver = false;
-let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null;
+let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false;
 let liveDriverMarker = null, liveTraveledPts = [];
 const STAGE_LABEL = { confirmado:'Confirmado', en_camino:'En camino', llego:'Llegó', en_viaje:'En viaje', finalizado:'Finalizado',
   recogido:'Recogido', entregado:'Entregado' };
@@ -2480,15 +2490,48 @@ function stageLabel(r){
   }
   return STAGE_LABEL[r.trip_stage] || r.trip_stage;
 }
+/* Hacia el destino (ya no a recoger): el viaje en curso, o el mandado ya
+   recogido / en camino a entregar. En 'recogido' (etapa vieja) el chofer
+   ya trae el paquete: la ruta azul y el encuadre van al DESTINO, no de
+   vuelta al punto de recogida — ahí estaba la línea "cortada" (v1.4.43). */
+function liveHeadingToDest(r){
+  if(r.kind==='viaje') return r.trip_stage==='en_viaje' || r.trip_stage==='finalizado';
+  return ['recogido','en_viaje','entregado'].includes(r.trip_stage||'');
+}
+/* Paradas intermedias de un mandado "Varios lados" (stops_json): la
+   primera es el origen (ya es la recogida), las demás se visitan en orden
+   antes de la entrega. En "Enviar" no hay paradas: lista vacía. */
+function liveRouteWaypoints(r, toDest){
+  if(!toDest || r.kind!=='mandado') return [];
+  try {
+    const stops = JSON.parse(r.stops_json||'[]');
+    return stops.slice(1).filter(s=>s && s.lat!=null && s.lng!=null).map(s=>({ lat: s.lat, lng: s.lng }));
+  } catch(e){ return []; }
+}
 function nextStage(r){
-  const seq = r.kind==='viaje' ? ['confirmado','en_camino','llego','en_viaje','finalizado'] : ['confirmado','en_camino','llego','recogido','en_viaje','entregado'];
-  const i = seq.indexOf(r.trip_stage);
-  return i>=0 && i<seq.length-1 ? seq[i+1] : null;
+  // Flujo simplificado del chofer (v1.4.43): Aceptar deja el servicio
+  // automáticamente "en camino" (sin botón). Viaje: "Ya estoy afuera"
+  // (sube el pasajero y empieza el recorrido) → "Llegué a destino".
+  // Mandado: "Ya estoy afuera para recoger el paquete" → "Ya voy en
+  // camino" (ya lo recogió, va a entregarlo) → "Entregado".
+  // Compatibilidad con servicios en curso: el 'llego' viejo de un viaje
+  // equivale a estar en camino a recoger (su botón sigue siendo
+  // "Ya estoy afuera" hacia en_viaje); el 'recogido' viejo de un mandado
+  // equivale a en_viaje (su botón es "Entregado").
+  if(r.kind==='viaje'){
+    if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino' || r.trip_stage==='llego') return 'en_viaje';
+    if(r.trip_stage==='en_viaje') return 'finalizado';
+    return null;
+  }
+  if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino') return 'llego';
+  if(r.trip_stage==='llego') return 'en_viaje';
+  if(r.trip_stage==='recogido' || r.trip_stage==='en_viaje') return 'entregado';
+  return null;
 }
 function stageButtonLabel(r){
   const n = nextStage(r); if(!n) return '';
-  if(r.kind==='viaje') return { en_camino:'Voy en camino', llego:'Ya estoy afuera', en_viaje:'Iniciar viaje', finalizado:'Llegué a destino · Finalizar viaje' }[n] || '';
-  return { en_camino:'Voy por el encargo', llego:'Ya llegué a recoger', recogido:'Ya recogí el encargo', en_viaje:'En camino a entregarlo', entregado:'Ya lo entregué' }[n] || '';
+  if(r.kind==='viaje') return { en_viaje:'Ya estoy afuera', finalizado:'Llegué a destino' }[n] || '';
+  return { llego:'Ya estoy afuera para recoger el paquete', en_viaje:'Ya voy en camino', entregado:'Entregado' }[n] || '';
 }
 function passengerStageTitle(r){
   // Titular en frase completa que ve el PASAJERO según la etapa (app real).
@@ -2548,13 +2591,13 @@ async function renderLiveMap(){
   removeRouteLine(liveMap, 'route'); removeRouteLine(liveMap, 'traveled');
   const pick = { lat: r.origin_lat, lng: r.origin_lng };
   const dest = { lat: r.dest_lat, lng: r.dest_lng };
-  const inTrip = (r.trip_stage==='en_viaje' || r.trip_stage==='finalizado');
+  const inTrip = liveHeadingToDest(r);
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
   // Si OSRM falla (sin señal en la carretera), el mapa en vivo igual se
   // abre con los puntos y las tiras; solo falta la línea azul de la ruta.
   let rt = null;
-  if(from){ try { rt = await osrmRoute(from, target); } catch(e){ rt = null; } }
+  if(from){ try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; } }
   if(rt){ liveRouteCoords = rt.coords; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
   else { liveRouteCoords = null; /* sin ruta OSRM: no se dibuja línea recta */ }
   if(liveAsDriver){
@@ -2595,20 +2638,20 @@ async function renderLiveMap(){
   const noticeLive = !liveAsDriver && r.kind==='viaje' && (((r.trip_stage==='confirmado'||r.trip_stage==='en_camino') && from) || r.trip_stage==='llego' || r.trip_stage==='en_viaje');
   const botPad = 150 + (canCancelLive ? 54 : 0) + (noticeLive ? 70 : 0);
   if(liveAsDriver){
-    // Encuadre por etapa (app real, v1.4.15): antes de iniciar, el mapa
-    // encuadra SOLO al chofer + el punto de recogida (la ruta azul hacia
-    // él); el destino todavía no entra — encuadrar los tres puntos
-    // alejaba el zoom a todo el recorrido y el mapa quedaba enorme y
-    // vacío, con la mototaxi en la orilla y la ruta invisible (captura
-    // del usuario 7:31). Una vez iniciado el viaje, el encuadre es
-    // chofer + destino (la ruta hacia donde van a llegar). Sin GPS del
-    // chofer aún, se centra el punto objetivo a zoom de calle (maxZoom
-    // 16 de fitPoints). La app hace lo mismo: sigue al vehículo con el
-    // punto objetivo adelante, no encuadra todo el recorrido.
-    const framePts = inTrip
-      ? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])
-      : (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);
-    fitPoints(liveMap, framePts, liveFollowPadding());
+    // Encuadre (v1.4.43): con la ruta dibujada se encuadra TODA la ruta
+    // (de la posición del chofer al objetivo, pasando por las paradas) en
+    // la franja libre, para que la línea azul se vea completa de punta a
+    // punta y no "cortada" bajo las tarjetas. Antes solo se encuadraban
+    // chofer + objetivo y la línea se perdía bajo las tarjetas (captura
+    // del usuario 19:01). Sin ruta OSRM se encuadra chofer + objetivo.
+    if(liveRouteCoords && liveRouteCoords.length){
+      fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
+    } else {
+      const framePts = inTrip
+        ? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])
+        : (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);
+      fitPoints(liveMap, framePts, liveFollowPadding());
+    }
   } else {
     fitPoints(liveMap, pts, { top: 170, bottom: botPad, left: 50, right: 50 });
     if(!inTrip) liveMap.easeTo({ center: [pick.lng, pick.lat], zoom: 16, offset: [0, -60], duration: 500 });
@@ -2644,12 +2687,12 @@ function renderLiveStrips(){
   const r = liveReq; if(!r) return;
   const top = $('#live-top'), bot = $('#live-bottom'), pill = $('#live-pill');
   const stage = stageLabel(r);
-  const inTrip = (r.trip_stage==='en_viaje' || r.trip_stage==='finalizado');
+  const inTrip = liveHeadingToDest(r);
   const canCancel = r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','en_viaje','entregado'].includes(r.trip_stage||''));
   if(liveAsDriver){
     top.classList.remove('paxcol'); bot.classList.remove('paxbot');
     $('#live-compass').style.top=''; $('#live-recenter').style.bottom='';
-    const targetLabel = inTrip ? 'al destino en '+(r.dest_zone||'') : 'al punto de encuentro en '+(r.origin_zone||'');
+    const targetLabel = inTrip ? 'al destino en '+(r.dest_zone||'') : (r.kind==='mandado' ? 'al punto de recogida en '+(r.origin_zone||'') : 'al punto de encuentro en '+(r.origin_zone||''));
     const tLat = inTrip ? r.dest_lat : r.origin_lat, tLng = inTrip ? r.dest_lng : r.origin_lng;
     const dd = (r.driver_lat && tLat) ? havKm(r.driver_lat, r.driver_lng, tLat, tLng) : null;
     const dir = (r.driver_lat && tLat) ? compassDir({lat:r.driver_lat,lng:r.driver_lng},{lat:tLat,lng:tLng}) : '';
@@ -2658,11 +2701,28 @@ function renderLiveStrips(){
       + '<div class="row" style="margin-top:6px"><span style="flex:1;min-width:0">Dirígete '+targetLabel+': '+(dd!=null ? 'faltan '+(dd<1 ? Math.round(dd*1000)+' m' : dd.toFixed(1)+' km')+' · ~'+etaMin(dd)+' min · '+dir : 'esperando tu ubicación…')+'</span><button type="button" class="howbtn" onclick="openGmaps('+r.origin_lat+','+r.origin_lng+','+r.dest_lat+','+r.dest_lng+','+inTrip+')">Cómo llegar</button></div>';
     pill.classList.add('hidden');
     const nxt = nextStage(r);
-    bot.innerHTML = '<div class="row"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
-      + mandadoDriverSummaryHtml(r)
-      + (r.trip_stage==='llego' ? '<a class="telbtn" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+' · '+esc(r.passenger_phone||'')+'</a>' : '')
-      + (r.kind==='mandado' ? '<button class="ghostb" onclick="driverPasteLocationInline('+r.id+')">📍 Pegar ubicación de WhatsApp para la entrega</button><div id="driver-paste-box"></div>' : '')
-      + '<div style="margin-top:8px;background:var(--amber);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
+    // v1.4.43: pantalla despejada — el mapa manda. La caja verde de
+    // "Resumen del mandado" y el botón ancho de pegar ubicación NO van
+    // aquí (tapaban la mototaxi y la ruta): Recibe y Pedido quedan en
+    // renglones chicos, y pegar ubicación es un enlace chico que abre el
+    // mismo campo de siempre. El botón verde de "Pedir ubicación por
+    // WhatsApp" y la caja verde del punto de entrega no existen en la web
+    // (eran de la app real) y no se agregan.
+    const recvLine = r.kind==='mandado'
+      ? 'Recibe: '+esc(r.recipient_name||r.passenger_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')
+      : '';
+    const payLine = r.kind==='mandado' && r.order_payment==='por_pagar'
+      ? 'Pedido: Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo'
+      : (r.kind==='mandado' && r.order_payment==='pagado' ? 'Pedido: Ya pagado' : '');
+    const miniLinks = [];
+    if(r.trip_stage==='en_camino' || r.trip_stage==='llego') miniLinks.push('<a class="minilink" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>');
+    if(r.kind==='mandado') miniLinks.push('<a class="minilink" href="javascript:void(0)" onclick="driverPasteLocationInline('+r.id+')">📍 Pegar ubicación de WhatsApp</a>');
+    bot.innerHTML = '<div class="row live-mini"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
+      + (recvLine ? '<div class="row live-mini"><span>'+recvLine+'</span></div>' : '')
+      + (payLine ? '<div class="row live-mini"><span>'+payLine+'</span></div>' : '')
+      + (miniLinks.length ? '<div class="row live-mini-links">'+miniLinks.join('')+'</div>' : '')
+      + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
+      + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
       + (nxt ? '<button onclick="advanceLive(\''+nxt+'\')">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
   } else {
     const dKm = (r.driver_lat && r.origin_lat) ? havKm(r.driver_lat, r.driver_lng, r.origin_lat, r.origin_lng) : null;
@@ -2715,7 +2775,9 @@ function renderLiveStrips(){
       + '<div style="font-size:13px;opacity:.85">'+esc(r.driver_vehicle||'')+' · Unidad '+esc(r.driver_unit||'—')+'</div>'
       + '<div style="font-size:13px;opacity:.85">WhatsApp '+esc(r.driver_phone||'')+'</div></div>'
       + '<div style="text-align:right"><div style="font-size:11px;opacity:.75">Precio final</div><b class="big2">'+fmt$(r.final_price||r.price)+'</b></div></div>'
-      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor. <a href="#" onclick="changePayLive(event,'+r.id+',\''+pay+'\')">Cambiar</a></span></div></div>';
+      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor.'+(r.trip_stage==='confirmado' ? ' <a href="#" onclick="changePayLive(event,'+r.id+',\''+pay+'\')">Cambiar</a>' : '')+'</span></div></div>';
+    // v1.4.43: "Cambiar" solo existe mientras sigue confirmado (antes de
+    // salir); al aceptar el chofer ya va en camino y el pago quedó fijado.
     // La brújula ya no necesita bajar: arriba solo van Regresar + estado.
     // El botón de recentrar debe librar la columna de abajo (Cancelar +
     // aviso verde + tarjeta del chofer).
@@ -2754,14 +2816,20 @@ function exitLive(){
   if(liveAsDriver) go('chofer'); else go('viajes');
 }
 async function advanceLive(stage){
+  // v1.4.43: guardia contra doble toque — seis toques seguidos en el mismo
+  // botón mandan UN solo avance; el servidor además lo acepta idempotente.
+  if(liveAdvancing) return; liveAdvancing = true;
   try {
     const j = await api('/api/advance-stage', { driver_id: myDriver.id, request_id: liveReq.id, stage });
     liveReq = j.request;
-    if(stage==='llego') showNotice('Le avisamos al pasajero que ya estás afuera.', 'green');
+    // v1.4.43: "Ya estoy afuera" avisa al pasajero (en viajes el viaje
+    // empieza ahí; en mandados es la llegada al punto de recogida).
+    if(stage==='llego' || (stage==='en_viaje' && liveReq.kind==='viaje')) showNotice('Le avisamos al pasajero que ya estás afuera.', 'green');
     if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); showTripSummary(liveReq, true); return; }
     await renderLiveMap();
     renderLiveStrips();
   } catch(e){ toast(e.message); }
+  finally { liveAdvancing = false; }
 }
 function driverPasteLocation(rid){ driverPasteLocationInline(rid); }
 function driverPasteLocationInline(rid){
@@ -2824,6 +2892,13 @@ function startLivePolling(){
       if(r.status==='cancelado'){ toast('El servicio fue cancelado.'); exitLive(); return; }
       if(r.trip_stage==='llego' && prevStage!=='llego' && !liveAsDriver){
         fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó.' });
+      }
+      // v1.4.43: en viajes "Ya estoy afuera" lleva directo a en_viaje
+      // (ya no hay etapa 'llego'): el aviso de que ya está afuera sale al
+      // entrar a en_viaje. En mandados en_viaje es "va a entregarte" y la
+      // tarjeta de estado ya lo dice sola.
+      if(r.trip_stage==='en_viaje' && prevStage!=='en_viaje' && !liveAsDriver && r.kind==='viaje'){
+        fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó y el viaje empieza.' });
       }
       if(r.driver_lat && liveDriverMarker){
         const ll = { lng: r.driver_lng, lat: r.driver_lat };
@@ -5769,7 +5844,16 @@ function startPolling(){
             } else if(r.trip_stage==='en_camino' && prev.indexOf('en_camino')<0 && r.status==='aceptado'){
               fireAlert('on-way', { title:'Tu mototaxi va en camino', body:'Ve alistándote, ya viene hacia ti.', btnText:'Ver mi viaje', btnFn:()=>goLive(r.id,false) });
             } else if(r.trip_stage==='llego' && prev.indexOf('llego')<0 && r.status==='aceptado'){
-              fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó.', btnText:'Ver mi viaje', btnFn:()=>goLive(r.id,false) });
+              // v1.4.43: en mandados 'llego' es "ya está en el punto de
+              // recogida" (no "sal de tu casa": el pasajero no sale, el
+              // chofer viene por el encargo).
+              if(r.kind==='viaje') fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó.', btnText:'Ver mi viaje', btnFn:()=>goLive(r.id,false) });
+              else fireAlert('outside', { strong:true, title:'El conductor ya está en el punto de recogida', body:'Ya está afuera para recoger tu encargo.', btnText:'Ver mi mandado', btnFn:()=>goLive(r.id,false) });
+            } else if(r.trip_stage==='en_viaje' && prev.indexOf('en_viaje')<0 && r.status==='aceptado'){
+              // v1.4.43: en viajes el chofer ya está afuera y el viaje
+              // empieza ahí; en mandados el encargo ya va camino a entregarse.
+              if(r.kind==='viaje') fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó y el viaje empieza.', btnText:'Ver mi viaje', btnFn:()=>goLive(r.id,false) });
+              else fireAlert('on-way-deliver', { title:'Tu encargo va en camino', body:'El conductor ya lo recogió y va a entregártelo.', btnText:'Ver mi mandado', btnFn:()=>goLive(r.id,false) });
             } else if((r.offers||[]).some(o=>o.kind==='contraoferta' && o.status==='pendiente')){
               fireAlert('counter', { title:'¡Tienes una contraoferta!', body:'Revisa el precio del chofer.', kind:'amber', btnText:'Ver ofertas', btnFn:()=>{ if(r.kind==='mandado'){ md.requestId=r.id; go('mandados'); } else { wiz.requestId=r.id; wiz.step=5; go('viajes'); } } });
             }
