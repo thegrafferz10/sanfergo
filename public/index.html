@@ -543,7 +543,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.54'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.55'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -694,7 +694,7 @@ let myPassenger = null, myDriver = null, myAccount = null;
 let currentView = 'home';
 let pollTimer = null, pollBusy = false;
 let lastSnapshot = {};
-let lastOpenIds = []; // ids de solicitudes abiertas ya vistas por el chofer
+let lastOpenSeen = {}; // id → republished_at de las solicitudes abiertas ya vistas por el chofer (v1.4.55: la republicación por precio mejorado tiene el mismo id pero republished_at nuevo, y también cuenta como llegada nueva)
 let myPhone = () => (myPassenger && myPassenger.phone) || (myDriver && myDriver.phone) || (myAccount && myAccount.phone) || '';
 function isAdmin(){ return !!(myAccount && myAccount.role === 'admin'); }
 async function loadPlaces(){
@@ -1869,6 +1869,23 @@ async function renderViajes(){
       renderSearching();
       return;
     }
+    // v1.4.55: candado inverso al de v1.4.50 (reporte del usuario
+    // 23:16: 'Cuando haya un mandado activo. Igual no debería dejar
+    // entrar en pedir viaje. Ahora sí deja.'): con un mandado en espera
+    // o en curso, entrar a Viajes NO muestra el formulario '¿A dónde
+    // vas?': se ve la misma pantalla de espera / en vivo del mandado
+    // hasta que termine o se cancele. 'Volver al inicio' sale SIN
+    // cancelar, igual que en la pantalla de espera del viaje.
+    const man55 = await myActiveRequest('mandado');
+    if(man55){
+      if(man55.status==='aceptado'){ goLive(man55.id, false); return; }
+      if(!md) md = newMandado();
+      md.requestId = man55.id;
+      setPageNoScroll('viajes-page', true);
+      page.innerHTML = backPill('Volver al inicio', "go('home')") + '<h2>Tu mandado</h2><div id="md-searching"></div>';
+      renderMandadoSearching(man55);
+      return;
+    }
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
       + '<h1>¿A dónde vas?</h1>'
       + whoStrip()
@@ -2561,19 +2578,27 @@ function counterSend(){
 }
 function counterCancel(){ counterState = null; const b = document.getElementById('counter-inline'); if(b) b.remove(); }
 async function raisePrice(rid, price){
-  try { await api('/api/raise-price', { passenger_id: myPassenger.id, request_id: rid, price }); toast('Precio actualizado a '+fmt$(price)+'.'); refreshSearching(); }
+  // v1.4.55: si el viaje se republicó con precio mejorado, el pasajero
+  // ve la confirmación verde (igual que en la app real); en un mandado
+  // solo cambia el precio.
+  try { const j = await api('/api/raise-price', { passenger_id: myPassenger.id, request_id: rid, price }); toast(j && j.request && j.request.price_improved ? 'Tu viaje se volvió a publicar con precio mejorado: '+fmt$(price)+'.' : 'Precio actualizado a '+fmt$(price)+'.'); refreshSearching(); }
   catch(e){ toast(e.message); }
 }
 function refreshSearching(){
   // v1.4.50: si en Mandados se está viendo la pantalla de espera del
   // viaje (no la del mandado), se refresca esa.
   if(currentView==='mandados' && wiz && wiz.step===5 && wiz.requestId){ renderSearching(); return; }
-  if(currentView==='mandados' && md && md.requestId){
+  // v1.4.55: la pantalla de espera del mandado también se puede ver
+  // desde Viajes (candado inverso): se refresca igual, salvo que se
+  // esté viendo la del viaje.
+  if(md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){
     api('/api/requests?passenger_id='+(myPassenger?myPassenger.id:'')+'&light=1').then(j=>{
       const r = j.requests.find(x=>x.id===md.requestId);
       if(r) renderMandadoSearching(r);
     }).catch(()=>{});
-  } else renderSearching();
+    return;
+  }
+  renderSearching();
 }
 async function cancelMyRequest(){
   if(!wiz.requestId) return;
@@ -4240,7 +4265,7 @@ async function renderMandadoSearching(active){
     const r = j.requests.find(x=>x.id===active.id);
     if(!r) return;
     if(r.status==='aceptado'){ goLive(r.id, false); return; }
-    if(r.status==='cancelado' || r.status==='finalizado'){ md = newMandado(); renderMandados(); return; }
+    if(r.status==='cancelado' || r.status==='finalizado'){ md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); return; }
     if(await maybeAutoConfirm(r)) return;
     const offers = (r.offers||[]).filter(o=>o.status==='pendiente');
     if(offerIdx >= offers.length) offerIdx = 0;
@@ -4301,7 +4326,7 @@ async function renderMandadoSearching(active){
 }
 async function cancelMandado(){
   if(!md.requestId) return;
-  try { await api('/api/cancel-request', { request_id: md.requestId }); md = newMandado(); renderMandados(); toast('Mandado cancelado.'); }
+  try { await api('/api/cancel-request', { request_id: md.requestId }); md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); toast('Mandado cancelado.'); }
   catch(e){ toast(e.message); }
 }
 
@@ -4718,7 +4743,7 @@ async function loadDriverInbox(force){
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.passenger_count||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.price_improved||'')+':'+(r.republished_at||'')+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.passenger_count||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -4805,6 +4830,11 @@ async function loadDriverInbox(force){
       // del usuario 21:16: "cerca de / Madero → cerca / de Centro").
       + '<div style="margin-top:6px"><b><span style="white-space:nowrap">'+esc(r._refO)+'</span> → <span style="white-space:nowrap">'+esc(r._refD)+'</span></b></div>'
       + (rowMeta.length?'<div class="muted" style="margin-top:4px;font-size:12px">'+rowMeta.join(' · ')+'</div>':'')
+      // (v1.4.55) Precio mejorado: el pasajero subió el precio y la
+      // solicitud se volvió a publicar como nueva. La leyenda verde va
+      // en la fila para que el chofer la vea de un vistazo, con el
+      // precio de antes y el de ahora (igual que en la app real).
+      + (r.price_improved?'<div style="margin-top:6px;background:#dcfce7;color:#166534;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">✦ Precio mejorado<br><span style="font-weight:400">El pasajero ha aumentado su precio: antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'.</span></div>':'')
       + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
       + (counter && !rejected?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
       + (rejected?'<div style="margin-top:6px;background:#ffedd5;color:#9a3412;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Rechazado · '+esc(rejectedTxt)+'</div>':'')
@@ -4866,6 +4896,9 @@ function inboxDetailHtml(r, sub, atLimit){
   + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
   + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
   + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
+  // (v1.4.55) Precio mejorado: el pasajero subió el precio y la
+  // solicitud se volvió a publicar como nueva.
+  + (r.price_improved?'<div class="card" style="background:#dcfce7;border:1px solid #16a34a"><b>Precio mejorado: el pasajero ha aumentado su precio.</b><p class="muted mt">Antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'. La solicitud se volvió a publicar como nueva con este precio mejorado.</p></div>':'')
   + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
   + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
   + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
@@ -4924,7 +4957,7 @@ function renderInboxOverlay(list){
     if(ov) ov.remove();
     return;
   }
-  const sig = JSON.stringify([r.id, r.status, r.price, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit]);
+  const sig = JSON.stringify([r.id, r.status, r.price, r.price_improved, r.republished_at, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit]);
   if(ov && sig===inboxOvSig) return; // nada cambió en el flotante: no se toca
   inboxOvSig = sig;
   const inner = '<div class="reqwrap"><button class="adx" aria-label="Cerrar" onclick="closeInboxOverlay()">✕</button>'
@@ -6457,7 +6490,10 @@ function startPolling(){
         // cuando se ve desde Mandados (viaje en espera); la del mandado
         // solo cuando no se está viendo la del viaje.
         if((currentView==='viajes' || currentView==='mandados') && wiz && wiz.step===5) renderSearching();
-        if(currentView==='mandados' && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){
+        // v1.4.55: la pantalla de espera del mandado también se refresca
+        // cuando se ve desde Viajes (candado inverso), no solo desde
+        // Mandados; la del viaje sigue sin pintarse encima.
+        if((currentView==='mandados' || currentView==='viajes') && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){
           const act = j.requests.find(x=>x.id===md.requestId);
           if(act) renderMandadoSearching(act);
         }
@@ -6467,12 +6503,19 @@ function startPolling(){
         const open = j.requests.filter(r=> r.kind==='viaje' ? myDriver.vehicle==='mototaxi' : true);
         updateDriverBadge(open.length);
         // Alerta al chofer en línea esté en la pantalla que esté (Inicio, Taxímetro, etc.)
-        const ids = open.map(r=>r.id);
-        const fresh = ids.filter(id=>!lastOpenIds.includes(id));
-        if(fresh.length && myDriver.online && lastOpenIds.length){
-          fireAlert('new-trip', { title:'¡Nuevo viaje!', body:'Llegó una solicitud nueva de viaje o mandado.', btnText:'Ver', btnFn:()=>{ driverTab('recibir'); } });
+        // v1.4.55: una solicitud republicada (precio mejorado) tiene el
+        // MISMO id pero republished_at nuevo: se detecta como llegada
+        // nueva para que suene el aviso y aparezca arriba, igual que un
+        // viaje nuevo, con su propio título '¡Precio mejorado!'.
+        const openSig = {};
+        for(const r of open) openSig[r.id] = r.republished_at || '';
+        const fresh = open.filter(r=>!(r.id in lastOpenSeen) || lastOpenSeen[r.id] !== (r.republished_at || ''));
+        const freshImproved = fresh.filter(r=>r.price_improved);
+        if(fresh.length && myDriver.online && Object.keys(lastOpenSeen).length){
+          if(freshImproved.length) fireAlert('price-improved', { title:'¡Precio mejorado!', body:'El pasajero ha aumentado su precio.', kind:'green', btnText:'Ver', btnFn:()=>{ driverTab('recibir'); } });
+          else fireAlert('new-trip', { title:'¡Nuevo viaje!', body:'Llegó una solicitud nueva de viaje o mandado.', btnText:'Ver', btnFn:()=>{ driverTab('recibir'); } });
         }
-        lastOpenIds = ids;
+        lastOpenSeen = openSig;
         if(currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); // refresco silencioso: no borra la lista si nada cambió
         const mine = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
         // v1.4.42: el aviso de viaje activo del chofer se alimenta de estos
