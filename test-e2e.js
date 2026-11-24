@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.44 en /api/health', h.ok && h.version === '1.4.44', JSON.stringify(h));
+  check('versión 1.4.45 en /api/health', h.ok && h.version === '1.4.45', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.44', h134.ok && h134.version === '1.4.44', JSON.stringify(h134));
+  check('versión 1.4.45', h134.ok && h134.version === '1.4.45', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.44)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.44';") && h.version === '1.4.44', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.45)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.45';") && h.version === '1.4.45', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.44 en /api/health (sección)', h27.ok && h27.version === '1.4.44', JSON.stringify(h27));
+  check('versión 1.4.45 en /api/health (sección)', h27.ok && h27.version === '1.4.45', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.44 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.44', JSON.stringify(h28));
+  check('versión 1.4.45 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.45', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.44 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.44', JSON.stringify(h29));
+  check('versión 1.4.45 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.45', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.44 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.44', JSON.stringify(h30));
+  check('versión 1.4.45 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.45', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1796,7 +1796,7 @@ async function api(path, body) {
   const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function nextStage(r){'));
   const tzFn = eval('(' + tzSrc.replace('function liveTargetZoom(distM)', 'function(distM)') + ')');
   check('v1.4.44: en vivo, el zoom objetivo aumenta al acercarse (lejos no toca nada, cerca 16 → 17 → 18)', tzFn(1500) === null && tzFn(1001) === null && tzFn(1000) === 16 && tzFn(800) === 16 && tzFn(501) === 16 && tzFn(500) === 17 && tzFn(300) === 17 && tzFn(201) === 17 && tzFn(200) === 18 && tzFn(100) === 18 && tzFn(203) === 17, JSON.stringify({ lejos: tzFn(1500), mil: tzFn(1000), ocho: tzFn(800), tres: tzFn(300), doscientos3: tzFn(203), cien: tzFn(100) }));
-  check('v1.4.44: el zoom de proximidad solo vive con seguimiento activo y solo en el mapa del chofer (un gesto manual lo apaga con el follow)', pollSec.indexOf('if(liveFollow){') < pollSec.indexOf('opts.zoom = proxZoom') && pollSec.indexOf('opts.zoom = proxZoom') < pollSec.indexOf("} else if(liveBearing!=null){") && pollSec.includes('liveTargetZoom(havKm(ll.lat, ll.lng, tgt.lat, tgt.lng) * 1000)') && pollSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && pollSec.includes('if(liveAsDriver){'));
+  check('v1.4.44: el zoom de proximidad solo vive con seguimiento activo y solo en el mapa del chofer (un gesto manual lo apaga con el follow)', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.indexOf('if(liveFollow){') < apSec.indexOf('opts.zoom = proxZoom') && apSec.indexOf('opts.zoom = proxZoom') < apSec.indexOf("} else if(liveBearing!=null){") && apSec.includes('liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000)') && apSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && apSec.includes('if(liveAsDriver){') && pollSec.includes('liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng)'); })());
   // En vivo: el estado del tramo de recogida existe para viaje y mandado
   // (aceptado en camino + ubicación del chofer compartida: de ahí sale la
   // línea chofer → recogida).
@@ -1810,6 +1810,50 @@ async function api(path, body) {
   await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: pkM.request.id, lat: 16.8685, lng: -93.2095 });
   const pkMRow = (await api('/api/requests?id=' + pkM.request.id)).requests[0];
   check('v1.4.44: en vivo, el mandado aceptado está en camino a recoger con la ubicación del chofer (misma línea chofer → recogida)', pkM.ok && pkMRow && pkMRow.trip_stage === 'en_camino' && pkMRow.driver_lat === 16.8685 && pkMRow.driver_lng === -93.2095, JSON.stringify(pkMRow && { stage: pkMRow.trip_stage, lat: pkMRow.driver_lat, lng: pkMRow.driver_lng }));
+
+  // --- v1.4.45: resumen flotante al final del viaje + viaje en curso sin internet ---
+  // El recibo (captura del usuario 20:44) era una hoja blanca a pantalla
+  // completa que no le gustó: ahora es flotante como el anuncio de
+  // entrada, para chofer y pasajero, en viajes y mandados.
+  const sumSec = html.slice(html.indexOf('function showTripSummary(r, asDriver){'), html.indexOf('function startLivePolling(){'));
+  check('v1.4.45: el resumen del viaje es flotante como el anuncio (fondo oscuro 60%, tarjeta 340 px, radio 24, X de 48×48 arriba)', html.includes("#trip-summary-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6)") && html.includes('#trip-summary-overlay .sumwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}') && html.includes('#trip-summary-overlay .sumfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px') && html.includes('#trip-summary-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%'));
+  check('v1.4.45: showTripSummary abre el flotante (no el diálogo) y la X / el fondo / el botón lo cierran al instante y vuelven a donde toca', sumSec.includes("ov.id = 'trip-summary-overlay'") && sumSec.includes('class="sumwrap"><button class="adx"') && sumSec.includes('onclick="closeTripSummary()"') && sumSec.includes("if(e.target === ov) closeTripSummary()") && sumSec.includes('function closeTripSummary(){') && sumSec.includes("const ov = document.getElementById('trip-summary-overlay');\n  if(ov) ov.remove();") && !sumSec.includes('openDialog('));
+  check('v1.4.45: el resumen ya abierto no se reconstruye (el sondeo del pasajero lo llama en cada tick con el viaje finalizado)', sumSec.includes("if(document.getElementById('trip-summary-overlay')) return;"));
+  check('v1.4.45: el contenido del recibo sigue intacto (mismos renglones, Generar recibo y botón de cerrar por lado)', sumSec.includes("window.__receiptTxt = txt; window.__receiptName = 'recibo-sanfergo-'+r.id+'.txt';") && sumSec.includes('onclick="downloadReceipt()">Generar recibo</button>') && sumSec.includes("'Cerrar y volver a recibir viajes'") && sumSec.includes('<span>Pasajero</span>') && sumSec.includes('<span>Precio final</span>'));
+  check('v1.4.45: el resumen del CHOFER lleva mini mapa con los dos puntos y la línea azul + "Gracias por concluir el viaje"', sumSec.includes('Gracias por concluir el viaje') && sumSec.includes('id="sum-minimap"') && sumSec.includes('drawSummaryMiniMap(r)') && html.includes("summaryMiniMap = makeMap('sum-minimap', false)") && html.includes("dotEl('#22c55e', 16)") && html.includes("dotEl('#dc2626', 16)") && html.includes("setRouteLine(summaryMiniMap, 'route', straightRouteCoords(o, d, []), '#2b7de9', 5)"));
+  // En vivo (evaluando la función real): la nota de cambio solo sale en efectivo.
+  const cashSrc = html.slice(html.indexOf('function summaryCashNote(r){'), html.indexOf('function showTripSummary(r, asDriver){'));
+  const cashFn = eval('(' + cashSrc.replace('function summaryCashNote(r)', 'function(r)') + ')');
+  check('v1.4.45: el resumen del PASAJERO lleva "Tu viaje ha concluido. Gracias por usar SanFerGo." y la nota de cambio SOLO en efectivo', sumSec.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && cashFn({ payment_method: 'efectivo' }) === 'Recuerda pagar con cambio al conductor' && cashFn({ payment_method: 'transferencia' }) === '' && cashFn({}) === 'Recuerda pagar con cambio al conductor', JSON.stringify({ ef: cashFn({ payment_method: 'efectivo' }), tr: cashFn({ payment_method: 'transferencia' }) }));
+  // --- sin internet: el mapa se dibuja desde el GPS local ---
+  // Diagnóstico (reporte del usuario 20:46): el GPS solo mandaba la
+  // posición al servidor y al fallar se tiraba; el sondeo tragaba el
+  // error en silencio y nada se movía. Ahora el GPS dibuja en local.
+  const watchSec = html.slice(html.indexOf('function startDriverGpsWatch(){'), html.indexOf('/* ===== TAXÍMETRO'));
+  check('v1.4.45: el GPS del chofer mueve el mapa EN LOCAL con cada lectura y encola el reporte si no hay internet', watchSec.includes('liveGpsPos = { lat, lng, t: now };') && watchSec.includes('liveApplyDriverPos(lat, lng);') && watchSec.includes('liveLocQueue.push({ lat, lng });') && watchSec.includes('if(liveLocQueue.length > 20) liveLocQueue.shift();'));
+  check('v1.4.45: el sondeo ya no se congela sin internet (guardia anti-solape, aviso chico, cola y avance pendiente al recuperar)', pollSec.includes('if(livePollBusy) return; livePollBusy = true;') && pollSec.includes('liveSetOffline(false);') && pollSec.includes('liveSetOffline(true);') && pollSec.includes('finally { livePollBusy = false; }') && pollSec.includes('liveFlushLocQueue();') && pollSec.includes('if(livePendingAdvance){ const st = livePendingAdvance; livePendingAdvance = null; advanceLive(st); }'));
+  check('v1.4.45: el avance que falla por red se guarda pendiente y se reintenta solo (un rechazo del servidor no se reintenta)', html.includes('livePendingAdvance = stage;') && html.includes("toast('Sin internet — el avance se enviará cuando vuelva la conexión.');") && html.includes("window.addEventListener('online'") && html.includes('id="live-offline">📶 Sin internet'));
+  // En vivo (evaluando la función real): solo los errores de red se reintentan.
+  const netSrc = html.slice(html.indexOf('function liveIsNetError(e){'), html.indexOf('function liveSetOffline(off){'));
+  const netFn = eval('(' + netSrc.replace('function liveIsNetError(e)', 'function(e)') + ')');
+  check('v1.4.45: en vivo, liveIsNetError distingue red de rechazo del servidor', netFn(new Error('La conexión tardó demasiado. Revisa tu señal e inténtalo de nuevo.')) === true && netFn(new Error('Failed to fetch')) === true && netFn(new Error('Load failed')) === true && netFn(new Error('Ese paso no sigue')) === false && netFn(new Error('Esta solicitud ya no está buscando conductor.')) === false, JSON.stringify({ timeout: netFn(new Error('La conexión tardó demasiado.')), fetch: netFn(new Error('Failed to fetch')), rechazo: netFn(new Error('Ese paso no sigue')) }));
+  check('v1.4.45: al salir del viaje en curso el GPS se detiene y se limpian la cola, el avance pendiente y el aviso', html.includes('stopDriverGpsWatch();') && html.includes('livePendingAdvance = null;') && html.includes('liveLocQueue = [];') && html.includes('function stopDriverGpsWatch(){') && html.includes('navigator.geolocation.clearWatch(drvWatchId)'));
+  // En vivo: viaje finalizado en efectivo y mandado finalizado por
+  // transferencia — las filas traen todo lo que pinta el resumen
+  // flotante (fecha, distancia, precio, pago, puntos, nombres).
+  const finV = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 20, payment_method: 'efectivo' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: finV.request.id, kind: 'acepta', price: 20 });
+  await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: finV.request.id, lat: 16.8727, lng: -93.2081 });
+  await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finV.request.id, stage: 'en_viaje' });
+  const finVRow = (await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finV.request.id, stage: 'finalizado' })).request;
+  check('v1.4.45: en vivo, el viaje finalizado en efectivo trae todo lo del resumen flotante (y la nota de cambio aplica)', finVRow && finVRow.status === 'finalizado' && !!finVRow.finished_at && finVRow.payment_method === 'efectivo' && finVRow.origin_lat === 16.8709 && finVRow.dest_lat === 16.8675 && finVRow.driver_lat === 16.8727 && cashFn(finVRow) === 'Recuerda pagar con cambio al conductor', JSON.stringify(finVRow && { st: finVRow.status, pago: finVRow.payment_method, fin: finVRow.finished_at }));
+  const finM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'transferencia', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: finM.request.id, kind: 'acepta', price: 20 });
+  await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: finM.request.id, lat: 16.8685, lng: -93.2095 });
+  await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'llego' });
+  await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'en_viaje' });
+  const finMRow = (await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'entregado' })).request;
+  check('v1.4.45: en vivo, el mandado finalizado por transferencia trae todo lo del resumen flotante (y la nota de cambio NO aplica)', finMRow && finMRow.status === 'finalizado' && !!finMRow.finished_at && finMRow.payment_method === 'transferencia' && finMRow.origin_lat === 16.8675 && finMRow.dest_lat === 16.8709 && finMRow.driver_lat === 16.8685 && cashFn(finMRow) === '', JSON.stringify(finMRow && { st: finMRow.status, pago: finMRow.payment_method, fin: finMRow.finished_at }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
