@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.46 en /api/health', h.ok && h.version === '1.4.46', JSON.stringify(h));
+  check('versión 1.4.47 en /api/health', h.ok && h.version === '1.4.47', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.46', h134.ok && h134.version === '1.4.46', JSON.stringify(h134));
+  check('versión 1.4.47', h134.ok && h134.version === '1.4.47', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.46)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.46';") && h.version === '1.4.46', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.47)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.47';") && h.version === '1.4.47', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.46 en /api/health (sección)', h27.ok && h27.version === '1.4.46', JSON.stringify(h27));
+  check('versión 1.4.47 en /api/health (sección)', h27.ok && h27.version === '1.4.47', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.46 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.46', JSON.stringify(h28));
+  check('versión 1.4.47 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.47', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.46 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.46', JSON.stringify(h29));
+  check('versión 1.4.47 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.47', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.46 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.46', JSON.stringify(h30));
+  check('versión 1.4.47 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.47', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1904,9 +1904,20 @@ async function api(path, body) {
   //     pasajero, sin engordar la lista (la foto se carga bajo demanda).
   check('v1.4.46: "Punto en el mapa" ya es zona genérica y se resuelve al lugar conocido cercano', html.slice(html.indexOf('const GENERIC_ZONES'), html.indexOf('function nearestZoneWithin')).includes("'Punto en el mapa'"));
   const rowSec = html.slice(html.indexOf('// Lista apilada (v1.4.36)'), html.indexOf('p.innerHTML = html;\n    loadInboxPhotos(list);'));
-  check('v1.4.46: la fila compacta trae foto chica, nombre del pasajero y ruta con la referencia "cerca de"', rowSec.includes('class="rowavatar" id="rowav-') && rowSec.includes("esc(r.passenger_name||'Pasajero')") && rowSec.includes("esc(r._refO)+' → '+esc(r._refD)") && !rowSec.includes('passenger_photo'));
+  check('v1.4.46: la fila compacta trae foto chica, nombre del pasajero y ruta con la referencia "cerca de"', rowSec.includes('class="rowavatar" id="rowav-') && rowSec.includes("esc(r.passenger_name||'Pasajero')") && rowSec.includes("<span style=\"white-space:nowrap\">'+esc(r._refO)+'</span> → <span style=\"white-space:nowrap\">'+esc(r._refD)+'</span>") && !rowSec.includes('passenger_photo'));
   check('v1.4.46: la foto de la fila se carga bajo demanda por id (una vez por solicitud, con caché) y la lista del sondeo sigue light sin fotos', html.includes('function loadInboxPhotos(list){') && html.includes('const inboxPhotoCache = {};') && html.includes("api('/api/requests?id='+r.id)") && html.includes("api('/api/requests?open=1&light=1')") && html.includes('loadInboxPhotos(list);'));
   check('v1.4.46: el detalle flotante sigue completo (foto grande del pasajero, Aceptar/Contraofertar) — lo compacto es solo la fila', inboxSec.includes("'<img class=\"avatar\" src=\"'+r.passenger_photo+'\">'") && inboxSec.includes('Aceptar') && inboxSec.includes('Contraofertar'));
+  // --- v1.4.47: la fila compacta no estaba bien acomodada (captura del
+  //     usuario 21:16) — la ruta "cerca de Madero → cerca de Centro" se
+  //     partía en tres líneas ("cerca de / Madero → cerca / de Centro")
+  //     porque compartía la columna de texto con el precio, que la
+  //     apretaba. Ahora la ruta va en su propia línea a todo lo ancho y
+  //     cada "cerca de X" va en un span sin salto de línea: el corte solo
+  //     puede caer en la flecha, nunca dentro de la frase.
+  const routeDiv47 = "<div style=\"margin-top:6px\"><b><span style=\"white-space:nowrap\">'+esc(r._refO)+'</span> → <span style=\"white-space:nowrap\">'+esc(r._refD)+'</span></b></div>";
+  check('v1.4.47: cada "cerca de X" va en su propio span sin salto de línea (la ruta nunca se parte dentro de la frase)', rowSec.includes("<span style=\"white-space:nowrap\">'+esc(r._refO)+'</span>") && rowSec.includes("<span style=\"white-space:nowrap\">'+esc(r._refD)+'</span>"));
+  check('v1.4.47: la ruta va en su propia línea a todo lo ancho, debajo de la línea del precio (el precio ya no aprieta el texto)', rowSec.includes(routeDiv47) && rowSec.indexOf(routeDiv47) > rowSec.indexOf("<b class=\"price\">'+fmt$(r.price)+'</b>"));
+  check('v1.4.47: la fila sigue compacta con chip, foto, nombre con elipsis, precio, chevron y la línea km/min/pago', rowSec.includes('class="chip') && rowSec.includes('class="rowavatar" id="rowav-') && rowSec.includes("esc(r.passenger_name||'Pasajero')") && rowSec.includes('text-overflow:ellipsis') && rowSec.includes('class="price"') && rowSec.includes('▾') && rowSec.includes("rowMeta.join(' · ')"));
   // En vivo (evaluando las funciones reales con los lugares del servidor):
   // 'Punto en el mapa' se resolvía a sí mismo; ahora resuelve a Madero/Centro.
   const placesJ = await api('/api/places');
@@ -1922,6 +1933,27 @@ async function api(path, body) {
   const openLight = await api('/api/requests?open=1&light=1');
   const rowTLight = (openLight.requests||[]).find(r=>r.id===rowT.request.id);
   check('v1.4.46: en vivo, la lista abierta light trae esa solicitud con el nombre pero SIN foto (la foto no vuelve al sondeo)', rowTLight && rowTLight.passenger_photo === null && rowTLight.passenger_name === 'Lucia Prueba', JSON.stringify(rowTLight && { foto: rowTLight.passenger_photo, nombre: rowTLight.passenger_name }));
+  // --- v1.4.47 (botón de atrás en Buscando): la pantalla "Buscando tu
+  //     mototaxi…" solo tenía "Cancelar viaje": no había cómo volver al
+  //     inicio sin cancelar. Ahora hay "‹ Volver al inicio" que vuelve al
+  //     inicio SIN cancelar (no llama a ningún endpoint: la solicitud
+  //     sigue pendiente), y al volver a entrar a Viajes aparece esa misma
+  //     pantalla de Buscando, no un formulario nuevo. Los mandados YA
+  //     tenían ese botón ("‹ Regresar al inicio") y la misma revisión del
+  //     pendiente antes del formulario — verificado en código, sin cambio.
+  const viaSec = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('let wizMap = null;'));
+  const viaStep5 = viaSec.slice(viaSec.indexOf('// paso 5: buscando'));
+  check('v1.4.47: la pantalla "Buscando tu mototaxi…" tiene botón "‹ Volver al inicio" que vuelve al inicio sin cancelar, en los dos caminos que la muestran (paso 5 y reentrada por paso 0)', viaStep5.includes("backPill('Volver al inicio', \"go('home')\")") && !viaStep5.includes('cancelMyRequest') && viaSec.indexOf("backPill('Volver al inicio', \"go('home')\")") < viaSec.indexOf('¿A dónde vas?'));
+  check('v1.4.47: al volver a entrar a Viajes con un viaje pendiente se muestra la pantalla de Buscando (el paso 0 revisa el viaje activo antes del formulario)', viaSec.indexOf("myActiveRequest('viaje')") > 0 && viaSec.indexOf("myActiveRequest('viaje')") < viaSec.indexOf('¿A dónde vas?') && viaSec.includes('wiz.step = 5;') && viaSec.includes('renderSearching();'));
+  const mdSec = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step)'));
+  const mdActSec = mdSec.slice(mdSec.indexOf('if(active){'), mdSec.indexOf('renderMandadoSearching(active)'));
+  check('v1.4.47: la pantalla de buscando del mandado ya tenía su botón "‹ Regresar al inicio" sin cancelar, y el pendiente se revisa antes del formulario (sin cambio necesario)', mdActSec.includes("backPill('Regresar al inicio', \"go('home')\")") && mdActSec.includes('id="md-searching"') && mdSec.indexOf("myActiveRequest('mandado')") < mdSec.indexOf('md.step===0'));
+  const bkV = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Punto en el mapa', origin_detail: 'Punto en el mapa', origin_lat: 16.87291, origin_lng: -93.21374, dest_zone: 'Punto en el mapa', dest_detail: 'Punto en el mapa', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.5, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const bkM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  const bkList = await api('/api/requests?passenger_id=' + pax.passenger.id + '&light=1');
+  const bkVRow = (bkList.requests||[]).find(r=>r.id===bkV.request.id);
+  const bkMRow = (bkList.requests||[]).find(r=>r.id===bkM.request.id);
+  check('v1.4.47: en vivo, el viaje y el mandado publicados siguen "buscando" en el mismo endpoint que usa myActiveRequest (al volver a entrar se muestra la pantalla de Buscando, no un formulario nuevo)', bkV.ok && bkM.ok && bkVRow && bkVRow.status==='buscando' && bkMRow && bkMRow.status==='buscando', JSON.stringify({ v: bkVRow && bkVRow.status, m: bkMRow && bkMRow.status }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

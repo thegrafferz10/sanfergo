@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.46)
+# SanFerGo — versión pública (v1.4.47)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.47 (2026-11-23) — Fila compacta del chofer reacomodada
+
+- **Diagnóstico (captura del usuario 21:16, web v1.4.46):** en "Recibir Viajes" la fila se veía mal acomodada — la ruta "cerca de Madero → cerca de Centro" se partía en tres líneas ("cerca de / Madero → cerca / de Centro") y el precio verde $25 quedaba apretado contra el chevron en la orilla derecha. Causa: la ruta compartía la columna de texto (flex1, min-width:0) con el nombre, entre el chip + foto a la izquierda y el precio grande + chevron a la derecha; la columna quedaba tan angosta que el texto se rompía dentro de las frases "cerca de".
+- **Arreglo (solo el layout de la fila compacta):** la primera línea ahora lleva chip + foto 36 px + nombre (con elipsis si es largo) + precio + chevron; la ruta bajó a su propia línea a todo lo ancho de la tarjeta, y cada "cerca de X" va envuelta en un `<span style="white-space:nowrap">`, así el corte solo puede caer en la flecha (→), nunca dentro de "cerca de Madero" ni de "cerca de Centro". La fila sigue compacta y trae todo lo mismo: chip Viaje/Mandado, foto chica, nombre, precio + chevron, línea km · min · Pago, y los avisos ámbar (Lleva $X / Te contraofertó) sin cambio. Sin tocar: lado del pasajero, detalle flotante, tarifas, flujos.
+- **Botón de atrás en "Buscando" (captura del usuario 21:17):** la pantalla "Buscando tu mototaxi…" solo tenía "Cancelar viaje": no había cómo volver al inicio sin cancelar. Ahora tiene "‹ Volver al inicio" arriba que vuelve al inicio SIN cancelar (no llama a ningún endpoint: la solicitud sigue pendiente). Al volver a entrar a Viajes aparece esa misma pantalla de Buscando, no un formulario nuevo — el paso 0 revisa el viaje activo antes de mostrar el formulario, y el paso 5 la vuelve a mostrar si el asistente sigue ahí. Lo mismo para mandados: la pantalla de buscando del mandado YA tenía su botón "‹ Regresar al inicio" sin cancelar y la misma revisión del pendiente antes del formulario (verificado en código, sin cambio necesario).
+- Pruebas: suite completa contra BD limpia: **621 OK, 0 FAIL** (614 de antes + 7 nuevas en la sección v1.4.47 — 3 de la fila compacta; 4 del botón de atrás: el botón en los dos caminos que muestran Buscando, la reentrada a Viajes, el botón del mandado ya existente, y la comprobación en vivo de que viaje y mandado siguen buscando. Los 7 checks de versión que decían 1.4.46 se actualizaron a 1.4.47; el check v1.4.46 de la ruta se actualizó al nuevo patrón nowrap).
 
 ## v1.4.46 (2026-11-23) — "Repetir este viaje" arreglado + fila del chofer con nombre, foto y referencia
 
