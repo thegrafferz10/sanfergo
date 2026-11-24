@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.38'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.39'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2068,6 +2068,27 @@ function nearestZoneName(pos){
   let best = null, bd = Infinity;
   for(const p of all){ const d = havKm(pos.lat, pos.lng, p.lat, p.lng); if(d < bd){ bd = d; best = p; } }
   return best ? best.name : null;
+}
+/* Etiquetas genéricas que no dicen el lugar (origen por GPS o destino por
+   WhatsApp): en la bandeja del chofer se resuelven a la zona conocida más
+   cercana por coordenadas (v1.4.39), así la fila dice "Madero → Centro"
+   y no "Mi ubicación → Punto de WhatsApp". 1.5 km: el pueblo mide ~3 km
+   y las zonas vecinas quedan a menos de eso; fuera de ese radio, o sin
+   coordenadas, se queda la etiqueta guardada. */
+const GENERIC_ZONES = ['Mi ubicación','Punto de WhatsApp','Punto de entrega','Punto marcado','Punto de salida','Destino','Entrega en mi punto','Punto'];
+function nearestZoneWithin(pos, maxKm){
+  const all = allPlaces();
+  if(!all.length || !pos || pos.lat==null || pos.lng==null) return null;
+  let best = null, bd = Infinity;
+  for(const p of all){ const d = havKm(pos.lat, pos.lng, p.lat, p.lng); if(d < bd){ bd = d; best = p; } }
+  return (best && bd <= maxKm) ? best.name : null;
+}
+function displayZoneName(stored, lat, lng){
+  // La zona guardada específica se respeta; solo las genéricas se
+  // resuelven por coordenadas. Sin coordenadas o lejos de toda zona
+  // conocida, se queda la etiqueta guardada (puede ser '').
+  if(stored && !GENERIC_ZONES.includes(stored)) return stored;
+  return nearestZoneWithin({ lat, lng }, 1.5) || stored;
 }
 function updatePickZone(){
   const el = document.getElementById('pick-zone');
@@ -4033,11 +4054,21 @@ async function loadDriverInbox(force){
     // Si la solicitud abierta ya no está en la lista (se aceptó, se
     // canceló o expiró), se cierra sola para no dejar un detalle huérfano.
     if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;
+    // Nombres de lugar que se muestran (v1.4.39): la zona guardada
+    // genérica ('Mi ubicación', 'Punto de WhatsApp'…) se resuelve a la
+    // zona conocida más cercana por coordenadas, así la fila dice
+    // 'Madero → Centro' y no 'Mi ubicación → Punto de WhatsApp'. Entran
+    // en la firma para que un cambio de nombre repinte la lista (p. ej.
+    // si las zonas terminan de cargar después del primer pintado).
+    for(const r of list){
+      r._dispO = displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng) || r.origin_detail || '';
+      r._dispD = displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng) || r.dest_detail || '';
+    }
     updateDriverBadge(list.length);
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -4083,16 +4114,20 @@ async function loadDriverInbox(force){
       + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
       + '<div class="flex" style="align-items:center">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
-      + '<div class="flex1"><b>'+esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
+      + '<div class="flex1"><b>'+esc(r._dispO)+' → '+esc(r._dispD)+'</b></div>'
       + '<b class="price">'+fmt$(r.price)+'</b>'
       + '<span class="muted">'+(expanded?'▴':'▾')+'</span></div>'
       + (counter?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
       + '</div>';
       if(!expanded) return card + '</div>';
+      // (v1.4.39) Botón visible para cerrar el detalle y volver a ver
+      // todas las solicitudes: antes solo se podía tocar otra vez la
+      // fila, y el chofer no lo encontraba.
+      card += '<button class="btn ghost small" style="margin-top:10px" onclick="inboxToggle('+r.id+')">‹ Ver todas las solicitudes</button>';
       card += '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
       + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
-      + '<div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
-      + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
+      + '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
+      + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
       + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
       + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
       + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
