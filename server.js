@@ -734,7 +734,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.63' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.64' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -852,6 +852,17 @@ async function api(req, res, pathname) {
     const start = new Date().toISOString();
     db.prepare(`UPDATE drivers SET plan='suscripcion', subscription_start=?, subscription_until=? WHERE id=?`).run(start, base.toISOString(), d.id);
     return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(d.id)), price: p.price, days: p.days, plan: key });
+  }
+  // v1.4.64: interruptor del candado de Negocios (solo admin). Sin el
+  // parámetro locked (o con cualquier valor distinto de false/'0'/0) se
+  // BLOQUEA — el valor seguro por defecto. El perfil del dueño
+  // (@thegrafferz10) sigue exento aunque el candado esté puesto.
+  if (pathname === '/api/admin/set-negocios-locked') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const locked = body.locked !== false && body.locked !== '0' && body.locked !== 0;
+    db.prepare(`INSERT OR REPLACE INTO admin_state (key, value) VALUES ('negocios_locked', ?)`).run(locked ? '1' : '0');
+    return send(res, 200, { ok: true, negocios_locked: locked });
   }
 
   // ---- Cuentas e inicio de sesión ----
@@ -1057,7 +1068,7 @@ async function api(req, res, pathname) {
     if (a.status === 'bloqueado') return send(res, 403, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
-    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null });
+    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null, negocios_locked: negociosLocked() });
   }
   if (pathname === '/api/logout') {
     if (body.token) db.prepare('DELETE FROM sessions WHERE token=?').run(String(body.token));
@@ -1227,14 +1238,31 @@ async function api(req, res, pathname) {
     return send(res, 200, { ok: true, stores });
   }
   // ---- Negocios (v1.3.5) ----
+  // v1.4.64: CANDADO de Negocios — por defecto BLOQUEADO (sin fila en
+  // admin_state = bloqueado). Solo entran el perfil del dueño
+  // (@thegrafferz10) y el admin; el admin lo abre/cierra desde el panel
+  // (POST /api/admin/set-negocios-locked). El candado se aplica en el
+  // SERVIDOR, no solo se esconde en el cliente: los dos endpoints que
+  // sirven el contenido de Negocios a los pasajeros (/api/businesses y
+  // /api/business) devuelven 403 con locked:true a quien no esté exento.
+  function negociosLocked(){
+    const row = db.prepare(`SELECT value FROM admin_state WHERE key='negocios_locked'`).get();
+    return !row || row.value !== '0';
+  }
+  function negociosExempt(a){ return !!a && (a.role === 'admin' || a.username === 'thegrafferz10'); }
+  function negociosLockError(){ return { ok: false, locked: true, error: 'Negocios está bloqueado por ahora.' }; }
   // Negocios activos y visibles para todos (los Premium primero, con su
   // insignia '★ Premium · Verificado'). Los pendientes NO se ven aquí.
   if (pathname === '/api/businesses') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (negociosLocked() && !negociosExempt(a)) return send(res, 403, negociosLockError());
     const list = db.prepare(`SELECT * FROM businesses WHERE status='activo' ORDER BY premium_until DESC, id ASC`).all()
       .map(publicBusiness);
     return send(res, 200, { ok: true, businesses: list });
   }
   if (pathname === '/api/business') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (negociosLocked() && !negociosExempt(a)) return send(res, 403, negociosLockError());
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('id'));
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     try { db.prepare('UPDATE businesses SET views = COALESCE(views,0)+1 WHERE id=?').run(b.id); } catch (e) {}

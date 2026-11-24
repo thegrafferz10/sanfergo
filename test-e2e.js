@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.63 en /api/health', h.ok && h.version === '1.4.63', JSON.stringify(h));
+  check('versión 1.4.64 en /api/health', h.ok && h.version === '1.4.64', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.63', h134.ok && h134.version === '1.4.63', JSON.stringify(h134));
+  check('versión 1.4.64', h134.ok && h134.version === '1.4.64', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.63)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.63';") && h.version === '1.4.63', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.64)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.64';") && h.version === '1.4.64', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1171,13 +1171,13 @@ async function api(path, body) {
   const biz2 = await api('/api/request-business', { token: accBea.token, name: 'Pizzería Prueba ' + RUN, type: 'entrega', whatsapp: '9610000012', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 25, description: 'Pizzas y pan' });
   check('negocio creado con categoría, colonia, horario y envío $25', biz2.ok && biz2.business.category === 'Comida' && biz2.business.colony === 'Centro' && biz2.business.schedule === 'Lunes a sábado, 9 AM a 7 PM' && biz2.business.delivery_fee === 25, JSON.stringify(biz2.business));
   await api('/api/approve-business', { token: admLogin.token, business_id: biz2.business.id });
-  const v1 = await api('/api/business?id=' + biz2.business.id);
-  const v2 = await api('/api/business?id=' + biz2.business.id);
+  const v1 = await api('/api/business?id=' + biz2.business.id + '&token=' + admLogin.token);
+  const v2 = await api('/api/business?id=' + biz2.business.id + '&token=' + admLogin.token);
   check('abrir la ficha suma vistas (estadísticas Premium)', v2.ok && v2.business.views >= (v1.business.views || 0) + 1, JSON.stringify([v1.business.views, v2.business.views]));
   const pr2 = await api('/api/add-product', { token: accBea.token, business_id: biz2.business.id, name: 'Pizza pepperoni', price: 120, description: 'Con queso y pepperoni' });
   check('producto con descripción', pr2.ok && pr2.product.description === 'Con queso y pepperoni', JSON.stringify(pr2));
   const av0 = await api('/api/set-product-available', { token: accBea.token, product_id: pr2.product.id, available: 0 });
-  const pr2Off = await api('/api/business?id=' + biz2.business.id);
+  const pr2Off = await api('/api/business?id=' + biz2.business.id + '&token=' + admLogin.token);
   check('producto marcado no disponible hoy', av0.ok && (pr2Off.business.products || []).find(p => p.id === pr2.product.id).available === 0, JSON.stringify(pr2Off.business.products));
   await api('/api/set-product-available', { token: accBea.token, product_id: pr2.product.id, available: 1 });
   // Los servicios solo van en negocios de citas (el de entrega vende
@@ -1185,7 +1185,7 @@ async function api(path, body) {
   const sv2 = await api('/api/add-service', { token: li1.token, business_id: biz.business.id, name: 'Tinte', price: 200, description: 'Tinte completo', duration_minutes: 90 });
   check('servicio con descripción y duración', sv2.ok && sv2.service.duration_minutes === 90, JSON.stringify(sv2));
   const avS = await api('/api/set-service-available', { token: li1.token, service_id: sv2.service.id, available: 0 });
-  const sv2Off = await api('/api/business?id=' + biz.business.id);
+  const sv2Off = await api('/api/business?id=' + biz.business.id + '&token=' + admLogin.token);
   check('servicio marcado no disponible', avS.ok && (sv2Off.business.services || []).find(x => x.id === sv2.service.id).available === 0, JSON.stringify(sv2Off.business.services));
   // (d) Pedido con el envío CONFIGURADO del negocio ($25, no $20 fijo).
   const ord = await api('/api/create-order', { token: accBea.token, business_id: biz2.business.id, items: [{ product_id: pr2.product.id, qty: 2 }], customer_name: 'Ana Cuenta', customer_phone: accPhone, delivery_zone: 'Centro', delivery_address: 'Casa verde junto a la tienda', payment_method: 'efectivo', note: 'Sin cebolla' });
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.63 en /api/health (sección)', h27.ok && h27.version === '1.4.63', JSON.stringify(h27));
+  check('versión 1.4.64 en /api/health (sección)', h27.ok && h27.version === '1.4.64', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.63 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.63', JSON.stringify(h28));
+  check('versión 1.4.64 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.64', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.63 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.63', JSON.stringify(h29));
+  check('versión 1.4.64 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.64', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.63 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.63', JSON.stringify(h30));
+  check('versión 1.4.64 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.64', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2899,7 +2899,7 @@ async function api(path, body) {
   const biz57c = await api('/api/request-business', { token: acc57c.token, name: 'Tienda 57C ' + RUN, type: 'entrega', whatsapp: '9610000059', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Sin productos 57' });
   await api('/api/approve-business', { token: admLogin.token, business_id: biz57c.business.id });
   check('v1.4.57: en vivo, negocio C (entrega, Comida) sin productos creado', biz57c.ok && biz57c.business.id, JSON.stringify(biz57c));
-  const listLive57 = await api('/api/businesses');
+  const listLive57 = await api('/api/businesses?token=' + admLogin.token);
   const live57 = (listLive57.businesses||[]).filter(b=>['Tienda 57A ', 'Salón 57B ', 'Tienda 57C '].some(p=>String(b.name||'').startsWith(p)));
   const liveA57 = live57.find(b=>String(b.name||'').startsWith('Tienda 57A '));
   const liveB57 = live57.find(b=>String(b.name||'').startsWith('Salón 57B '));
@@ -3025,7 +3025,7 @@ async function api(path, body) {
   const ad58p2 = await api('/api/create-ad', { token: admLogin.token, kind: 'negocio', business_id: biz58p.business.id, label: 'Ad 58P ' + RUN, image: 'data:image/jpeg;base64,' + 'F'.repeat(100), entries: ['negocios'], slot: 'panel' });
   const ads58p = await api('/api/ads');
   const ad58pLive = (ads58p.ads || []).find(a => a.id === (ad58p.ad && ad58p.ad.id));
-  const biz58pMenu = await api('/api/business?id=' + biz58p.business.id);
+  const biz58pMenu = await api('/api/business?id=' + biz58p.business.id + '&token=' + admLogin.token);
   check('v1.4.58: en vivo, el anuncio vinculado existe con banner y su negocio trae el menú (1 producto)', ad58p.ok && ad58p2.ok && ad58p2.ad.id === ad58p.ad.id && !!ad58pLive && ad58pLive.business_id === biz58p.business.id && !!ad58pLive.banner_image && biz58pMenu.ok && (biz58pMenu.business.products || []).length === 1, JSON.stringify({ ad: ad58pLive && { id: ad58pLive.id, biz: ad58pLive.business_id, banner: !!(ad58pLive.banner_image) }, menu: biz58pMenu.business && (biz58pMenu.business.products || []).length }));
   // (8) Suspender / eliminar negocios antiguos (estático + en vivo).
   const suspSec = srv.slice(srv.indexOf("'/api/admin/suspend-business'"), srv.indexOf("'/api/admin/delete-business'"));
@@ -3037,15 +3037,15 @@ async function api(path, body) {
   check('v1.4.58: en vivo, una cuenta que no es admin NO puede suspender (403)', !sus58No.ok && /Solo el administrador/.test(sus58No.error || ''), JSON.stringify(sus58No));
   const sus58 = await api('/api/admin/suspend-business', { token: admLogin.token, business_id: biz58p.business.id });
   check('v1.4.58: en vivo, el admin suspende el negocio: status suspendido', sus58.ok && sus58.business.status === 'suspendido', JSON.stringify(sus58));
-  const list58s = await api('/api/businesses');
+  const list58s = await api('/api/businesses?token=' + admLogin.token);
   check('v1.4.58: en vivo, el negocio suspendido ya NO se ve en Negocios', !(list58s.businesses || []).some(b => b.id === biz58p.business.id), JSON.stringify((list58s.businesses || []).map(b => b.id)));
-  const one58s = await api('/api/business?id=' + biz58p.business.id);
+  const one58s = await api('/api/business?id=' + biz58p.business.id + '&token=' + admLogin.token);
   check('v1.4.58: en vivo, la ficha del negocio suspendido da 404', !one58s.ok, JSON.stringify(one58s));
   const adm58s = await api('/api/admin-businesses?token=' + admLogin.token);
   const susRow58 = (adm58s.businesses || []).find(b => b.id === biz58p.business.id);
   check('v1.4.58: en vivo, el negocio suspendido conserva sus datos (1 producto) y se puede reactivar', !!susRow58 && susRow58.status === 'suspendido' && (susRow58.products || []).length === 1, JSON.stringify(susRow58 && { status: susRow58.status, p: (susRow58.products || []).length }));
   const rea58 = await api('/api/admin/suspend-business', { token: admLogin.token, business_id: biz58p.business.id });
-  const list58r = await api('/api/businesses');
+  const list58r = await api('/api/businesses?token=' + admLogin.token);
   check('v1.4.58: en vivo, reactivado vuelve a verse en Negocios', rea58.ok && rea58.business.status === 'activo' && (list58r.businesses || []).some(b => b.id === biz58p.business.id), JSON.stringify(rea58));
   const acc58d = await api('/api/register-account', { name: 'Biz 58D', username: 'biz58d_' + RUN, phone: '961582' + RUN.slice(0, 4), password: 'secreta123' });
   const biz58d = await api('/api/request-business', { token: acc58d.token, name: 'Tienda 58D ' + RUN, type: 'entrega', whatsapp: '9610000059', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Borrar 58' });
@@ -3056,9 +3056,9 @@ async function api(path, body) {
   const del58No = await api('/api/admin/delete-business', { token: acc57a.token, business_id: biz58d.business.id });
   check('v1.4.58: en vivo, una cuenta que no es admin NO puede eliminar negocios (403)', !del58No.ok && /Solo el administrador/.test(del58No.error || ''), JSON.stringify(del58No));
   const del58 = await api('/api/admin/delete-business', { token: admLogin.token, business_id: biz58d.business.id });
-  const list58d = await api('/api/businesses');
+  const list58d = await api('/api/businesses?token=' + admLogin.token);
   const adm58d = await api('/api/admin-businesses?token=' + admLogin.token);
-  const one58d = await api('/api/business?id=' + biz58d.business.id);
+  const one58d = await api('/api/business?id=' + biz58d.business.id + '&token=' + admLogin.token);
   check('v1.4.58: en vivo, el admin elimina el negocio: ya no está en Negocios, ni en el panel, ni su ficha existe', del58.ok && !(list58d.businesses || []).some(b => b.id === biz58d.business.id) && !(adm58d.businesses || []).some(b => b.id === biz58d.business.id) && !one58d.ok, JSON.stringify(del58));
   const ads58d = await api('/api/ads');
   const ad58dLive = (ads58d.ads || []).find(a => a.id === (ad58d.ad && ad58d.ad.id));
@@ -3657,6 +3657,63 @@ async function api(path, body) {
   check('v1.4.61: evaluado — esa única mototaxi queda en la posición MÁS FRESCA del chofer (la del sondeo, no la de cuando abrió el mapa)', !!live61 && live61.motoPosOk, JSON.stringify(live61 && { motoPosA: live61.motoPosA }));
   check('v1.4.61: evaluado — el encuadre del pasajero es la ruta restante con el padding del chofer (no los dos puntos del viaje a lo ancho del pueblo)', !!live61 && live61.fitOk, JSON.stringify(live61 && { fitPadA: live61.fitPadA, fit0: live61.fitPtsA && live61.fitPtsA[0], routeLen: live61.routeA && live61.routeA.length }));
   check('v1.4.61: evaluado — en el mapa del PASAJERO el marcador se mueve con cada lectura del sondeo (tiempo real) y el zoom de proximidad sube 16→17→18 al acercarse al destino', !!live61 && live61.movesOk, JSON.stringify(live61 && { moves: live61.markerMovesB.length, zoomsB: live61.zoomsB }));
+
+  // ===== v1.4.64 (2026-11-24): candado de Negocios — solo entra el perfil del dueño (@thegrafferz10); el admin lo abre/cierra desde el panel =====
+  // Por defecto BLOQUEADO (sin fila en admin_state = bloqueado). El candado se aplica en el SERVIDOR: /api/businesses y /api/business devuelven 403 con locked:true a quien no esté exento. En el inicio, la tarjeta de Negocios muestra 🔒 + «Próximamente» y al tocarla solo avisa. Los endpoints de crear/administrar negocios y los pedidos/citas (ya con su propio permiso de dueña/admin) no cambian; el listado y la ficha son la superficie que se bloquea.
+  check('v1.4.64: el servidor tiene el candado de Negocios con bloqueo por defecto (sin fila = bloqueado) y exención solo para admin y @thegrafferz10', srv.includes("function negociosLocked(){") && srv.includes("key='negocios_locked'") && srv.includes("return !row || row.value !== '0';") && srv.includes("function negociosExempt(a){ return !!a && (a.role === 'admin' || a.username === 'thegrafferz10'); }"));
+  check('v1.4.64: /api/businesses y /api/business devuelven 403 con locked:true si el candado está puesto y la cuenta no está exenta', (srv.split("if (negociosLocked() && !negociosExempt(a)) return send(res, 403, negociosLockError());").length - 1) === 2 && srv.includes("function negociosLockError(){ return { ok: false, locked: true, error: 'Negocios está bloqueado por ahora.' }; }"));
+  check('v1.4.64: /api/admin/set-negocios-locked existe, solo admin, guarda el estado en admin_state y por defecto bloquea (sin locked = bloqueado)', srv.includes("'/api/admin/set-negocios-locked'") && srv.includes("INSERT OR REPLACE INTO admin_state (key, value) VALUES ('negocios_locked', ?)") && srv.includes("const locked = body.locked !== false && body.locked !== '0' && body.locked !== 0;") && srv.includes("return send(res, 200, { ok: true, negocios_locked: locked });"));
+  check('v1.4.64: /api/me devuelve negocios_locked (el cliente lo lee al iniciar sesión)', srv.includes("negocios_locked: negociosLocked()"));
+  check('v1.4.64: el cliente guarda el candado al iniciar sesión y la exención es admin o @thegrafferz10', html.includes("let negociosLocked = true;") && html.includes("negociosLocked = !!j.negocios_locked;") && html.includes("function negociosCanEnter(){ return !negociosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }"));
+  check('v1.4.64: el inicio muestra 🔒 + Próximamente en la tarjeta de Negocios cuando está bloqueado y la cuenta no es la del dueño', (()=>{ const h0 = html.indexOf('function renderHome(){'); const h1 = html.indexOf('function renderViajes', h0); const s = html.slice(h0, h1); return s.includes('negociosCanEnter()') && s.includes('🔒') && s.includes('Próximamente') && s.includes('Negocios está bloqueado por ahora.'); })());
+  check('v1.4.64: openNegocios no entra con el candado puesto (avisa y vuelve, no va a Negocios)', html.includes("function openNegocios(){ if(!negociosCanEnter()){ toast('Negocios está bloqueado por ahora.'); return; }"));
+  check('v1.4.64: el listado y la ficha ya no son públicos — renderBizMain, la ficha, el carrito y las dos pantallas del admin pasan el token', html.includes("api('/api/businesses?token=' + encodeURIComponent(store.token || ''))") && html.includes("api('/api/business?id=' + id + '&token=' + encodeURIComponent(store.token || ''))") && html.includes("api('/api/business?id=' + bizCurrent + '&token=' + encodeURIComponent(store.token || ''))") && (html.split("api('/api/businesses?token=' + encodeURIComponent(store.token))").length - 1) === 2 && !html.includes("api('/api/businesses')") && !html.includes("api('/api/business?id=' + id)") && !html.includes("api('/api/business?id=' + bizCurrent)"));
+  check('v1.4.64: con el candado puesto, renderBizMain muestra la tarjeta del candado en vez del feed vacío', html.includes("if(e && e.data && e.data.locked)") && html.includes("Negocios bloqueado por ahora"));
+  check('v1.4.64: el panel del admin tiene el interruptor del candado con su estado (bloqueado/abierto) y el botón para abrir/bloquear', html.includes("toggleNegociosLock()") && html.includes("Negocios bloqueado") && html.includes("Negocios abierto") && html.includes("Abrir Negocios") && html.includes("Bloquear Negocios") && html.includes("'/api/admin/set-negocios-locked'"));
+  // --- Evaluado: la lógica de exención (función real del cliente) ---
+  let can64 = null;
+  try {
+    const m64 = html.match(/function negociosCanEnter\(\)\{[^}]*\}/);
+    if (!m64) throw new Error('sin negociosCanEnter');
+    const f64 = new Function('negociosLocked', 'myAccount', m64[0] + '; return negociosCanEnter();');
+    can64 = {
+      lockedOwner: f64(true, { username: 'thegrafferz10', role: 'user' }),
+      lockedAdmin: f64(true, { username: 'admin', role: 'admin' }),
+      lockedOther: f64(true, { username: 'pax64', role: 'user' }),
+      lockedNone: f64(true, null),
+      openOther: f64(false, { username: 'pax64', role: 'user' })
+    };
+  } catch(e){ can64 = null; }
+  check('v1.4.64: evaluado — negociosCanEnter: con candado solo entran @thegrafferz10 y admin; sin candado entran todos; sin sesión nadie (falsy, no estrictamente false)', !!can64 && can64.lockedOwner === true && can64.lockedAdmin === true && can64.lockedOther === false && !can64.lockedNone && can64.openOther === true, JSON.stringify(can64));
+  // --- Evaluados: el candado en vivo (BD limpia) ---
+  const acc64 = await api('/api/register-account', { name: 'Pax 64', username: 'pax64_' + RUN, phone: '961640' + RUN.slice(0, 4), password: 'secreta123' });
+  const me64 = await api('/api/me?token=' + acc64.token);
+  check('v1.4.64: en vivo — por defecto Negocios está BLOQUEADO: /api/me lo dice', me64.ok && me64.negocios_locked === true, JSON.stringify(me64 && { locked: me64.negocios_locked }));
+  const list64Locked = await api('/api/businesses?token=' + acc64.token);
+  check('v1.4.64: en vivo — un pasajero normal NO lista negocios con el candado puesto (403 locked)', !list64Locked.ok && list64Locked.locked === true, JSON.stringify(list64Locked));
+  const anon64 = await api('/api/businesses');
+  check('v1.4.64: en vivo — sin sesión tampoco se listan negocios (403 locked)', !anon64.ok && anon64.locked === true, JSON.stringify(anon64));
+  const one64Locked = await api('/api/business?id=1&token=' + acc64.token);
+  check('v1.4.64: en vivo — un pasajero normal NO abre la ficha con el candado puesto (403 locked)', !one64Locked.ok && one64Locked.locked === true, JSON.stringify(one64Locked));
+  const own64 = await api('/api/register-account', { name: 'Josue Eduardo', username: 'thegrafferz10', phone: '961641' + RUN.slice(0, 4), password: 'secreta123' });
+  const biz64 = await api('/api/request-business', { token: own64.token, name: 'Tienda 64 ' + RUN, type: 'entrega', whatsapp: '9610000064', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado', delivery_fee: 20, description: 'Prueba candado 64' });
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz64.business.id });
+  const list64Own = await api('/api/businesses?token=' + own64.token);
+  check('v1.4.64: en vivo — @thegrafferz10 SÍ lista negocios con el candado puesto (exento)', list64Own.ok && (list64Own.businesses || []).some(b => b.id === biz64.business.id), JSON.stringify((list64Own.businesses || []).map(b => b.id)));
+  const one64Own = await api('/api/business?id=' + biz64.business.id + '&token=' + own64.token);
+  check('v1.4.64: en vivo — @thegrafferz10 SÍ abre la ficha con el candado puesto', one64Own.ok && one64Own.business.id === biz64.business.id, JSON.stringify(one64Own));
+  const list64Adm = await api('/api/businesses?token=' + admLogin.token);
+  check('v1.4.64: en vivo — el admin también está exento del candado', list64Adm.ok && (list64Adm.businesses || []).some(b => b.id === biz64.business.id), JSON.stringify(list64Adm.ok));
+  const tog64No = await api('/api/admin/set-negocios-locked', { token: acc64.token, locked: false });
+  check('v1.4.64: en vivo — una cuenta que no es admin NO puede cambiar el candado (403)', !tog64No.ok && /Solo el administrador/.test(tog64No.error || ''), JSON.stringify(tog64No));
+  const tog64Open = await api('/api/admin/set-negocios-locked', { token: admLogin.token, locked: false });
+  const list64Open = await api('/api/businesses?token=' + acc64.token);
+  check('v1.4.64: en vivo — el admin abre Negocios y el pasajero normal ya lista', tog64Open.ok && tog64Open.negocios_locked === false && list64Open.ok && (list64Open.businesses || []).some(b => b.id === biz64.business.id), JSON.stringify({ tog: tog64Open, n: (list64Open.businesses || []).length }));
+  const me64Open = await api('/api/me?token=' + acc64.token);
+  check('v1.4.64: en vivo — /api/me refleja el candado abierto', me64Open.ok && me64Open.negocios_locked === false, JSON.stringify(me64Open && { locked: me64Open.negocios_locked }));
+  const tog64Lock = await api('/api/admin/set-negocios-locked', { token: admLogin.token, locked: true });
+  const list64Relock = await api('/api/businesses?token=' + acc64.token);
+  check('v1.4.64: en vivo — el admin vuelve a bloquear y el pasajero normal queda fuera otra vez (el candado queda puesto)', tog64Lock.ok && tog64Lock.negocios_locked === true && !list64Relock.ok && list64Relock.locked === true, JSON.stringify(tog64Lock));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.4.63)
+# SanFerGo — versión pública (v1.4.64)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.64 (2026-11-24) — Candado de Negocios: solo entra el perfil del dueño
+
+- Negocios queda BLOQUEADO por defecto: en el inicio, la tarjeta de Negocios muestra 🔒 + «Próximamente» y al tocarla solo avisa (no entra). Solo el perfil del dueño (@thegrafferz10) y el admin entran a Negocios como antes, sin cambios.
+- El candado se aplica en el SERVIDOR, no solo se esconde en el cliente: /api/businesses y /api/business devuelven 403 con locked:true a quien no esté exento (también sin sesión). El listado y la ficha ya no son públicos: el cliente pasa el token en todos sus fetch de Negocios.
+- Interruptor en el panel del administrador («🔒 Negocios bloqueado/abierto», con su estado y botón «Abrir Negocios» / «Bloquear Negocios»), respaldado por POST /api/admin/set-negocios-locked (solo admin; sin el parámetro locked se bloquea, el valor seguro por defecto). El perfil del dueño sigue exento aunque el candado esté puesto.
+- Los endpoints de crear/administrar negocios y los pedidos/citas (que ya tenían su propio permiso de dueña/admin) no cambian; viajes, mandados, modo chofer, recibos, anuncios, tarifas y suscripciones tampoco. Los anuncios de entrada no cambian: quien está bloqueado nunca entra a Negocios.
+- Pruebas: suite completa contra BD limpia: **1023 OK, 0 FAIL** (1001 de antes + 22 nuevas: 10 estáticas del candado/interruptor, 1 evaluada de la lógica de exención y 11 en vivo del candado, la exención y el interruptor; checks actualizados: 7 de versión a 1.4.64 y 11 lecturas de negocios que ahora pasan el token del admin).
 
 ## v1.4.63 (2026-11-24) — Recibo del CHOFER: la línea ya no dice lo del pasajero
 
