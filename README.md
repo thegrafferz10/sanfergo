@@ -1,9 +1,18 @@
-# SanFerGo — versión pública (v1.4.62)
+# SanFerGo — versión pública (v1.4.63)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.63 (2026-11-24) — Recibo del CHOFER: la línea ya no dice lo del pasajero
+
+- El recibo del CHOFER (viaje) ya NO dice "Recuerda revisar todas tus pertenencias" — esa línea es del pasajero. El usuario la corrigió así: "Revisa que el pasajero no haya olvidado algo en tu mototaxi", en la misma banda crema de siempre. Todo lo demás del recibo del chofer queda igual: tarjeta naranja, "Resumen del viaje", "Gracias por concluir el viaje", precio en grande, X arriba, tarjeta centrada.
+- El recibo del PASAJERO sigue con su línea "Recuerda revisar todas tus pertenencias" sin cambios.
+- Recibos de MANDADOS al diseño naranja nuevo (antes salían VIEJOS: tarjeta blanca con tabla + "Generar recibo"): pasajero "¡Mandado entregado!" con "Tu mandado ha concluido. Gracias por usar SanFerGo.", precio final en grande y la banda "Recuerda pagar con cambio al conductor" SOLO en efectivo, SIN línea de pertenencias; chofer "Resumen del mandado" con "Gracias por concluir el mandado" y precio en grande, SIN cambio ni pertenencias; sin tabla, sin mini mapa, sin "Generar recibo"; X arriba y tarjeta centrada; también desde "Ver recibo" del historial (el diálogo viejo de showReceipt ya no lo usa ningún recibo).
+- Al entrar a trabajar como chofer, la pestaña inicial ahora es Recibir Viajes, no Inicio (la barra inferior sigue con Inicio / Taxímetro / Recibir Viajes para cambiar cuando quiera; con viaje activo el aviso verde con "Ver mi viaje en curso" sigue ahí como antes).
+- Nada más cambia.
+- Pruebas: suite completa contra BD limpia: **1001 OK, 0 FAIL** (993 de antes + 8 nuevas: 2 estáticas de las ramas de mandado, 2 evaluadas nuevas de los recibos de mandado (transferencia del pasajero y chofer), 1 evaluada nueva de "Ver recibo" de mandado del chofer y 3 de la pestaña inicial del chofer; checks actualizados: el recibo de mandado del pasajero, el diálogo viejo de showReceipt, el "Ver recibo" de mandado del pasajero y el v1.4.48 de personas en el recibo — el recibo naranja ya no lleva ese renglón por diseño).
 
 ## v1.4.62 (2026-11-24) — Recibo naranja: pertenencias + X arriba + tarjeta centrada + recibo del CHOFER igual de bonito
 
