@@ -524,7 +524,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.48'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.49'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1905,11 +1905,10 @@ async function renderViajes(){
     const oz = nearestZoneName(wiz.origin), dz = nearestZoneName(wiz.dest);
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="wiz-map"></div>'
       + '<div class="strip top" style="background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">'
-      + '<button class="backpill" style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="wiz.step=3;renderViajes()">‹ Regresar</button>'
       + '<div class="pick-instructions" style="width:100%"><div style="display:flex;gap:8px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:#22c55e;flex-shrink:0"></span><span style="flex:1">Punto en el mapa · cerca de '+esc(oz||wiz.origin.zone||'')+'</span></div>'
       + '<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;flex-shrink:0"></span><span style="flex:1">Punto en el mapa · cerca de '+esc(dz||wiz.dest.zone||'')+'</span></div>'
       + '<div class="muted" style="margin-top:8px">≈ '+wiz.eta+' min · '+wiz.km.toFixed(1)+' km de recorrido</div></div></div>'
-      + '<div class="strip bottom" style="background:#fff">' + priceSheetHtml('viaje') + '</div></div>';
+      + '<div class="strip bottom" style="background:#fff;max-height:calc(100dvh - 24px);overflow-y:auto">' + priceSheetHtml('viaje') + '</div></div>';
     setTimeout(()=>drawWizMap(), 60);
     return;
   }
@@ -2283,7 +2282,17 @@ function priceSheetHtml(kind){
     extra = '<div style="background:#14532d;color:#fff;border-radius:12px;padding:12px;display:flex;justify-content:space-between;margin-top:8px"><span>Distancia estimada · '+md.km.toFixed(1)+' km</span><span>Tiempo estimado · ≈ '+md.eta+' min</span></div>'
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
   }
-  return '<b>'+(isTrip ? 'Tu precio' : 'Precio y publicar')+'</b>'
+  // v1.4.49: el botón "‹ Regresar" vive DENTRO de la hoja, arriba de todo.
+  // Antes la píldora flotaba en la franja de arriba y la hoja (más alta
+  // desde v1.4.48 con el selector de personas) la tapaba: en el paso de
+  // precio no había forma de volver (reporte del usuario 21:58). Vuelve
+  // al paso anterior sin borrar nada (origen, destino, precio y personas
+  // se quedan en wiz/md). En mandados el paso anterior depende del flujo:
+  // Quiero está en el paso 5 (vuelve al 4) y Enviar en el 4 (vuelve al 3),
+  // por eso mdBack(md.step-1).
+  const backBtn = '<button class="backpill" style="margin:0 0 6px" onclick="'+(isTrip ? 'wiz.step=3;renderViajes()' : 'mdBack(md.step-1)')+'">‹ Regresar</button>';
+  return backBtn
+    + '<b>'+(isTrip ? 'Tu precio' : 'Precio y publicar')+'</b>'
     + (!isTrip ? mdPublishSummaryHtml() : '')
     + extra
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-weight:700">Tu precio</span><button class="sugg-pill" onclick="priceSetSuggested(\''+kind+'\')">Sugerido: '+fmt$(sugg)+'</button></div>'
@@ -3939,9 +3948,8 @@ function renderMandadoQuiero(){
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
       + '<div class="strip top" style="background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">'
-      + '<button class="backpill" style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(4)">‹ Regresar</button>'
       + '<div class="pick-instructions" style="width:100%"><b>'+esc(mdSummaryLine())+'</b><div class="muted" style="margin-top:4px">≈ '+md.eta+' min · '+md.km.toFixed(1)+' km de recorrido</div></div></div>'
-      + '<div class="strip bottom" style="background:#fff">' + priceSheetHtml('mandado') + '</div></div>';
+      + '<div class="strip bottom" style="background:#fff;max-height:calc(100dvh - 24px);overflow-y:auto">' + priceSheetHtml('mandado') + '</div></div>';
     setTimeout(()=>drawMdMap(), 60);
   }
 }
@@ -4025,9 +4033,8 @@ function renderMandadoEnviar(){
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
       + '<div class="strip top" style="background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">'
-      + '<button class="backpill" style="background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18);margin:0" onclick="mdBack(3)">‹ Regresar</button>'
       + '<div class="pick-instructions" style="width:100%"><b>'+esc(mdSummaryLine())+'</b><div class="muted" style="margin-top:4px">≈ '+md.eta+' min · '+md.km.toFixed(1)+' km de recorrido</div></div></div>'
-      + '<div class="strip bottom" style="background:#fff">' + priceSheetHtml('mandado') + '</div></div>';
+      + '<div class="strip bottom" style="background:#fff;max-height:calc(100dvh - 24px);overflow-y:auto">' + priceSheetHtml('mandado') + '</div></div>';
     setTimeout(()=>drawMdMap(), 60);
   }
 }
