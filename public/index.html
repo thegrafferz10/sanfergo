@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.37'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.38'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4077,12 +4077,17 @@ async function loadDriverInbox(force){
       const expanded = inboxExpandedId===r.id;
       // Fila compacta (v1.4.37): solo tipo, de → a y precio. Al tocarla se
       // abre el detalle completo con el resumen y aceptar/contraofertar.
+      // (v1.4.38) Si el pasajero contraofertó, la fila cerrada muestra el
+      // aviso ámbar para que el chofer lo vea de un vistazo.
       let card = '<div class="card white">'
-      + '<div class="flex" style="align-items:center;cursor:pointer" onclick="inboxToggle('+r.id+')">'
+      + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
+      + '<div class="flex" style="align-items:center">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
       + '<div class="flex1"><b>'+esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
       + '<b class="price">'+fmt$(r.price)+'</b>'
-      + '<span class="muted">'+(expanded?'▴':'▾')+'</span></div>';
+      + '<span class="muted">'+(expanded?'▴':'▾')+'</span></div>'
+      + (counter?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
+      + '</div>';
       if(!expanded) return card + '</div>';
       card += '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
       + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
