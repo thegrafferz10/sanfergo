@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.4.36)
+# SanFerGo — versión pública (v1.4.37)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.37 (2026-11-23) — Solicitudes compactas en Recibir Viajes: toca para ver el detalle
+
+- En **Recibir Viajes** cada solicitud abierta ahora es una fila compacta con solo tres cosas: la etiqueta Viaje/Mandado, de → a (por ejemplo "Mi ubicación → Punto de WhatsApp") y el precio, más una flecha ▾/▴. Ya no se ven en la lista el pasajero, la descripción, el resumen, la distancia ni los botones.
+- Al tocar una fila se abre en su lugar el detalle completo con lo mismo de antes (pasajero con foto y teléfono, De/A, distancia, precio, descripción, cosas, paradas, forma de pago, cuadro **Resumen del mandado** con quien recibe y el pago del pedido) y ahí mismo los botones **Aceptar $X** y **Contraofertar** (también la contraoferta del pasajero y el formulario de contraoferta, cuando aplican). Tocar la fila otra vez la cierra; tocar otra fila cambia la abierta.
+- El detalle abierto sobrevive al refresco silencioso: el id abierto (`inboxExpandedId`, nueva función `inboxToggle`) entra en la firma de datos de v1.4.36, así un refresco no colapsa el detalle ni pierde la contraoferta escrita; si la solicitud abierta ya no está en la lista (se aceptó o se canceló), se cierra sola. Sin parpadeo: "Cargando…" solo en la primera carga y el error sigue sin borrar la lista.
+- Sin tocar: la pestaña **En curso**, la tarjeta del mapa en vivo del chofer y el aviso flotante de nuevo viaje siguen con el resumen completo; el flujo de publicar, las tarifas y los viajes no cambian.
+- Pruebas: suite completa contra BD limpia: 525 OK, 0 FAIL (522 de antes + 3 nuevas estáticas: fila colapsada solo con tipo/de→a/precio, detalle expandido con resumen + Aceptar/Contraofertar, y detalle que sobrevive al refresco).
 
 ## v1.4.36 (2026-11-23) — La bandeja del chofer ya no parpadea y es lista, no páginas
 
