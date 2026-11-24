@@ -543,7 +543,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.55'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.56'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4887,7 +4887,13 @@ function inboxDetailHtml(r, sub, atLimit){
   // flotante. Al final, el botón para cerrar y volver a ver todas las
   // solicitudes (la X de arriba también lo cierra).
   const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
-  const counter = mine && mine.passenger_counter_price;
+  // (v1.4.56) Una oferta rechazada está MUERTA: no decide los botones.
+  // Solo la oferta VIVA (pendiente) cuenta como 'ya respondiste' o como
+  // contraoferta del pasajero; la rechazada solo deja su aviso naranja y
+  // el chofer puede aceptar el precio del pasajero o contraofertar de
+  // nuevo (el servidor ya no la da por contestada).
+  const mineLive = mine && mine.status!=='rechazada' ? mine : null;
+  const counter = mineLive && mineLive.passenger_counter_price;
   const highFare = r.price >= 80;
   let h = '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
   + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
@@ -4906,25 +4912,32 @@ function inboxDetailHtml(r, sub, atLimit){
   + mandadoDriverSummaryHtml(r);
   // (v1.4.54) Oferta rechazada: el aviso NARANJA dice qué se rechazó.
   // Si el pasajero rechazó la oferta del chofer, eso dice; si el chofer
-  // rechazó la contraoferta del pasajero, eso dice. En ambos casos ya
-  // no se puede responder esa solicitud, así que no se muestran los
-  // botones de la contraoferta (estarían muertos: el servidor la da por
-  // contestada).
+  // rechazó la contraoferta del pasajero, eso dice. (v1.4.56) El aviso
+  // ya NO quita los botones: la oferta rechazada no bloquea aceptar el
+  // precio del pasajero ni contraofertar de nuevo, así que el aviso es
+  // solo informativo y los botones salen debajo, como en una solicitud
+  // sin responder.
   const rejectedD = mine && mine.status==='rechazada';
   if(rejectedD){
-    h += '<div class="card" style="background:#ffedd5;border:1px solid #f97316"><b>'+(counter ? 'Rechazaste su contraoferta de '+fmt$(counter)+'.' : 'Rechazado: el pasajero rechazó tu oferta de '+fmt$(mine.price)+'.')+'</b><p class="muted mt">Esta solicitud sigue abierta para otros choferes. Puedes quitarla de tu bandeja deslizando la fila a la izquierda.</p></div>';
-  } else if(counter){
-    h += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
+    h += '<div class="card" style="background:#ffedd5;border:1px solid #f97316"><b>'+(mine.passenger_counter_price ? 'Rechazaste su contraoferta de '+fmt$(mine.passenger_counter_price)+'.' : 'Rechazado: el pasajero rechazó tu oferta de '+fmt$(mine.price)+'.')+'</b><p class="muted mt">Esta solicitud sigue abierta para otros choferes. Puedes quitarla de tu bandeja deslizando la fila a la izquierda.</p></div>';
+  }
+  if(counter){
+    h += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mineLive.price)+').</b>'
       + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
-      + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
-      + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mine.id+')">Rechazar contraoferta</button></div></div>';
-  } else if(mine){
-    h += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mine.kind==='contraoferta' ? 'contraofertaste '+fmt$(mine.price) : 'aceptaste '+fmt$(mine.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
+      + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mineLive.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
+      + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mineLive.id+')">Rechazar contraoferta</button></div></div>';
+  } else if(mineLive){
+    h += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mineLive.kind==='contraoferta' ? 'contraofertaste '+fmt$(mineLive.price) : 'aceptaste '+fmt$(mineLive.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
   } else if(highFare && !sub){
     h += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
   } else if(atLimit){
     h += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
   } else if(driverCounter && driverCounter.rid===r.id){
+    // (v1.4.56) El borrador nunca se pre-llena por debajo del precio
+    // actual del pasajero: la contraoferta vieja y rechazada ($30) no
+    // puede aparecer cuando el pasajero ya subió a $35. El borrador
+    // arranca en el precio del pasajero (o en el mínimo por personas).
+    driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP);
     h += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
       + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
       + '<p class="muted center mt">De $5 en $5, mínimo '+fmt$(r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP)+'.</p>'
@@ -5011,6 +5024,11 @@ async function driverRespond(rid, kind, price){
   driverRespondBusy = true;
   try {
     const j = await api('/api/driver-respond', { driver_id: myDriver.id, request_id: rid, kind, price });
+    // (v1.4.56) La respuesta ya se envió: el borrador de contraoferta
+    // se borra. Antes quedaba vivo en la página y al volver a abrir el
+    // detalle salía el formulario viejo (pre-llenado con la contraoferta
+    // ya rechazada) en vez del botón Aceptar.
+    driverCounter = null;
     // Aceptar ya confirma al instante: el servidor devuelve el viaje aceptado.
     if(kind==='acepta' && j && j.request && j.request.status==='aceptado'){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
     toast(kind==='acepta'?'Oferta enviada. Esperando al pasajero.':'Contraoferta enviada.'); renderDriverInbox();
@@ -5025,7 +5043,7 @@ async function driverRespond(rid, kind, price){
       try {
         const j2 = await api('/api/requests?id='+rid);
         const r2 = (j2.requests||[])[0];
-        if(r2 && r2.status==='aceptado' && r2.driver_id===myDriver.id){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
+        if(r2 && r2.status==='aceptado' && r2.driver_id===myDriver.id){ driverCounter = null; toast('¡Viaje confirmado!'); goLive(rid, true); return; }
       } catch(e2){}
     }
     toast(e.message);
