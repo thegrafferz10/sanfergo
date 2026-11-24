@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.51 en /api/health', h.ok && h.version === '1.4.51', JSON.stringify(h));
+  check('versión 1.4.52 en /api/health', h.ok && h.version === '1.4.52', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.51', h134.ok && h134.version === '1.4.51', JSON.stringify(h134));
+  check('versión 1.4.52', h134.ok && h134.version === '1.4.52', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.51)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.51';") && h.version === '1.4.51', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.52)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.52';") && h.version === '1.4.52', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.51 en /api/health (sección)', h27.ok && h27.version === '1.4.51', JSON.stringify(h27));
+  check('versión 1.4.52 en /api/health (sección)', h27.ok && h27.version === '1.4.52', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.51 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.51', JSON.stringify(h28));
+  check('versión 1.4.52 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.52', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.51 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.51', JSON.stringify(h29));
+  check('versión 1.4.52 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.52', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.51 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.51', JSON.stringify(h30));
+  check('versión 1.4.52 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.52', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2183,6 +2183,79 @@ async function api(path, body) {
   const mine51 = open51.ok ? open51.requests.filter(r=>r.passenger_id===pax51.passenger.id) : [];
   check('v1.4.51: en vivo, la lista ligera del chofer (?open=1&light=1) trae passenger_count en los 3 viajes (es lo que lee la fila compacta)', open51.ok && mine51.filter(r=>r.kind==='viaje').length === 3 && mine51.filter(r=>r.kind==='viaje').every(r=>[1,2,3].includes(r.passenger_count)) && mine51.find(r=>r.kind==='viaje' && r.price===30).passenger_count === 3, JSON.stringify(mine51.map(r=>({ k: r.kind, p: r.passenger_count, pr: r.price }))));
   check('v1.4.51: en vivo, el mandado en la lista del chofer trae passenger_count=1 (la fila no muestra personas)', open51.ok && mine51.filter(r=>r.kind==='mandado').length === 1 && mine51.find(r=>r.kind==='mandado').passenger_count === 1, JSON.stringify(mine51.map(r=>({ k: r.kind, p: r.passenger_count }))));
+
+  // --- v1.4.52: al llegar una oferta, la pantalla "Buscando tu mototaxi…"
+  //     quita la tarjeta del viaje y sube la oferta a su lugar; con varias
+  //     ofertas, carrusel horizontal en su sitio (scroll-snap, se desliza
+  //     de lado, no es una página); "Cancelar viaje" queda como apartado
+  //     propio debajo de las ofertas (reporte del usuario 22:38, captura
+  //     10:36 PM con la X roja sobre la tarjeta del viaje de $30 y la
+  //     contraoferta de $35 de Josué Eduardo). Sin ofertas, todo queda
+  //     como antes. La pantalla de espera del mandado no se toca.
+  const searchSec52 = html.slice(html.indexOf('async function renderSearching(){'), html.indexOf('let autoConfirmedReqs = {};'));
+  const tripCardSec52 = searchSec52.slice(searchSec52.indexOf("const tripCard = '"), searchSec52.indexOf("const cancelHtml = '"));
+  check('v1.4.52: la tarjeta del viaje ya no lleva "Cancelar viaje" dentro (se quita con la tarjeta)', !tripCardSec52.includes('Cancelar viaje'));
+  check('v1.4.52: "Cancelar viaje" es su propio apartado (cancelHtml) con el mismo botón rojo y el mismo cancelMyRequest', searchSec52.includes("const cancelHtml = '<div class=\"center\" style=\"margin-top:14px\"><button class=\"linklike\" style=\"color:var(--red)\" onclick=\"cancelMyRequest()\">Cancelar viaje</button></div>'"));
+  check('v1.4.52: con ofertas la tarjeta se quita y la oferta sube a su lugar (título + ofertas en vez de la tarjeta)', searchSec52.includes('(offers.length ? titleHtml + offersHtml : tripCard)'));
+  check('v1.4.52: el apartado de cancelar va DESPUÉS de las ofertas (al final del armado)', searchSec52.indexOf('+ cancelHtml;') > searchSec52.indexOf('(offers.length ? titleHtml + offersHtml : tripCard)'));
+  check('v1.4.52: el carrusel de ofertas es scroll-snap en su sitio (CSS .offer-carousel, sin transform translateX en esta pantalla)', html.includes('.offer-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory') && searchSec52.includes('class="offer-carousel"') && searchSec52.includes('class="offer-slide"') && !searchSec52.includes('translateX'));
+  check('v1.4.52: al deslizar se actualizan solo los puntos y el contador (scroll listener, sin repintar la pantalla)', searchSec52.includes("addEventListener('scroll'") && searchSec52.includes("getElementById('offer-count')") && searchSec52.includes("getElementById('offer-dots')") && !searchSec52.includes("addEventListener('touchend'"));
+  check('v1.4.52: el sondeo de 5 s no saca al pasajero de la oferta que estaba viendo (se restaura scrollLeft con offerIdx)', searchSec52.includes('car.scrollLeft = offerIdx * car.clientWidth'));
+  const offerCardSec52 = html.slice(html.indexOf('function offerCard(r, o){'), html.indexOf('async function respondOffer'));
+  check('v1.4.52: cada tarjeta de oferta sigue con sus botones Aceptar / Contraofertar / Rechazar (no se tocan)', offerCardSec52.includes('Aceptar ') && offerCardSec52.includes('Contraofertar') && offerCardSec52.includes('Rechazar'));
+  // Evaluando el armado real de la pantalla: se extrae el bloque de
+  // renderSearching que arma el HTML (desde el filtro de ofertas hasta
+  // el box.innerHTML) y se ejecuta con solicitudes de mentira (0 ofertas,
+  // 1 contraoferta de $35, 2 contraofertas de $35 y $40), con la offerCard
+  // real y sin DOM.
+  const offerCardFn52 = new Function('esc','fmt$','minForPax', offerCardSec52 + '; return offerCard;')((s)=>String(s==null?'':s), (n)=>'$'+Math.round(Number(n)||0), (p)=>20 + 5*(Math.max(1, Math.min(3, Number(p)||1))-1));
+  const asmStart52 = searchSec52.indexOf("const offers = (r.offers||[]).filter(o=>o.status==='pendiente');");
+  const asmBox52 = searchSec52.indexOf('box.innerHTML =', asmStart52);
+  const asmEnd52 = searchSec52.indexOf(';', searchSec52.indexOf('+ cancelHtml;', asmBox52)) + 1;
+  const asm52 = searchSec52.slice(asmStart52, asmEnd52);
+  function runSearching52(r){
+    const boxStub = { innerHTML: '' };
+    return new Function('r','box','offerIdx','esc','fmt$','suggestedPrice','offerCard', asm52 + '; return box.innerHTML;')(r, boxStub, 0, (s)=>String(s==null?'':s), (n)=>'$'+Math.round(Number(n)||0), (km)=>20, offerCardFn52);
+  }
+  function req52(offers){
+    return { id: 999, status: 'buscando', kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', dest_zone: 'Mercado', dest_detail: 'Mercado', distance_km: 0.8, eta_minutes: 5, price: 30, suggested: 20, passenger_count: 3, offers };
+  }
+  function offer52(id, name, price){
+    return { id, status: 'pendiente', kind: 'contraoferta', driver_name: name, driver_vehicle: 'mototaxi', driver_unit: 'Hahaha', eta_minutes: 5, price, driver_photo: null, vehicle_photo: null, is_premium: false, passenger_counter_price: null };
+  }
+  let html52a = '', html52aErr = '';
+  try { html52a = runSearching52(req52([])); } catch(e){ html52aErr = String(e && e.message || e); }
+  check('v1.4.52: evaluado — 0 ofertas: se ve la tarjeta del viaje (BUSCANDO, Tu precio, aviso, subir precio) y Cancelar viaje, sin carrusel', !!html52a && html52a.includes('Viaje en mototaxi') && html52a.includes('BUSCANDO') && html52a.includes('Tu precio:') && html52a.includes('Ningún conductor') && html52a.includes('Cancelar viaje') && !html52a.includes('offer-carousel') && !html52a.includes('¡Tienes una contraoferta!'), html52aErr || html52a.slice(0, 200));
+  let html52b = '', html52bErr = '';
+  try { html52b = runSearching52(req52([offer52(1, 'Josué Eduardo', 35)])); } catch(e){ html52bErr = String(e && e.message || e); }
+  check('v1.4.52: evaluado — 1 contraoferta ($35, como la captura): la tarjeta desaparece, la oferta sube arriba con sus botones y Cancelar viaje queda debajo', !!html52b && !html52b.includes('Viaje en mototaxi') && html52b.includes('¡Tienes una contraoferta!') && html52b.includes('Josué Eduardo') && html52b.includes('Aceptar $35') && html52b.includes('Contraofertar') && html52b.includes('Rechazar') && html52b.indexOf('Cancelar viaje') > html52b.indexOf('Aceptar $35') && !html52b.includes('offer-carousel'), html52bErr || html52b.slice(0, 300));
+  let html52c = '', html52cErr = '';
+  try { html52c = runSearching52(req52([offer52(1, 'Josué Eduardo', 35), offer52(2, 'Chofer Segundo', 40)])); } catch(e){ html52cErr = String(e && e.message || e); }
+  check('v1.4.52: evaluado — 2 contraofertas: carrusel horizontal en su sitio con las dos ofertas ("1 de 2 · desliza para verlas"), sin tarjeta, y Cancelar viaje debajo del carrusel', !!html52c && html52c.includes('offer-carousel') && html52c.includes('offer-slide') && html52c.includes('Josué Eduardo') && html52c.includes('Chofer Segundo') && html52c.includes('1 de 2 · desliza para verlas') && html52c.includes('Aceptar $35') && html52c.includes('Aceptar $40') && !html52c.includes('Viaje en mototaxi') && html52c.indexOf('Cancelar viaje') > html52c.indexOf('offer-carousel'), html52cErr || html52c.slice(0, 300));
+  console.log('== v1.4.52: ofertas suben y la tarjeta se quita ==');
+  const pax52 = await api('/api/register-passenger', { name: 'Pax Cincuentadós', phone: '9610000053', face_photo: PHOTO });
+  check('v1.4.52: en vivo, pasajera de prueba registrada', pax52.ok && pax52.passenger.id, JSON.stringify(pax52));
+  const drv52a = await api('/api/register-driver', { name: 'Chofer 52A', phone: '9610000054', vehicle: 'mototaxi', unit: 'V52A', selfie: PHOTO, vehicle_photo: PHOTO });
+  const drv52b = await api('/api/register-driver', { name: 'Chofer 52B', phone: '9610000055', vehicle: 'mototaxi', unit: 'V52B', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.52: en vivo, dos choferes de prueba registrados con fotos', drv52a.ok && drv52a.driver.id && drv52b.ok && drv52b.driver.id, JSON.stringify([drv52a.driver && drv52a.driver.id, drv52b.driver && drv52b.driver.id]));
+  await approveDriver(drv52a.driver.id);
+  await approveDriver(drv52b.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv52a.driver.id, online: true });
+  await api('/api/set-driver-online', { driver_id: drv52b.driver.id, online: true });
+  const trip52 = await api('/api/create-request', { passenger_id: pax52.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.52: en vivo, el viaje de la prueba queda BUSCANDO ($30, 3 personas, 0.8 km, como la captura del usuario)', trip52.ok && trip52.request.status === 'buscando' && trip52.request.price === 30 && trip52.request.passenger_count === 3, JSON.stringify(trip52.request && { st: trip52.request.status, p: trip52.request.price, n: trip52.request.passenger_count }));
+  const off52a = await api('/api/driver-respond', { driver_id: drv52a.driver.id, request_id: trip52.request.id, kind: 'contraoferta', price: 35 });
+  check('v1.4.52: en vivo, el primer chofer contraoferta $35 (como Josué Eduardo en la captura)', off52a.ok, JSON.stringify(off52a));
+  const off52b = await api('/api/driver-respond', { driver_id: drv52b.driver.id, request_id: trip52.request.id, kind: 'contraoferta', price: 40 });
+  check('v1.4.52: en vivo, el segundo chofer contraoferta $40', off52b.ok, JSON.stringify(off52b));
+  const req52live = await api('/api/requests?passenger_id=' + pax52.passenger.id);
+  const trip52live = req52live.ok ? req52live.requests.find(r=>r.id===trip52.request.id) : null;
+  const pend52 = trip52live ? (trip52live.offers||[]).filter(o=>o.status==='pendiente' && o.kind==='contraoferta') : [];
+  check('v1.4.52: en vivo, el viaje trae 2 contraofertas pendientes ($35 y $40): la pantalla mostraría el carrusel', trip52live && trip52live.status === 'buscando' && pend52.length === 2 && pend52.some(o=>o.price===35) && pend52.some(o=>o.price===40), JSON.stringify(trip52live && { st: trip52live.status, off: pend52.map(o=>({ p: o.price, k: o.kind, s: o.status })) }));
+  const can52 = await api('/api/cancel-request', { request_id: trip52.request.id });
+  check('v1.4.52: en vivo, cancelar desde el apartado propio cancela el viaje (mismo botón, mismo endpoint)', can52.ok, JSON.stringify(can52));
+  const list52 = await api('/api/requests?passenger_id=' + pax52.passenger.id + '&light=1');
+  check('v1.4.52: en vivo, tras cancelar ya no hay viaje en espera: la pantalla se levanta', list52.ok && !list52.requests.some(r=>r.kind==='viaje' && r.status==='buscando'), JSON.stringify(list52.requests && list52.requests.map(r=>r.status)));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

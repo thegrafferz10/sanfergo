@@ -1,4 +1,4 @@
-# SanFerGo — versión pública (v1.4.51)
+# SanFerGo — versión pública (v1.4.52)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
@@ -9,6 +9,11 @@ los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 
 - **Personas en la fila de Recibir Viajes (reporte del usuario 22:26, captura 10:25 PM: la fila del viaje de $30 — mínimo de 3 personas — decía solo "0.8 km · ~5 min · Pago: efectivo", sin el dato):** la línea tenue de la fila compacta ahora termina con el conteo — "0.8 km · ~5 min · Pago: efectivo · 3 personas" ("1 persona" para una). Solo viajes: los mandados son siempre de 1 persona y no llevan el dato, y un viaje viejo sin `passenger_count` muestra "1 persona" por defecto. El detalle expandido ya mostraba "Personas" desde v1.4.48 y no se toca; la firma de repintado de la bandeja incluye el conteo para que la fila se actualice si cambia. El acomodo de la fila (v1.4.47) no cambia.
 - Pruebas: suite completa contra BD limpia: **692 OK, 0 FAIL** (676 de antes + 16 nuevas en la sección v1.4.51 — 4 estáticas, 5 evaluadas con el constructor real de la línea tenue y 7 en vivo. Los 7 checks de versión que decían 1.4.50 se actualizaron a 1.4.51).
+
+## v1.4.52 (2026-11-23) — Al llegar una oferta, la tarjeta se quita y la oferta sube; varias ofertas se deslizan de lado
+
+- **Pantalla "Buscando tu mototaxi…" con ofertas (reporte del usuario 22:38, captura 10:36 PM con la X roja sobre la tarjeta del viaje de $30 y la contraoferta de $35 de Josué Eduardo):** cuando llega una oferta, la tarjeta "Viaje en mototaxi" (ruta, km/min, BUSCANDO, "Tu precio: $30 (sugerido $20)") se quita y la oferta sube a su lugar, justo debajo del texto ("¡Tienes una contraoferta!" + tarjeta del chofer con sus botones Aceptar / Contraofertar / Rechazar). Con varias ofertas, las tarjetas van en un carrusel horizontal en su sitio (scroll-snap nativo, se desliza de lado en la misma pantalla, no es una página ni un repintado: solo se actualizan los puntos "N de M · desliza para verlas", y el sondeo de 5 s restaura la oferta que se estaba viendo). "Cancelar viaje" ya no vive dentro de la tarjeta: es su propio apartado debajo de las ofertas, con el mismo botón rojo y el mismo comportamiento (al cancelar se levanta el candado de Mandados de v1.4.50). Sin ofertas, la pantalla queda exactamente como antes (tarjeta, aviso de que nadie ha respondido, botones para subir el precio). La pantalla de espera del mandado no se toca (sigue con su carrusel anterior).
+- Pruebas: suite completa contra BD limpia: **711 OK, 0 FAIL** (692 de antes + 19 nuevas en la sección v1.4.52 — 8 estáticas, 3 evaluadas con el armado real de la pantalla y 8 en vivo. Los 7 checks de versión que decían 1.4.51 se actualizaron a 1.4.52).
 
 ## v1.4.50 (2026-11-23) — Con un viaje en espera o en curso ya no se puede entrar a Mandados
 
