@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.55 en /api/health', h.ok && h.version === '1.4.55', JSON.stringify(h));
+  check('versión 1.4.56 en /api/health', h.ok && h.version === '1.4.56', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.55', h134.ok && h134.version === '1.4.55', JSON.stringify(h134));
+  check('versión 1.4.56', h134.ok && h134.version === '1.4.56', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.55)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.55';") && h.version === '1.4.55', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.56)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.56';") && h.version === '1.4.56', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.55 en /api/health (sección)', h27.ok && h27.version === '1.4.55', JSON.stringify(h27));
+  check('versión 1.4.56 en /api/health (sección)', h27.ok && h27.version === '1.4.56', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.55 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.55', JSON.stringify(h28));
+  check('versión 1.4.56 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.56', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.55 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.55', JSON.stringify(h29));
+  check('versión 1.4.56 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.56', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.55 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.55', JSON.stringify(h30));
+  check('versión 1.4.56 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.56', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2640,6 +2640,129 @@ async function api(path, body) {
   check('v1.4.55: en vivo, cancelar el mandado aceptado funciona (antes de empezar) y se levanta el candado', canMan55.ok, JSON.stringify(canMan55));
   const paxFree55 = await api('/api/requests?passenger_id=' + pax55.passenger.id + '&light=1');
   check('v1.4.55: en vivo, tras cancelar ya no hay mandado activo (entrar a Viajes vuelve a mostrar el formulario)', paxFree55.ok && !paxFree55.requests.some(r=>r.kind==='mandado' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(paxFree55.requests && paxFree55.requests.map(r=>({ k: r.kind, st: r.status }))));
+
+  // --- v1.4.56: el chofer SÍ puede aceptar el precio mejorado tras un
+  //     rechazo (reporte del usuario 23:43, captura 11:42 PM del detalle
+  //     flotante: solo 'Tu contraoferta' − $30 + con 'Enviar
+  //     contraoferta' / 'Volver', sin botón Aceptar). Causas raíz:
+  //     (1) cliente: driverCounter (el borrador de contraoferta) nunca
+  //     se borraba al enviarla, así que al reabrir el detalle salía el
+  //     formulario viejo pre-llenado con la contraoferta ya rechazada
+  //     ($30) en vez de Aceptar $35; (2) servidor: /api/driver-respond
+  //     rebotaba 'Ya respondiste esta solicitud.' si existía CUALQUIER
+  //     oferta del chofer, aunque estuviera rechazada; y el cliente
+  //     mostraba solo el aviso naranja sin botones. Ahora: la oferta
+  //     rechazada está muerta (el servidor la borra al responder de
+  //     nuevo, y el cliente solo la usa para el aviso naranja), el
+  //     borrador se borra al enviar, y el formulario nunca se pre-llena
+  //     por debajo del precio actual del pasajero.
+  const respSec56 = srv.slice(srv.indexOf("if (pathname === '/api/driver-respond')"), srv.indexOf("if (pathname === '/api/respond-offer')"));
+  check('v1.4.56: /api/driver-respond borra la oferta rechazada antes de responder (una oferta rechazada no bloquea aceptar ni contraofertar de nuevo)', respSec56.includes("if (existing && existing.status === 'rechazada')") && respSec56.includes("DELETE FROM offers WHERE id=?") && respSec56.includes('existing = null;'));
+  const detailSec56 = html.slice(html.indexOf('function inboxDetailHtml(r, sub, atLimit){'), html.indexOf('function renderInboxOverlay(list){'));
+  check('v1.4.56: el detalle distingue la oferta VIVA de la rechazada (mineLive: solo la pendiente decide los botones; la rechazada solo deja su aviso naranja)', detailSec56.includes("const mineLive = mine && mine.status!=='rechazada' ? mine : null;") && detailSec56.includes('const counter = mineLive && mineLive.passenger_counter_price;'));
+  check('v1.4.56: el aviso naranja ya no quita los botones (es solo informativo y el flujo sigue a Aceptar/Contraofertar)', detailSec56.includes("if(rejectedD){") && detailSec56.indexOf('if(counter){') > detailSec56.indexOf("if(rejectedD){"));
+  check('v1.4.56: driverRespond borra el borrador de contraoferta al enviar (la respuesta ya salió; no queda el formulario viejo)', html.includes('// (v1.4.56) La respuesta ya se envió: el borrador de contraoferta') && html.slice(html.indexOf('async function driverRespond(rid, kind, price){'), html.indexOf('async function driverAcceptCounter')).includes('driverCounter = null;'));
+  check('v1.4.56: el formulario de contraoferta nunca se pre-llena por debajo del precio actual del pasajero (ni del mínimo por personas)', detailSec56.includes("driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP);"));
+  // Evaluando el detalle real (inboxDetailHtml) con estado de mentira:
+  // se extrae la función y se ejecuta con la bandeja del chofer 777.
+  function runDetail56(r, driverCounter){
+    const stubs = {
+      esc: (s)=>String(s==null?'':s),
+      fmt$: (n)=>'$'+Math.round(Number(n)||0),
+      paxText: (p)=>{ const n=Math.max(1,Math.min(3,Number(p)||1)); return n===1?'1 persona':n+' personas'; },
+      minForPax: (p)=>20 + 5*(Math.max(1,Math.min(3,Number(p)||1))-1),
+      MIN_TRIP: 20,
+      MANDADO_EXTRA_STOP: 10,
+      FREE_DAILY_LIMIT: 50,
+      mandadoDriverSummaryHtml: ()=> '',
+      myDriver: { id: 777 },
+      driverCounter: driverCounter || null,
+    };
+    const fn = new Function('r','sub','atLimit', ...Object.keys(stubs), detailSec56 + '; return inboxDetailHtml(r, sub, atLimit);');
+    return fn(r, false, false, ...Object.values(stubs));
+  }
+  function reqDetail56(offers, price, improved){
+    return { id: 999, kind: 'viaje', passenger_name: 'Pax Prueba', passenger_phone: '9610000000', price, distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2, _dispO: 'cerca de Madero', _dispD: 'cerca de Madero', description: '', items_json: null, extra_stops: 0, order_payment: null, order_amount: 0, price_improved: improved ? 1 : 0, previous_price: improved ? 25 : null, republished_at: improved ? '2026-11-23 23:20:00' : null, offers: offers || [] };
+  }
+  function offDetail56(status, price, counter){
+    return { id: 1, driver_id: 777, status, kind: 'contraoferta', price, passenger_counter_price: (counter == null ? null : counter) };
+  }
+  // (a) El caso exacto del reporte: viaje republicado a $35, oferta
+  //     rechazada ya borrada por el servidor (sin ofertas), borrador
+  //     limpio: el detalle TIENE que traer 'Aceptar $35'.
+  let det56a = '', det56aErr = '';
+  try { det56a = runDetail56(reqDetail56([], 35, true), null); } catch(e){ det56aErr = String(e && e.message || e); }
+  check('v1.4.56: evaluado — viaje republicado ($35, precio mejorado, sin ofertas): el detalle trae Aceptar $35 y Contraofertar, sin formulario de contraoferta', !!det56a && det56a.includes('Aceptar $35') && det56a.includes('Contraofertar') && det56a.includes('Precio mejorado') && !det56a.includes('Tu contraoferta') && !det56a.includes('Enviar contraoferta'), det56aErr || det56a.slice(0, 300));
+  // (b) Sin republicar: la oferta rechazada sigue en la lista (el
+  //     servidor la devuelve) y el detalle muestra el aviso naranja Y
+  //     el botón Aceptar del precio original.
+  let det56b = '', det56bErr = '';
+  try { det56b = runDetail56(reqDetail56([offDetail56('rechazada', 30, null)], 25, false), null); } catch(e){ det56bErr = String(e && e.message || e); }
+  check('v1.4.56: evaluado — contraoferta rechazada SIN subir el precio: el detalle muestra el aviso naranja Y Aceptar $25 (el precio original)', !!det56b && det56b.includes('Rechazado: el pasajero rechazó tu oferta de $30') && det56b.includes('Aceptar $25') && det56b.includes('Contraofertar'), det56bErr || det56b.slice(0, 300));
+  // (c) Borrador viejo: el formulario NO se pre-llena con los $30
+  //     muertos; arranca en el precio actual del pasajero ($35).
+  let det56c = '', det56cErr = '';
+  try { det56c = runDetail56(reqDetail56([], 35, true), { rid: 999, price: 30 }); } catch(e){ det56cErr = String(e && e.message || e); }
+  check('v1.4.56: evaluado — borrador viejo de $30 con el precio ya en $35: el formulario arranca en $35 (no en los $30 rechazados)', !!det56c && det56c.includes('Tu contraoferta') && det56c.includes('id="dc-val">$35') && !det56c.includes('id="dc-val">$30'), det56cErr || det56c.slice(0, 300));
+  // (d) Control: oferta pendiente viva (sin rechazo) sigue mostrando
+  //     'Ya respondiste' y SIN Aceptar (no se tocó ese flujo).
+  let det56d = '', det56dErr = '';
+  try { det56d = runDetail56(reqDetail56([offDetail56('pendiente', 30, null)], 25, false), null); } catch(e){ det56dErr = String(e && e.message || e); }
+  check('v1.4.56: evaluado — control: contraoferta PENDIENTE (sin rechazar) sigue con "Ya respondiste: contraofertaste $30" y sin Aceptar', !!det56d && det56d.includes('Ya respondiste: contraofertaste $30') && !det56d.includes('Aceptar $25'), det56dErr || det56d.slice(0, 300));
+  // (e) Control: contraoferta del pasajero pendiente sigue con sus
+  //     botones (Aceptar $20 y empezar / Rechazar contraoferta).
+  let det56e = '', det56eErr = '';
+  try { det56e = runDetail56(reqDetail56([offDetail56('pendiente', 30, 20)], 25, false), null); } catch(e){ det56eErr = String(e && e.message || e); }
+  check('v1.4.56: evaluado — control: contraoferta del pasajero pendiente ($20) sigue con "Aceptar $20 y empezar" y "Rechazar contraoferta"', !!det56e && det56e.includes('Aceptar $20 y empezar') && det56e.includes('Rechazar contraoferta'), det56eErr || det56e.slice(0, 300));
+  console.log('== v1.4.56: aceptar el precio mejorado tras un rechazo ==');
+  const pax56 = await api('/api/register-passenger', { name: 'Pax Cincuentaseis', phone: '9610000065', face_photo: PHOTO });
+  check('v1.4.56: en vivo, pasajera de prueba registrada', pax56.ok && pax56.passenger.id, JSON.stringify(pax56));
+  const drv56a = await api('/api/register-driver', { name: 'Chofer 56A', phone: '9610000066', vehicle: 'mototaxi', unit: 'V56A', selfie: PHOTO, vehicle_photo: PHOTO });
+  const drv56b = await api('/api/register-driver', { name: 'Chofer 56B', phone: '9610000067', vehicle: 'mototaxi', unit: 'V56B', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.56: en vivo, dos choferes de prueba registrados con fotos', drv56a.ok && drv56a.driver.id && drv56b.ok && drv56b.driver.id, JSON.stringify([drv56a.driver && drv56a.driver.id, drv56b.driver && drv56b.driver.id]));
+  await approveDriver(drv56a.driver.id);
+  await approveDriver(drv56b.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv56a.driver.id, online: true });
+  await api('/api/set-driver-online', { driver_id: drv56b.driver.id, online: true });
+  // Flujo 1 (SIN subir el precio): contraoferta $30 → rechazo → el
+  // chofer acepta el precio original $25 y el viaje se confirma.
+  const trip56a = await api('/api/create-request', { passenger_id: pax56.passenger.id, kind: 'viaje', origin_zone: 'Madero', origin_detail: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Progreso Centro', dest_detail: 'Progreso Centro', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.3, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 2 });
+  check('v1.4.56: en vivo, el primer viaje queda BUSCANDO ($25, 2 personas)', trip56a.ok && trip56a.request.status === 'buscando' && trip56a.request.price === 25, JSON.stringify(trip56a.request && { st: trip56a.request.status, p: trip56a.request.price }));
+  const off56a = await api('/api/driver-respond', { driver_id: drv56a.driver.id, request_id: trip56a.request.id, kind: 'contraoferta', price: 30 });
+  check('v1.4.56: en vivo, el chofer A contraoferta $30 (pendiente)', off56a.ok && off56a.offer.status === 'pendiente', JSON.stringify(off56a));
+  const rej56a = await api('/api/respond-offer', { passenger_id: pax56.passenger.id, request_id: trip56a.request.id, offer_id: off56a.offer.id, action: 'rechaza' });
+  check('v1.4.56: en vivo, el pasajero rechaza la contraoferta ($30)', rej56a.ok, JSON.stringify(rej56a));
+  const acc56a = await api('/api/driver-respond', { driver_id: drv56a.driver.id, request_id: trip56a.request.id, kind: 'acepta', price: 25 });
+  check('v1.4.56: en vivo, SIN subir el precio el chofer A puede aceptar el precio original ($25): el viaje se confirma a $25', acc56a.ok && acc56a.request.status === 'aceptado' && acc56a.request.final_price === 25 && acc56a.request.driver_id === drv56a.driver.id, JSON.stringify(acc56a.request && { st: acc56a.request.status, fp: acc56a.request.final_price, d: acc56a.request.driver_id }));
+  const paxList56a = await api('/api/requests?passenger_id=' + pax56.passenger.id);
+  const trip56aPax = paxList56a.ok ? paxList56a.requests.find(r=>r.id===trip56a.request.id) : null;
+  check('v1.4.56: en vivo, el pasajero ve su viaje aceptado por el chofer A a $25 (le llegó la confirmación)', trip56aPax && trip56aPax.status === 'aceptado' && trip56aPax.driver_id === drv56a.driver.id && trip56aPax.final_price === 25, JSON.stringify(trip56aPax && { st: trip56aPax.status, d: trip56aPax.driver_id, fp: trip56aPax.final_price }));
+  // Flujo 2 (el caso exacto del reporte): contraoferta $30 → rechazo →
+  // el pasajero sube $25 → $35 (republica) → el chofer acepta $35.
+  const trip56b = await api('/api/create-request', { passenger_id: pax56.passenger.id, kind: 'viaje', origin_zone: 'Madero', origin_detail: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Progreso Centro', dest_detail: 'Progreso Centro', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 2 });
+  check('v1.4.56: en vivo, el segundo viaje queda BUSCANDO ($25, 2 personas, 0.8 km)', trip56b.ok && trip56b.request.status === 'buscando' && trip56b.request.price === 25, JSON.stringify(trip56b.request && { st: trip56b.request.status, p: trip56b.request.price }));
+  const off56b = await api('/api/driver-respond', { driver_id: drv56a.driver.id, request_id: trip56b.request.id, kind: 'contraoferta', price: 30 });
+  check('v1.4.56: en vivo, el chofer A contraoferta $30 en el segundo viaje (pendiente)', off56b.ok && off56b.offer.status === 'pendiente', JSON.stringify(off56b));
+  const rej56b = await api('/api/respond-offer', { passenger_id: pax56.passenger.id, request_id: trip56b.request.id, offer_id: off56b.offer.id, action: 'rechaza' });
+  check('v1.4.56: en vivo, el pasajero rechaza la contraoferta del segundo viaje ($30)', rej56b.ok, JSON.stringify(rej56b));
+  const raise56 = await api('/api/raise-price', { passenger_id: pax56.passenger.id, request_id: trip56b.request.id, price: 35 });
+  check('v1.4.56: en vivo, el pasajero sube el precio a $35 (republica con precio mejorado, previous_price $25)', raise56.ok && raise56.request.price === 35 && raise56.request.price_improved === 1 && raise56.request.previous_price === 25, JSON.stringify(raise56.request && { p: raise56.request.price, imp: raise56.request.price_improved, prev: raise56.request.previous_price }));
+  const open56 = await api('/api/requests?open=1&light=1');
+  const trip56bLive = open56.ok ? open56.requests.find(r=>r.id===trip56b.request.id) : null;
+  check('v1.4.56: en vivo, tras republicar NO hay oferta rechazada en la lista del chofer (el aviso naranja se fue)', trip56bLive && !(trip56bLive.offers||[]).some(o=>o.status==='rechazada'), JSON.stringify(trip56bLive && (trip56bLive.offers||[]).map(o=>({ d: o.driver_id, s: o.status, p: o.price }))));
+  const acc56b = await api('/api/driver-respond', { driver_id: drv56a.driver.id, request_id: trip56b.request.id, kind: 'acepta', price: 35 });
+  check('v1.4.56: en vivo, tras el rechazo + republicación el chofer A PUEDE aceptar el precio mejorado ($35): el viaje se confirma a $35', acc56b.ok && acc56b.request.status === 'aceptado' && acc56b.request.final_price === 35 && acc56b.request.driver_id === drv56a.driver.id, JSON.stringify(acc56b.request && { st: acc56b.request.status, fp: acc56b.request.final_price, d: acc56b.request.driver_id }));
+  const paxList56b = await api('/api/requests?passenger_id=' + pax56.passenger.id);
+  const trip56bPax = paxList56b.ok ? paxList56b.requests.find(r=>r.id===trip56b.request.id) : null;
+  check('v1.4.56: en vivo, el pasajero ve su segundo viaje aceptado por el chofer A a $35 (le llegó la confirmación)', trip56bPax && trip56bPax.status === 'aceptado' && trip56bPax.driver_id === drv56a.driver.id && trip56bPax.final_price === 35, JSON.stringify(trip56bPax && { st: trip56bPax.status, d: trip56bPax.driver_id, fp: trip56bPax.final_price }));
+  // El chofer B también puede contraofertar de nuevo tras un rechazo
+  // (sin republicar): la oferta rechazada ya no lo bloquea.
+  const trip56c = await api('/api/create-request', { passenger_id: pax56.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 1 });
+  const off56c = await api('/api/driver-respond', { driver_id: drv56b.driver.id, request_id: trip56c.request.id, kind: 'contraoferta', price: 30 });
+  await api('/api/respond-offer', { passenger_id: pax56.passenger.id, request_id: trip56c.request.id, offer_id: off56c.offer.id, action: 'rechaza' });
+  const reOff56c = await api('/api/driver-respond', { driver_id: drv56b.driver.id, request_id: trip56c.request.id, kind: 'contraoferta', price: 35 });
+  check('v1.4.56: en vivo, tras un rechazo SIN republicar el chofer B puede contraofertar DE NUEVO ($35)', reOff56c.ok && reOff56c.offer.status === 'pendiente', JSON.stringify(reOff56c));
+  await api('/api/cancel-request', { request_id: trip56c.request.id });
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

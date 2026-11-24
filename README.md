@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.55)
+# SanFerGo — versión pública (v1.4.56)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.56 (2026-11-23) — El chofer SÍ puede aceptar el precio mejorado tras un rechazo
+
+- **Aceptar tras un rechazo (reporte del usuario 23:43, captura 11:42 PM del detalle flotante: solo 'Tu contraoferta' − $30 + con 'Enviar contraoferta' / 'Volver', sin botón Aceptar):** el chofer había contraofertado $30, el pasajero lo rechazó, el pasajero subió el precio $25 → $35 (republicación con 'Precio mejorado') y al abrir el detalle ya no podía aceptar los $35. Dos causas raíz: (1) cliente — `driverCounter` (el borrador de contraoferta) nunca se borraba al enviarla, así que al reabrir el detalle salía el formulario viejo pre-llenado con la contraoferta ya rechazada ($30) en vez de Aceptar $35; (2) servidor — `/api/driver-respond` rebotaba con 'Ya respondiste esta solicitud.' si existía CUALQUIER oferta del chofer en la solicitud, aunque estuviera rechazada, y el cliente mostraba solo el aviso naranja sin botones. Ahora: la oferta rechazada está muerta — el servidor la borra al responder de nuevo (igual que ya hacía `/api/raise-price` al republicar), así el chofer puede aceptar el precio del pasajero o contraofertar de nuevo, con o sin republicación; el cliente distingue la oferta VIVA de la rechazada (`mineLive`: solo la pendiente decide los botones, la rechazada solo deja su aviso naranja, que ya no quita los botones); `driverRespond` borra el borrador al enviar; y el formulario de contraoferta nunca se pre-llena por debajo del precio actual del pasajero (arranca en el precio del pasajero o en el mínimo por personas). De paso se cerró un hueco: aceptar la contraoferta del pasajero sobre una oferta ya rechazada ya no la resucita.
+- Pruebas: suite completa contra BD limpia: **842 OK, 0 FAIL** (817 de antes + 25 nuevas en la sección v1.4.56 — 5 estáticas, 5 evaluadas con el código real (el detalle flotante `inboxDetailHtml` en 5 estados) y 15 en vivo: contraoferta → rechazo → aceptar el precio original $25 sin subir el precio; contraoferta → rechazo → subir a $35 → aceptar el precio mejorado $35 (el pasajero ve el viaje aceptado en los dos casos); y contraofertar de nuevo tras un rechazo sin republicar. Los 7 checks de versión que decían 1.4.55 se actualizaron a 1.4.56.
 
 ## v1.4.55 (2026-11-23) — Subir el precio republica el viaje con 'Precio mejorado'; candado inverso: mandado activo bloquea pedir viaje
 

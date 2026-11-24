@@ -733,7 +733,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.55' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.56' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1915,7 +1915,19 @@ async function api(req, res, pathname) {
       if (driverServicesToday(driver_id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
       if (offeredPrice >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
     }
-    const existing = db.prepare('SELECT * FROM offers WHERE request_id=? AND driver_id=?').get(request_id, driver_id);
+    let existing = db.prepare('SELECT * FROM offers WHERE request_id=? AND driver_id=?').get(request_id, driver_id);
+    // (v1.4.56) Una oferta rechazada está MUERTA: no bloquea una respuesta
+    // nueva del chofer. Antes, tras un rechazo el chofer no podía aceptar
+    // el precio del pasajero ni contraofertar de nuevo: el servidor
+    // rebotaba con 'Ya respondiste esta solicitud.' y el cliente solo
+    // mostraba el aviso naranja. Se borra la fila rechazada y se sigue
+    // como si no hubiera respondido (igual que ya hacía /api/raise-price
+    // al republicar). También cierra un hueco: aceptar la contraoferta
+    // del pasajero sobre una oferta ya rechazada ya no la resucita.
+    if (existing && existing.status === 'rechazada') {
+      db.prepare(`DELETE FROM offers WHERE id=?`).run(existing.id);
+      existing = null;
+    }
     const isPremium = hasSub ? 1 : 0;
     const insertOffer = (offerKind, offerPrice) => {
       const o = db.prepare(`INSERT INTO offers (request_id, driver_id, driver_name, driver_phone, driver_photo, driver_plan,

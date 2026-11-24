@@ -50,7 +50,7 @@ Notas:
   `node server.js` con `systemd` o `pm2`, y abrir el puerto. Aquí sí hay
   costo mensual.
 
-## Variables de entorno (v1.4.55)
+## Variables de entorno (v1.4.56)
 
 Sin estas variables la app funciona igual que antes: el registro con
 correo no pide código y el botón de Google muestra su aviso. Para activar
