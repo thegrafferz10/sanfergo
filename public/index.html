@@ -82,6 +82,11 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .fullmap .maplibregl-canvas{outline:none}
 .strip{position:absolute;left:12px;right:12px;z-index:60;background:rgba(255,255,255,.96);color:var(--dark);border-radius:14px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
 .strip.top{top:calc(env(safe-area-inset-top,0px) + 10px)}
+/* Aviso de viaje activo del chofer (v1.4.42): vive en Inicio, Recibir Viajes
+   y Taxímetro a la vez (misma clase en los tres). Vacío no ocupa espacio;
+   en el taxímetro flota sobre el mapa, debajo de la franja de arriba. */
+.driver-active-banner:empty{display:none}
+#view-taximetro .driver-active-banner{position:absolute;top:calc(env(safe-area-inset-top,0px) + 76px);left:12px;right:12px;z-index:61}
 .strip.bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
 .strip .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
 .strip .big2{font-size:22px;font-weight:800}
@@ -444,6 +449,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <div class="view" id="view-taximetro">
   <div class="fullmap" style="position:fixed;height:100dvh">
     <div class="map" id="taxi-map"></div>
+    <div class="driver-active-banner"></div>
     <div class="strip top" id="taxi-top"></div>
     <div class="strip bottom" id="taxi-bottom"></div>
     <div class="taxizoom hidden" id="taxi-zoom">
@@ -488,7 +494,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.41'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.42'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -523,11 +529,24 @@ function fmtTaxiSecs(s){ s=Math.max(0,Math.floor(s)); if(s<60) return s+' seg'; 
 function fmtTaxiDist(km){ km=km||0; if(km<1) return Math.round(km*1000)+' m'; return km.toFixed(2)+' km'; }
 function fmtDateTime(iso){ try { return new Date((iso||'').replace(' ','T').replace(/Z$/,'')+'Z').toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; } }
 async function api(path, body){
-  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {};
-  const r = await fetch(API + path, opt);
-  const j = await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));
-  if(!j.ok){ const e = new Error(j.error || 'Algo salió mal. Inténtalo de nuevo.'); e.data = j; throw e; }
-  return j;
+  // v1.4.42: tiempo límite de 20 s. Sin él, una llamada lenta (por ejemplo
+  // una lista de 2 MB con las fotos base64 en el móvil) se quedaba colgada
+  // para siempre y dejaba las pantallas del chofer en "Cargando..." sin
+  // salida. Ahora falla rápido, cada pantalla muestra su reintento y el
+  // sondeo vuelve a intentar en el siguiente ciclo.
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 20000);
+  try {
+    const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {};
+    opt.signal = ctrl.signal;
+    const r = await fetch(API + path, opt);
+    const j = await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));
+    if(!j.ok){ const e = new Error(j.error || 'Algo salió mal. Inténtalo de nuevo.'); e.data = j; throw e; }
+    return j;
+  } catch(e){
+    if(e && e.name==='AbortError') throw new Error('La conexión tardó demasiado. Revisa tu señal e inténtalo de nuevo.');
+    throw e;
+  } finally { clearTimeout(timer); }
 }
 function toast(msg){ showNotice(msg, ''); }
 function showNotice(html, kind, btnText, btnFn){
@@ -618,7 +637,7 @@ let PLACES = [];
 let LANDMARKS = []; // negocios y lugares con nombre (rótulos del mapa)
 let myPassenger = null, myDriver = null, myAccount = null;
 let currentView = 'home';
-let pollTimer = null;
+let pollTimer = null, pollBusy = false;
 let lastSnapshot = {};
 let lastOpenIds = []; // ids de solicitudes abiertas ya vistas por el chofer
 let myPhone = () => (myPassenger && myPassenger.phone) || (myDriver && myDriver.phone) || (myAccount && myAccount.phone) || '';
@@ -1724,7 +1743,7 @@ function newWizard(){ return { step:0, origin:null, dest:null, km:0, eta:0, pric
 async function myActiveRequest(kind){
   if(!myPassenger) return null;
   try {
-    const j = await api('/api/requests?passenger_id='+myPassenger.id);
+    const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
     return j.requests.find(r=>(!kind || r.kind===kind) && (r.status==='buscando' || r.status==='aceptado')) || null;
   } catch(e){ return null; }
 }
@@ -1888,7 +1907,7 @@ async function renderLastTripCard(){
   // ruta, fecha, precio y botón verde para repetirlo con los mismos puntos.
   const box = $('#viajes-lasttrip'); if(!box || !myPassenger) return;
   try {
-    const j = await api('/api/requests?passenger_id='+myPassenger.id);
+    const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
     const fin = (j.requests||[]).filter(r=>r.kind==='viaje' && r.status==='finalizado' && r.origin_lat!=null && r.dest_lat!=null)[0];
     if(!fin){ box.innerHTML = ''; return; }
     box.innerHTML = '<div class="card white" style="border:2px solid #16a34a;background:#f0fdf4"><div style="color:var(--green);font-size:13px;font-weight:700">Tu último viaje</div>'
@@ -1920,7 +1939,7 @@ async function repeatLastTrip(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','viajes'); return; }
   let last = null;
   try {
-    const j = await api('/api/requests?passenger_id='+myPassenger.id);
+    const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
     last = (j.requests||[]).filter(r=>r.kind==='viaje' && r.status==='finalizado' && r.origin_lat!=null && r.dest_lat!=null)[0] || null;
   } catch(e){}
   if(!last){ toast('Aún no tienes un viaje terminado para repetir.'); return; }
@@ -2385,7 +2404,7 @@ async function raisePrice(rid, price){
 }
 function refreshSearching(){
   if(currentView==='mandados' && md && md.requestId){
-    api('/api/requests?passenger_id='+(myPassenger?myPassenger.id:'')).then(j=>{
+    api('/api/requests?passenger_id='+(myPassenger?myPassenger.id:'')+'&light=1').then(j=>{
       const r = j.requests.find(x=>x.id===md.requestId);
       if(r) renderMandadoSearching(r);
     }).catch(()=>{});
@@ -2498,10 +2517,15 @@ function goLive(requestId, asDriver){
 async function openLiveTrip(requestId, asDriver){
   liveAsDriver = !!asDriver;
   try {
-    const j = await api('/api/requests');
-    liveReq = j.requests.find(r=>r.id===requestId);
-    if(!liveReq){ toast('No se encontró el viaje.'); go('viajes'); return; }
-  } catch(e){ toast(e.message); return; }
+    // v1.4.42: pedir UNA solicitud por su id, no toda la lista (2.5 MB con
+    // las fotos). El 2026-11-23 el chofer aceptó, el servidor confirmó, pero
+    // esta descarga se atascó en el móvil y el mapa en vivo quedó en blanco
+    // con un error. Si falla, se vuelve a la bandeja en vez de dejar el mapa
+    // vacío.
+    const j = await api('/api/requests?id='+requestId);
+    liveReq = (j.requests||[])[0] || null;
+    if(!liveReq){ toast('No se encontró el viaje.'); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } else go('viajes'); return; }
+  } catch(e){ toast(e.message); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } return; }
   liveFollow = true; liveHeading = null; liveRouteCoords = null; liveTraveledPts = [];
   acquireWakeLock();
   if(!liveMap){
@@ -2787,8 +2811,8 @@ function startLivePolling(){
   livePoll = setInterval(async ()=>{
     if(currentView!=='live' || !liveReq) { clearInterval(livePoll); livePoll=null; return; }
     try {
-      const j = await api('/api/requests');
-      const r = j.requests.find(x=>x.id===liveReq.id);
+      const j = await api('/api/requests?id='+liveReq.id);
+      const r = (j.requests||[])[0];
       if(!r) return;
       const prevStage = liveReq.trip_stage, prevLat = liveReq.driver_lat, prevLng = liveReq.driver_lng;
       liveReq = r;
@@ -2999,6 +3023,8 @@ function openTaximeter(fromDriver){
   startTaxiWatch();
   startTaxiTick();
   renderTaxiStrips();
+  // v1.4.42: el aviso de viaje activo también vive en el taxímetro.
+  paintDriverActiveBanners(); refreshDriverActiveBanner();
 }
 function taxiMotoEl(label){
   // Ícono de mototaxi con su píldora encima (app real: "Vas aquí" corriendo,
@@ -3803,15 +3829,52 @@ function driverTab(tab){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-chofer').classList.add('active');
   currentView = 'chofer';
-  if(tab==='inicio'){ renderDriverHome(); refreshMyDriver().then(d=>{ if(d && currentView==='chofer' && driverTabName==='inicio') renderDriverHome(); }); }
-  if(tab==='recibir') renderDriverInbox();
+  if(tab==='inicio'){ renderDriverHome(); refreshMyDriver().then(d=>{ if(d && currentView==='chofer' && driverTabName==='inicio') renderDriverHome(); }); refreshDriverActiveBanner(); }
+  if(tab==='recibir'){ renderDriverInbox(); refreshDriverActiveBanner(); }
 }
 let driverHomeExpanded = null; // 'plan' | 'trips' | 'hist' | null
 let driverActiveId = null, dismissedDriverActiveId = null; // la X del banner de viaje activo solo lo oculta en esta sesión; al recargar vuelve porque el viaje sigue activo en el servidor
+// v1.4.42: aviso de viaje activo del chofer, en TODAS las pantallas del modo
+// chofer (Inicio, Recibir Viajes y Taxímetro), como el aviso verde del
+// pasajero. Antes solo existía en Inicio y solo se pintaba dentro del
+// driverCounts().then: si esa descarga se atascaba (2.3 MB con fotos, sin
+// tiempo límite), el aviso no aparecía nunca y el chofer no sabía que tenía
+// un viaje aceptado. Ahora el aviso vive en un estado compartido
+// (driverActiveTrip), se alimenta del sondeo que ya corre cada 5 s y se
+// repinta en cada contenedor .driver-active-banner presente en el DOM.
+let driverActiveTrip = null;
+function driverActiveBannerHtml(active){
+  const isMan = active.kind==='mandado';
+  return '<div class="card" style="background:#14532d;color:#fff;border:none">'
+    + '<div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><b style="font-size:18px">'
+    + (isMan ? '¡El pasajero confirmó tu mandado!' : '¡El pasajero confirmó tu viaje!')
+    + '</b><p class="mt" style="color:rgba(255,255,255,.85)">'+esc(active.origin_zone||'')+' → '+esc(active.dest_zone||'')
+    + (active.passenger_name ? ' · '+esc(active.passenger_name) : '')+' · '+fmt$(active.final_price||active.price)
+    + ' · ya puedes empezar el servicio.</p></div>'
+    + '<button aria-label="Cerrar aviso" onclick="dismissDriverActiveBanner()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:800;line-height:1;flex:none">×</button></div>'
+    + '<button class="btn amber" style="width:100%;margin-top:12px" onclick="goLive('+active.id+', true)">'
+    + (isMan ? 'Ver mi mandado en curso' : 'Ver mi viaje en curso')+'</button></div>';
+}
+function paintDriverActiveBanners(){
+  const html = (driverActiveTrip && driverActiveTrip.id!==dismissedDriverActiveId) ? driverActiveBannerHtml(driverActiveTrip) : '';
+  document.querySelectorAll('.driver-active-banner').forEach(b=>{ b.innerHTML = html; });
+}
+function setDriverActiveFromList(list){
+  const act = (list||[]).find(r=>r.status==='aceptado') || null;
+  driverActiveTrip = act;
+  if(act) driverActiveId = act.id;
+  paintDriverActiveBanners();
+}
+async function refreshDriverActiveBanner(){
+  if(!myDriver) return;
+  try {
+    const j = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
+    setDriverActiveFromList(j.requests||[]);
+  } catch(e){ /* se reintenta en el siguiente ciclo del sondeo */ }
+}
 function dismissDriverActiveBanner(){
   dismissedDriverActiveId = driverActiveId;
-  const b = document.getElementById('driver-active-banner');
-  if(b) b.innerHTML = '';
+  paintDriverActiveBanners();
 }
 function driverEntry(key, label, pill){
   return '<button class="driver-entry" onclick="driverHomeExpand(\''+key+'\')"><span><b>'+label+'</b> '+(pill||'')+'</span><span style="font-size:20px;color:var(--green)">›</span></button>';
@@ -3820,13 +3883,13 @@ async function driverCounts(){
   // Servicios de hoy (plan gratis) + viajes confirmados/en curso, para el
   // inicio del chofer y la bandeja de Recibir Viajes.
   try {
-    const j = await api('/api/requests?driver_id='+myDriver.id);
+    const j = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
     const list = j.requests || [];
     const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
     const todayCount = list.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
     const confirmed = list.filter(r=>r.status==='aceptado');
     return { today: todayCount, confirmedTotal: confirmed.length, inCourse: confirmed.length, active: confirmed[0] || null };
-  } catch(e){ return { today: 0, confirmedTotal: 0, inCourse: 0, active: null }; }
+  } catch(e){ return { today: 0, confirmedTotal: 0, inCourse: 0, active: undefined }; }
 }
 /* El estado del chofer se vuelve a pedir al servidor al abrir su inicio y
    al tocar "Ponerme en línea": el estado guardado en memoria podía quedar
@@ -3865,7 +3928,7 @@ function renderDriverHome(){
     renderDriverExpanded();
     return;
   }
-  p.innerHTML = '<div id="driver-active-banner"></div>'
+  p.innerHTML = '<div class="driver-active-banner" id="driver-active-banner"></div>'
   + '<div class="card white"><div class="flex">'
     + (d.selfie?'<img style="width:84px;height:84px;border-radius:50%;object-fit:cover;background:#e5e7eb;border:3px solid #16a34a" src="'+d.selfie+'">':'<div class="avatar" style="width:84px;height:84px;font-size:34px;display:flex;align-items:center;justify-content:center;border:3px solid #16a34a">👤</div>')
     + '<div class="flex1"><b style="font-size:19px">'+esc(d.name)+'</b><div class="muted">'+vehicleLine+'</div></div></div>'
@@ -3883,6 +3946,7 @@ function renderDriverHome(){
     + '<div id="driver-home-expanded"></div>'
     + '<button class="btn" style="border:2px solid var(--red);color:var(--red);background:#fff" onclick="exitDriverMode()">Salir del modo chofer</button>';
   renderDriverExpanded();
+  paintDriverActiveBanners(); // el aviso que ya se conoce sale al instante, sin esperar a driverCounts
   driverCounts().then(c=>{
     const ps = document.getElementById('de-plan-sub');
     if(ps) ps.textContent = sub ? ('De paga · ilimitado · te quedan ' + Math.max(0, Math.ceil((new Date(d.subscription_until) - Date.now())/86400000)) + ' días') : ('Gratis · ' + c.today + ' de '+FREE_DAILY_LIMIT+' servicios hoy · $50/sem · $150/mes · $500/año');
@@ -3890,29 +3954,11 @@ function renderDriverHome(){
     if(tt && c.active) tt.textContent = 'Servicio en curso · ver el mapa';
     const ts = document.getElementById('de-trips-sub');
     if(ts) ts.textContent = c.confirmedTotal ? (c.confirmedTotal + ' en total · ' + c.inCourse + ' en curso') : 'Todavía no tienes viajes confirmados.';
-    // Banner de viaje activo ARRIBA del Inicio de chofer (app real:
-    // aviso verde "¡El pasajero confirmó tu viaje!" con botón ámbar
-    // "Ver mi viaje en curso" que abre el mapa en vivo). El viaje en
-    // vivo solo vivía en memoria: al salir del mapa o recargar, el
-    // chofer lo perdía y solo lo encontraba tras dos toques dentro de
-    // "Mis viajes confirmados". El banner se pinta desde el servidor
-    // en cada visita al inicio, así que sobrevive a salir y a recargar.
-    const db2 = document.getElementById('driver-active-banner');
-    if(db2){
-      if(c.active && c.active.id!==dismissedDriverActiveId){
-        driverActiveId = c.active.id;
-        const isMan = c.active.kind==='mandado';
-        db2.innerHTML = '<div class="card" style="background:#14532d;color:#fff;border:none">'
-          + '<div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><b style="font-size:18px">'
-          + (isMan ? '¡El pasajero confirmó tu mandado!' : '¡El pasajero confirmó tu viaje!')
-          + '</b><p class="mt" style="color:rgba(255,255,255,.85)">'+esc(c.active.origin_zone||'')+' → '+esc(c.active.dest_zone||'')
-          + (c.active.passenger_name ? ' · '+esc(c.active.passenger_name) : '')+' · '+fmt$(c.active.final_price||c.active.price)
-          + ' · ya puedes empezar el servicio.</p></div>'
-          + '<button aria-label="Cerrar aviso" onclick="dismissDriverActiveBanner()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:800;line-height:1;flex:none">×</button></div>'
-          + '<button class="btn amber" style="width:100%;margin-top:12px" onclick="goLive('+c.active.id+', true)">'
-          + (isMan ? 'Ver mi mandado en curso' : 'Ver mi viaje en curso')+'</button></div>';
-      } else { db2.innerHTML = ''; }
-    }
+    // v1.4.42: el aviso de viaje activo se pinta con el pintor compartido
+    // (igual en Inicio, Recibir Viajes y Taxímetro). Si la descarga falló
+    // (active === undefined), no se toca el aviso que ya había: el sondeo
+    // lo revalida en el siguiente ciclo.
+    if(c.active !== undefined) setDriverActiveFromList(c.active ? [c.active] : []);
   });
 }
 function driverHomeExpand(key){
@@ -3986,25 +4032,25 @@ async function toggleOnline(){
 async function loadDriverTrips(){
   const box = $('#driver-trips'); if(!box) return;
   try {
-    const j = await api('/api/requests?driver_id='+myDriver.id);
+    const j = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
     const list = j.requests.filter(r=>r.status==='aceptado');
     box.innerHTML = list.length ? list.map(r=>'<div class="card white"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b>'
       + '<div class="muted">'+fmt$(r.final_price||r.price)+' · '+stageLabel(r)+' · '+fmtDateTime(r.created_at)+'</div>'
       + '<button class="btn blue small" onclick="goLive('+r.id+', true)">Abrir mapa del viaje</button></div>').join('')
       : '<p class="muted">Aún no tienes viajes confirmados.</p>';
-  } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
+  } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p><div class="center"><button class="btn small" onclick="loadDriverTrips()">Reintentar</button></div>'; }
 }
 async function loadDriverHist(){
   const box = $('#driver-hist'); if(!box) return;
   try {
-    const j = await api('/api/requests?driver_id='+myDriver.id);
+    const j = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
     const list = j.requests.filter(r=>r.status==='finalizado' || r.status==='cancelado');
     box.innerHTML = list.length ? list.map(r=>'<div class="card white"><div class="flex"><div class="flex1"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b>'
       + '<div class="muted">'+fmtDateTime(r.created_at)+' · '+fmt$(r.final_price||r.price)+'</div></div>'
       + '<span class="chip '+(r.status==='finalizado'?'':'red')+'">'+(r.status==='finalizado'?'Finalizado':'Cancelado')+'</span></div>'
       + (r.status==='finalizado' ? '<button class="btn small" onclick="showReceipt('+r.id+')">Ver recibo del viaje</button>' : '')+'</div>').join('')
       : '<p class="muted">Aún no tienes viajes terminados.</p>';
-  } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
+  } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p><div class="center"><button class="btn small" onclick="loadDriverHist()">Reintentar</button></div>'; }
 }
 let driverInboxTab = 'sol', driverCounter = null;
 function mandadoDriverSummaryHtml(r){
@@ -4043,26 +4089,41 @@ function inboxToggle(rid){
   if(inboxExpandedId===rid){ closeInboxOverlay(); return; }
   inboxExpandedId = rid;
   renderInboxOverlay(inboxLastList);
+  // v1.4.42: la bandeja ahora se descarga ligera (sin fotos) para que no se
+  // atasque; la foto del pasajero del detalle se trae aparte, en segundo
+  // plano, y repinta el flotante cuando llega. Si falla, el detalle sigue
+  // mostrándose con el avatar genérico.
+  api('/api/requests?id='+rid).then(j=>{
+    const full = (j.requests||[])[0]; if(!full || inboxExpandedId!==rid) return;
+    const i = inboxLastList.findIndex(x=>x.id===rid); if(i<0) return;
+    full._dispO = inboxLastList[i]._dispO; full._dispD = inboxLastList[i]._dispD;
+    inboxLastList[i] = full; inboxOvSig=''; renderInboxOverlay(inboxLastList);
+  }).catch(()=>{});
   renderDriverInbox();
 }
 async function loadDriverInbox(force){
   if(inboxLoading) return;
   const p = $('#chofer-page');
   if(!p) return;
-  const head = '<h2>Recibir Viajes</h2><p class="muted mt">Acepta al precio del pasajero o manda tu contraoferta.</p>';
+  const head = '<div class="driver-active-banner"></div><h2>Recibir Viajes</h2><p class="muted mt">Acepta al precio del pasajero o manda tu contraoferta.</p>';
   // 'Cargando…' SOLO en la primera carga, cuando aún no hay lista en
   // pantalla. En cada refresco la lista anterior se queda puesta hasta
   // que la nueva llega (v1.4.36: antes cada llamada borraba todo y la
   // solicitud aparecía, desaparecía y volvía a aparecer).
   if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">Cargando…</p>';
+  paintDriverActiveBanners();
   const sub = !!(myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date());
   inboxLoading = true;
   try {
     // Las dos llamadas en paralelo (antes eran tres seguidas: conteos,
     // mis servicios y abiertas), así la solicitud llega más rápido.
+    // v1.4.42: descarga ligera (sin fotos base64): la lista completa con
+    // fotos pesaba 2.3 MB y en el móvil se atascaba dejando la bandeja en
+    // "Cargando..." para siempre. La foto del pasajero se trae aparte al
+    // abrir el detalle (inboxToggle).
     const [mj, j] = await Promise.all([
-      api('/api/requests?driver_id='+myDriver.id),
-      api('/api/requests?open=1')
+      api('/api/requests?driver_id='+myDriver.id+'&light=1'),
+      api('/api/requests?open=1&light=1')
     ]);
     const myList = mj.requests||[];
     const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
@@ -4163,9 +4224,10 @@ async function loadDriverInbox(force){
   } catch(e){
     // Sin conexión o con el servidor dormido: la lista anterior se queda
     // en pantalla y el siguiente ciclo reintenta en silencio. Solo en la
-    // primera carga se muestra el aviso.
-    if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">No se pudo cargar. Revisa tu conexión; se reintentará solo.</p>';
-  } finally { inboxLoading = false; }
+    // primera carga se muestra el aviso, ahora con botón de reintento
+    // (v1.4.42: antes el "Cargando…" podía quedarse para siempre).
+    if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">No se pudo cargar. Revisa tu conexión; se reintentará solo.</p><div class="center"><button class="btn small" onclick="loadDriverInbox(true)">Reintentar</button></div>';
+  } finally { inboxLoading = false; paintDriverActiveBanners(); }
 }
 function inboxDetailHtml(r, sub, atLimit){
   // Contenido del detalle de una solicitud (v1.4.41): EXACTAMENTE lo que
@@ -4272,23 +4334,64 @@ function updateDriverBadge(n){
     b.textContent = n; b.classList.toggle('hidden', !n);
   });
 }
+// v1.4.42: guardia contra doble toque. Sin ella, tocar Aceptar dos veces
+// mientras el primer POST viajaba mandaba un segundo POST que el servidor
+// rechazaba con "Ya respondiste esta solicitud." y el chofer veía un error
+// aunque el viaje ya estaba confirmado. Y si ese error llega de verdad, se
+// verifica el estado real: si el viaje ya está aceptado para este chofer,
+// se va al mapa en vivo en vez de mostrar el error.
+let driverRespondBusy = false;
 async function driverRespond(rid, kind, price){
+  if(driverRespondBusy) return;
+  driverRespondBusy = true;
   try {
     const j = await api('/api/driver-respond', { driver_id: myDriver.id, request_id: rid, kind, price });
     // Aceptar ya confirma al instante: el servidor devuelve el viaje aceptado.
     if(kind==='acepta' && j && j.request && j.request.status==='aceptado'){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
     toast(kind==='acepta'?'Oferta enviada. Esperando al pasajero.':'Contraoferta enviada.'); renderDriverInbox();
   }
-  catch(e){ toast(e.message); }
+  catch(e){
+    // Doble toque: el primer envío ya confirmó el viaje y el segundo rebota
+    // en el servidor ("Esta solicitud ya no está buscando conductor." si el
+    // viaje ya quedó aceptado, o "Ya respondiste esta solicitud." si la
+    // oferta ya existe). No es un error real: se verifica el estado y se va
+    // al mapa en vivo si el viaje ya está aceptado para este chofer.
+    if(e && e.message && (e.message.indexOf('Ya respondiste')>=0 || e.message.indexOf('ya no está buscando')>=0)){
+      try {
+        const j2 = await api('/api/requests?id='+rid);
+        const r2 = (j2.requests||[])[0];
+        if(r2 && r2.status==='aceptado' && r2.driver_id===myDriver.id){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
+      } catch(e2){}
+    }
+    toast(e.message);
+  }
+  finally { driverRespondBusy = false; }
 }
 
 async function driverAcceptCounter(rid, oid, price){
+  if(driverRespondBusy) return;
+  driverRespondBusy = true;
   try { await api('/api/respond-offer', { passenger_id: 0, request_id: rid, offer_id: oid, action:'acepta' }); toast('¡Viaje confirmado a '+fmt$(price)+'!'); goLive(rid, true); }
-  catch(e){ toast(e.message); }
+  catch(e){
+    // Igual que en driverRespond: si la contraoferta ya quedó aceptada (el
+    // segundo toque o un reintento tras confirmar), se va al viaje en vivo.
+    if(e && e.message && (e.message.indexOf('ya no está buscando')>=0 || e.message.indexOf('Ya respondiste')>=0 || e.message.indexOf('ya no está pendiente')>=0)){
+      try {
+        const j2 = await api('/api/requests?id='+rid);
+        const r2 = (j2.requests||[])[0];
+        if(r2 && r2.status==='aceptado' && r2.driver_id===myDriver.id){ toast('¡Viaje confirmado!'); goLive(rid, true); return; }
+      } catch(e2){}
+    }
+    toast(e.message);
+  }
+  finally { driverRespondBusy = false; }
 }
 async function driverRejectCounter(rid, oid){
+  if(driverRespondBusy) return;
+  driverRespondBusy = true;
   try { await api('/api/respond-offer', { passenger_id: 0, request_id: rid, offer_id: oid, action:'rechaza' }); toast('Contraoferta rechazada. Tu oferta sigue como estaba.'); renderDriverInbox(); }
   catch(e){ toast(e.message); }
+  finally { driverRespondBusy = false; }
 }
 
 /* ===== PANEL DE ADMINISTRADOR (v1.3.5: el admin entra DIRECTO al panel al
@@ -5648,9 +5751,14 @@ async function setLostStatus(id, status){
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async ()=>{
+    // v1.4.42: nunca solapar dos ciclos. Sin esta guardia, cada ciclo hacía
+    // 3 descargas seguidas de 2+ MB y el siguiente ciclo arrancaba antes de
+    // que terminara el anterior: las llamadas se apilaban, se atascaban y la
+    // pantalla quedaba en "Cargando..." para siempre.
+    if(pollBusy) return; pollBusy = true;
     try {
       if(myPassenger){
-        const j = await api('/api/requests?passenger_id='+myPassenger.id);
+        const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
         for(const r of j.requests){
           const key = 'req_'+r.id;
           const prev = lastSnapshot[key];
@@ -5676,7 +5784,7 @@ function startPolling(){
         }
       }
       if(myDriver && store.mode==='driver'){
-        const j = await api('/api/requests?open=1');
+        const j = await api('/api/requests?open=1&light=1');
         const open = j.requests.filter(r=> r.kind==='viaje' ? myDriver.vehicle==='mototaxi' : true);
         updateDriverBadge(open.length);
         // Alerta al chofer en línea esté en la pantalla que esté (Inicio, Taxímetro, etc.)
@@ -5687,7 +5795,10 @@ function startPolling(){
         }
         lastOpenIds = ids;
         if(currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); // refresco silencioso: no borra la lista si nada cambió
-        const mine = await api('/api/requests?driver_id='+myDriver.id);
+        const mine = await api('/api/requests?driver_id='+myDriver.id+'&light=1');
+        // v1.4.42: el aviso de viaje activo del chofer se alimenta de estos
+        // mismos datos (sin descarga extra) y se repinta donde esté.
+        setDriverActiveFromList(mine.requests);
         for(const r of mine.requests){
           const key = 'drv_'+r.id;
           const prev = lastSnapshot[key];
@@ -5708,6 +5819,7 @@ function startPolling(){
         }
       }
     } catch(e){ /* sin conexión: se reintenta solo */ }
+    finally { pollBusy = false; }
   }, 5000);
 }
 
