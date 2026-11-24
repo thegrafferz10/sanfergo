@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.65'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.66'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3637,6 +3637,14 @@ function startLivePolling(){
    local NO dibuja: en "en camino" el teléfono del pasajero está en su
    casa, no con la mototaxi — su marcador sale del sondeo al servidor). */
 let drvWatchId = null, drvLastSent = { t: 0, lat: 0, lng: 0 }, drvActiveReqId = null;
+/* GPS del chofer en la APP INSTALADA (Capacitor): cuando existe el plugin
+   BackgroundGeolocation, el reporte usa su watcher con background:true —
+   el GPS sigue mandando aunque la app pase a segundo plano, se abra
+   WhatsApp o se bloquee el teléfono. En el navegador normal no existe
+   window.Capacitor: el camino es idéntico al de siempre, cero cambio. */
+let drvBgWatcherId = null, drvBgStarting = false, drvGpsGen = 0;
+function drvCapBg(){ try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null; } catch(e){ return null; } }
+function drvCapHttp(){ try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp) || null; } catch(e){ return null; } }
 function drvActiveReq(){
   if(driverActiveTrip && driverActiveTrip.status==='aceptado') return driverActiveTrip;
   if(liveReq && liveReq.status==='aceptado' && myDriver && liveReq.driver_id===myDriver.id) return liveReq;
@@ -3647,41 +3655,89 @@ function syncDriverGpsWatch(){
   if(act) startDriverGpsWatch(act.id);
   else stopDriverGpsWatch();
 }
+function drvOnPos(lat, lng){
+  const now = Date.now();
+  liveGpsPos = { lat, lng, t: now };
+  // v1.4.45: el GPS mueve el mapa EN LOCAL con cada lectura, sin
+  // esperar al servidor — sin internet la mototaxi, la línea, la
+  // distancia y el texto siguen actualizándose mientras avanza.
+  // v1.4.65: el dibujo local es SOLO del mapa en vivo del chofer.
+  if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);
+  const d = havKm(drvLastSent.lat||lat, drvLastSent.lng||lng, lat, lng) * 1000;
+  // v1.4.65: reportar cada ~3 s en vez de cada 8 s — el pasajero se
+  // alimenta de estos reportes, y a 8 s su mototaxi avanzaba a saltos.
+  if(now - drvLastSent.t < 3000 && d < 10) return;
+  drvLastSent = { t: now, lat, lng };
+  drvSendPos(lat, lng);
+}
+function drvSendPos(lat, lng){
+  const rid = drvActiveReqId || (liveReq && liveReq.id);
+  if(!rid) return;
+  const body = { driver_id: myDriver.id, request_id: rid, lat, lng };
+  const onFail = ()=>{
+    // Sin internet el reporte NO se tira: se guarda en cola y se
+    // envía cuando vuelve la conexión (liveFlushLocQueue).
+    liveLocQueue.push({ lat, lng });
+    if(liveLocQueue.length > 20) liveLocQueue.shift();
+    liveSetOffline(true);
+  };
+  const http = drvCapHttp();
+  if(http){
+    // App instalada: HTTP nativo. Los fetch() del WebView se limitan a
+    // los 5 minutos en segundo plano en Android; por el puente nativo
+    // el reporte sigue saliendo aunque la app esté en segundo plano.
+    http.request({ url: location.origin + '/api/update-driver-location', method: 'POST', headers: { 'Content-Type': 'application/json' }, data: body, connectTimeout: 10000, readTimeout: 20000 }).then(r=>{
+      if(!(r && r.status===200 && r.data && r.data.ok!==false)) throw new Error('bad');
+    }).catch(onFail);
+    return;
+  }
+  api('/api/update-driver-location', body).catch(onFail);
+}
 function startDriverGpsWatch(reqId){
   if(reqId) drvActiveReqId = reqId;
-  if(!myDriver || drvWatchId!=null) return;
-  if(!navigator.geolocation) return;
+  if(!myDriver || drvWatchId!=null || drvBgWatcherId!=null || drvBgStarting) return;
+  const bg = drvCapBg();
+  if(bg){
+    // App instalada: watcher en segundo plano con notificación
+    // persistente ("SanFerGo está compartiendo tu ubicación...").
+    drvBgStarting = true;
+    const gen = drvGpsGen;
+    bg.addWatcher({
+      backgroundMessage: 'SanFerGo está compartiendo tu ubicación durante el viaje',
+      backgroundTitle: 'SanFerGo',
+      requestPermissions: true,
+      stale: false,
+      distanceFilter: 10
+    }, (loc, err)=>{
+      if(err || !loc) return;
+      drvOnPos(loc.latitude, loc.longitude);
+    }).then(id=>{
+      drvBgStarting = false;
+      if(gen !== drvGpsGen){ try { bg.removeWatcher({ id }); } catch(e){} const act = drvActiveReq(); if(act) startDriverGpsWatch(act.id); return; }
+      drvBgWatcherId = id;
+    }).catch(()=>{
+      // Si el plugin falla al arrancar, caer al GPS del navegador.
+      drvBgStarting = false;
+      if(gen !== drvGpsGen) return;
+      if(drvWatchId==null) startDriverBrowserWatch();
+    });
+    return;
+  }
+  startDriverBrowserWatch();
+}
+function startDriverBrowserWatch(){
+  if(!navigator.geolocation || drvWatchId!=null) return;
   drvWatchId = navigator.geolocation.watchPosition(pos=>{
-    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    const now = Date.now();
-    liveGpsPos = { lat, lng, t: now };
-    // v1.4.45: el GPS mueve el mapa EN LOCAL con cada lectura, sin
-    // esperar al servidor — sin internet la mototaxi, la línea, la
-    // distancia y el texto siguen actualizándose mientras avanza.
-    // v1.4.65: el dibujo local es SOLO del mapa en vivo del chofer.
-    if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);
-    const d = havKm(drvLastSent.lat||lat, drvLastSent.lng||lng, lat, lng) * 1000;
-    // v1.4.65: reportar cada ~3 s en vez de cada 8 s — el pasajero se
-    // alimenta de estos reportes, y a 8 s su mototaxi avanzaba a saltos.
-    if(now - drvLastSent.t < 3000 && d < 10) return;
-    drvLastSent = { t: now, lat, lng };
-    const rid = drvActiveReqId || (liveReq && liveReq.id);
-    if(!rid) return;
-    api('/api/update-driver-location', { driver_id: myDriver.id, request_id: rid, lat, lng })
-      .catch(()=>{
-        // Sin internet el reporte NO se tira: se guarda en cola y se
-        // envía cuando vuelve la conexión (liveFlushLocQueue).
-        liveLocQueue.push({ lat, lng });
-        if(liveLocQueue.length > 20) liveLocQueue.shift();
-        liveSetOffline(true);
-      });
+    drvOnPos(pos.coords.latitude, pos.coords.longitude);
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 3000 });
 }
 function stopDriverGpsWatch(){
   // El GPS deja de compartirse solo cuando ya NO hay servicio activo
   // (syncDriverGpsWatch lo decide); salir del mapa en vivo ya no lo
   // apaga, para que el pasajero siga viendo avanzar la mototaxi.
+  drvGpsGen++;
   if(drvWatchId!=null){ try { navigator.geolocation.clearWatch(drvWatchId); } catch(e){} drvWatchId = null; }
+  if(drvBgWatcherId!=null){ const bg = drvCapBg(); const id = drvBgWatcherId; drvBgWatcherId = null; if(bg){ try { bg.removeWatcher({ id }); } catch(e){} } }
   liveGpsPos = null; drvActiveReqId = null;
 }
 
@@ -3998,6 +4054,11 @@ function stopTaxi(){
   const pts = (s.points||[]).filter((_,i,arr)=> arr.length<=300 || i % Math.ceil(arr.length/300)===0);
   hist.unshift({ startedAt: s.startedAt, endAt: s.endAt, totalSecs: s.totalSecs, waitSecs: s.waitSecs, km: s.km, price: taxiPrice(s), points: pts });
   taxiSaveHist(hist);
+  // v1.4.66: registrar el recorrido en el servidor para la ficha del chofer
+  // (total y hoy) en el panel de admin. No bloquea ni cambia nada en el
+  // teléfono: si no hay internet o falla, el recorrido queda en el
+  // historial local y el límite gratis se sigue contando ahí.
+  if(myDriver && myDriver.id){ api('/api/taxi-run', { token: store.token, price: taxiPrice(s), km: s.km||0, secs: s.totalSecs||0 }).catch(()=>{}); }
   renderTaxiStrips();
 }
 function taxiReceipt(){
@@ -5701,8 +5762,8 @@ async function renderAdminDetail(){
     todayCount = list.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
   } catch(e){}
   const subBlock = sub
-    ? '<b>Suscripción de paga activa · Servicios ilimitados · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>' + (d.subscription_start ? '<p class="muted mt">Activa desde el '+new Date(d.subscription_start).toLocaleDateString('es-MX')+'.</p>' : '')
-    : '<b>Plan gratis · '+todayCount+' de '+FREE_DAILY_LIMIT+' servicios de hoy · '+(todayCount>=FREE_DAILY_LIMIT ? 'ya llegó a su límite de hoy' : 'todavía puede aceptar más hoy')+'</b>'
+    ? '<b>Suscripción de paga activa · Servicios ilimitados · Taxímetro ilimitado · '+(d.taxi_runs_today||0)+' recorridos de taxímetro hoy · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>' + (d.subscription_start ? '<p class="muted mt">Activa desde el '+new Date(d.subscription_start).toLocaleDateString('es-MX')+'.</p>' : '')
+    : '<b>Plan gratis · '+todayCount+' de '+FREE_DAILY_LIMIT+' servicios de hoy · '+(d.taxi_runs_today||0)+' de '+FREE_DAILY_LIMIT+' recorridos de taxímetro de hoy · '+(todayCount>=FREE_DAILY_LIMIT ? 'ya llegó a su límite de hoy' : 'todavía puede aceptar más hoy')+'</b>'
       + '<p class="muted mt">Precios de la suscripción: $50 por semana · $150 por mes · $500 por año (el chofer elige y paga por transferencia).</p>';
   body.innerHTML = '<button class="backpill" onclick="adminDetail=null;adminBlockStep=false;adminDeleteStep=false;renderAdminDrivers()">Regresar a la lista de choferes</button>'
     + '<h1>Ficha del chofer</h1>'
@@ -5716,6 +5777,7 @@ async function renderAdminDetail(){
     + '<div class="kv"><span>Plan</span><b>'+(sub?'Suscripción':'Gratis')+'</b></div>'
     + '<div class="kv"><span>Estado</span><b>'+(d.is_blocked?'Bloqueado':(d.status==='pendiente'?'Pendiente de aprobación':'Activo'))+' · '+(d.online?'En línea':'Fuera de línea')+'</b></div>'
     + '<div class="kv"><span>Servicios</span><b>'+(d.services_done||0)+' en total · '+todayCount+' hoy</b></div>'
+    + '<div class="kv"><span>Taxímetro</span><b>'+(d.taxi_runs_total||0)+' en total · '+(d.taxi_runs_today||0)+' hoy</b></div>'
     + '<div class="kv"><span>Registro</span><b>'+fmtDateTime(d.created_at)+'</b></div></div>'
     + '<div class="card white"><h3>SUSCRIPCIÓN</h3><p class="mt">'+subBlock+'</p></div>'
     + '<div class="card white"><h3>ACTIVAR SUSCRIPCIÓN</h3><p class="muted mt">El chofer te mandó la transferencia: actívale aquí su plan. Si ya tiene uno vigente, se le suman los días (no pierde los que le quedan).</p><div class="btnrow"><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'weekly\')">Semanal · $50 · 7 días</button><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'monthly\')">Mensual · $150 · 30 días</button><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'yearly\')">Anual · $500 · 365 días</button></div></div>'
