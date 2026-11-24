@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.37)
+# SanFerGo — versión pública (v1.4.38)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.38 (2026-11-23) — Aviso de contraoferta en la fila colapsada de Recibir Viajes
+
+- Cuando el pasajero le contraoferta al chofer, la fila cerrada (compacta) ahora muestra de un vistazo un aviso ámbar **"Te contraofertó $X · Toca para responder"** debajo de la fila de tipo + de → a + precio. Antes ese aviso solo vivía dentro del detalle expandido, así que el chofer no lo veía sin abrir la solicitud (observación del constructor de v1.4.37, aprobada por el usuario: "Sí" + "Porfaa").
+- El aviso solo aparece cuando la oferta del chofer tiene una contraoferta pendiente del pasajero (`mine.passenger_counter_price`, la misma condición del cuadro de contraoferta del detalle); las filas sin contraoferta se ven exactamente como en v1.4.37. Tocar la fila (también el aviso) sigue abriendo el detalle completo con el cuadro de contraoferta y Aceptar/Rechazar. El aviso aparece y desaparece con los datos en el refresco normal — ese campo ya entraba en la firma de v1.4.36 — y no rompe el no-parpadeo.
+- Sin tocar: el detalle expandido, el flujo de publicar, las tarifas, los viajes y Quiero.
+- Pruebas: suite completa contra BD limpia: 528 OK, 0 FAIL (525 de antes + 3 nuevas: 2 estáticas — el aviso ámbar en la fila colapsada solo cuando hay contraoferta, y tocar la fila sigue abriendo el detalle — y 1 en vivo de que `/api/requests?open=1` devuelve `passenger_counter_price` en la solicitud contraofertada y nada en la solicitud sin contraoferta).
 
 ## v1.4.37 (2026-11-23) — Solicitudes compactas en Recibir Viajes: toca para ver el detalle
 

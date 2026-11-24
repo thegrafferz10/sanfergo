@@ -339,7 +339,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.37', JSON.stringify(h));
+  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.38', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -440,7 +440,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.37', JSON.stringify(h134));
+  check('versión 1.4.36', h134.ok && h134.version === '1.4.38', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +602,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.37';") && h.version === '1.4.37', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.38';") && h.version === '1.4.38', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1396,7 +1396,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.37', JSON.stringify(h27));
+  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.38', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1441,7 +1441,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.37', JSON.stringify(h28));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.38', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1455,7 +1455,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.37', JSON.stringify(h29));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.38', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1464,7 +1464,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.37', JSON.stringify(h30));
+  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.38', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1614,10 +1614,21 @@ async function api(path, body) {
   check('v1.4.37: la fila colapsada solo muestra tipo, de → a y precio (sin resumen, distancia ni botones)', compactSec.includes('inboxToggle') && compactSec.includes('→') && compactSec.includes('fmt$(r.price)') && compactSec.includes('▾') && !compactSec.includes('Recibe') && !compactSec.includes('Resumen del mandado') && !compactSec.includes('Aceptar') && !compactSec.includes('Distancia') && !compactSec.includes('mandadoDriverSummaryHtml'));
   check('v1.4.37: el detalle expandido trae el resumen completo con Aceptar y Contraofertar', inboxSec.includes('function inboxToggle(rid){') && inboxSec.includes('const expanded = inboxExpandedId===r.id;') && inboxSec.indexOf("if(!expanded) return card + '</div>';") < inboxSec.lastIndexOf('mandadoDriverSummaryHtml(r)') && inboxSec.indexOf("if(!expanded) return card + '</div>';") < inboxSec.indexOf("Aceptar '+fmt$(r.price)") && inboxSec.includes('Contraofertar'));
   check('v1.4.37: el detalle abierto sobrevive al refresco (el id entra en la firma) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('driverInboxTab, inboxExpandedId, driverCounter?') && inboxSec.includes('if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;') && inboxSec.includes('inboxExpandedId = inboxExpandedId===rid ? null : rid;'));
+  // --- v1.4.38: aviso de contraoferta en la fila colapsada ---
+  check('v1.4.38: la fila colapsada muestra el aviso ámbar "Te contraofertó $X · Toca para responder" cuando el pasajero contraofertó', compactSec.includes('Te contraofertó ') && compactSec.includes("fmt$(counter)") && compactSec.includes('· Toca para responder') && compactSec.includes('#fef3c7') && compactSec.includes('passenger_counter_price'));
+  check('v1.4.38: el aviso solo sale cuando hay contraoferta (condicionado a counter) y tocar la fila sigue abriendo el detalle', compactSec.includes("(counter?'<div") && compactSec.includes(":'')") && compactSec.includes("inboxToggle('+r.id+')"));
   const open36a = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   const open36b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Copalar', dest_detail: 'Copalar', dest_lat: 16.855, dest_lng: -93.198, distance_km: 2.5, eta_minutes: 9, price: 35, payment_method: 'efectivo' });
   const open36 = await api('/api/requests?open=1');
   check('v1.4.36: en vivo, dos solicitudes abiertas a la vez llegan juntas (la lista apilada las muestra todas)', open36a.ok && open36b.ok && open36.ok && open36.requests.some(r=>r.id===open36a.request.id) && open36.requests.some(r=>r.id===open36b.request.id), JSON.stringify({a: open36a.request && open36a.request.id, b: open36b.request && open36b.request.id, open: open36.requests.map(r=>r.id)}));
+  // --- v1.4.38 (en vivo): la contraoferta del pasajero llega en los datos que lee la fila ---
+  const req38 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const off38 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req38.request.id, kind: 'contraoferta', price: 35 });
+  const cnt38 = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: req38.request.id, offer_id: off38.offer.id, action: 'contraoferta', price: 20 });
+  const open38 = await api('/api/requests?open=1');
+  const row38 = open38.requests.find(r=>r.id===req38.request.id);
+  const plain38 = open38.requests.find(r=>r.id===open36a.request.id);
+  check('v1.4.38: en vivo, la solicitud con contraoferta del pasajero trae passenger_counter_price ($20) y la solicitud sin ella no', req38.ok && off38.ok && cnt38.ok && open38.ok && row38 && (row38.offers||[]).some(o=>o.passenger_counter_price===20) && plain38 && !(plain38.offers||[]).some(o=>o.passenger_counter_price), JSON.stringify({row: row38 && row38.offers, plain: plain38 && plain38.offers}));
   check('v1.4.34: publicar Enviar manda nombre, pago del pedido y cantidad', html.includes("type:'enviar'") && html.includes('recipient_name: md.recipientName') && html.includes('order_payment: md.orderPay') && html.includes("order_amount: md.orderPay==='por_pagar'"));
   const quieroSec = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
   check('v1.4.34: "Quiero un mandado" sigue en 5 pasos', quieroSec.includes('Paso 1 de 5') && quieroSec.includes('Paso 4 de 5') && quieroSec.includes('md.step===5'));
