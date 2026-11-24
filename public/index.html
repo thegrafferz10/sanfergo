@@ -161,13 +161,11 @@ input[type=file]{padding:8px}
 /* Diálogo (resumen / recibo) */
 .dialog{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
 .dialog .box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:88dvh;overflow:auto;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
-.carousel{overflow:hidden}
-.carousel .track{display:flex;transition:transform .25s ease}
-.carousel .slide{min-width:100%}
 /* v1.4.52: carrusel de ofertas de "Buscando tu mototaxi…" — se desliza de
    lado en la misma pantalla (scroll-snap nativo, no es una página ni un
-   repintado). Las clases .carousel/.track/.slide no se tocan: las sigue
-   usando la pantalla de espera del mandado. */
+   repintado). v1.4.53: la pantalla de espera del mandado usa este mismo
+   carrusel; el carrusel viejo (transform translateX + touchend) y sus
+   clases .carousel/.track/.slide se eliminaron porque ya nada los usa. */
 .offer-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .offer-carousel::-webkit-scrollbar{display:none}
 .offer-carousel .offer-slide{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always}
@@ -531,7 +529,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.52'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.53'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2403,7 +2401,7 @@ async function publishTrip(){
 }
 
 /* ===== Buscando / ofertas (carrusel) ===== */
-let offerIdx = 0, offerTouchX = null;
+let offerIdx = 0;
 async function renderSearching(){
   const box = $('#searching'); if(!box || !wiz.requestId) return;
   try {
@@ -4238,32 +4236,51 @@ async function renderMandadoSearching(active){
     if(accepted) titleHtml = '<h2 class="center">¡Aceptaron tu mandado!</h2><p class="muted center mt">'+esc(accepted.driver_name)+' aceptó tu precio de '+fmt$(accepted.price)+'. Tu mandado empieza enseguida, con el mapa en vivo del conductor viniendo por tu encargo.</p>';
     else if(countered) titleHtml = '<h2 class="center">¡Tienes una contraoferta!</h2><p class="muted center mt">'+esc(countered.driver_name)+' te ofrece '+fmt$(countered.price)+' por tu mandado (tu precio era '+fmt$(r.price)+'). Revisa su oferta aquí abajo: acéptala para empezar o contraoferta otro precio.</p>';
     let offersHtml = '';
-    if(offers.length===1) offersHtml = offerCard(r, offers[0]);
-    else if(offers.length>1){
-      offersHtml = '<div class="carousel" id="offer-carousel"><div class="track" style="transform:translateX(-'+(offerIdx*100)+'%)">'
-        + offers.map(o=>'<div class="slide">'+offerCard(r, o)+'</div>').join('') + '</div></div>'
-        + '<p class="muted center">'+(offerIdx+1)+' de '+offers.length+' · desliza para verlas</p>'
-        + '<div class="dots">'+offers.map((o,i)=>'<i class="'+(i===offerIdx?'on':'')+'"></i>').join('')+'</div>';
+    if(offers.length===1){
+      offersHtml = offerCard(r, offers[0]);
+    } else if(offers.length>1){
+      // v1.4.53: mismo carrusel que la pantalla del viaje (v1.4.52) —
+      // scroll-snap nativo, las ofertas se deslizan de lado en esta misma
+      // pantalla (no es una página ni un repintado completo: solo se
+      // actualizan los puntos y el contador).
+      offersHtml = '<div class="offer-carousel" id="offer-carousel">'
+        + offers.map(o=>'<div class="offer-slide">'+offerCard(r, o)+'</div>').join('') + '</div>'
+        + '<p class="muted center" id="offer-count">'+(offerIdx+1)+' de '+offers.length+' · desliza para verlas</p>'
+        + '<div class="dots" id="offer-dots">'+offers.map((o,i)=>'<i class="'+(i===offerIdx?'on':'')+'"></i>').join('')+'</div>';
     }
-    box.innerHTML = '<h2 class="center">Buscando quién haga tu mandado…</h2>'
-      + '<p class="muted center mt">Tu mandado ya se envió a los conductores. En cuanto uno acepte tu precio, tu mandado queda confirmado y empieza aquí mismo, con su mapa en vivo; si te contraoferta otro precio, su oferta aparece aquí para que decidas.</p>'
-      + '<div class="card white"><b>Tu mandado</b>'
+    // v1.4.53: con ofertas la tarjeta del mandado se quita y la oferta sube
+    // a su lugar, justo debajo del texto; sin ofertas la tarjeta queda
+    // exactamente como antes (resumen, aviso de que nadie ha respondido,
+    // botones de subir y Cancelar mandado dentro de la tarjeta).
+    const mdCard = '<div class="card white"><b>Tu mandado</b>'
       + '<div class="muted mt">'+esc(r.description||'Mandado')+' · '+fmt$(r.price)+' · '+r.distance_km+' km · ≈ '+r.eta_minutes+' min</div>'
       + '<div style="margin-top:8px"><span class="chip blue">BUSCANDO</span></div>'
       + '<div class="muted mt">Tu precio: <b>'+fmt$(r.price)+'</b> (sugerido '+fmt$(r.suggested||suggestedPrice(r.distance_km||1))+')</div>'
-      + (offers.length ? '' : '<div class="card warn"><b>Ningún conductor real en línea ha respondido todavía.</b><p class="muted mt">Los conductores registrados responden desde el apartado Soy conductor cuando están en línea. Súbelo un poco y tu solicitud se vuelve más atractiva.</p>'
-        + '<div class="btnrow"><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+10)+')">Subir a '+fmt$(r.price+10)+'</button><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+20)+')">Subir a '+fmt$(r.price+20)+'</button></div></div>')
-      + '<div class="center" style="margin-top:10px"><button class="linklike" style="color:var(--red)" onclick="cancelMandado()">Cancelar mandado</button></div></div>'
-      + titleHtml + offersHtml;
+      + '<div class="card warn"><b>Ningún conductor real en línea ha respondido todavía.</b><p class="muted mt">Los conductores registrados responden desde el apartado Soy conductor cuando están en línea. Súbelo un poco y tu solicitud se vuelve más atractiva.</p>'
+        + '<div class="btnrow"><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+10)+')">Subir a '+fmt$(r.price+10)+'</button><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+20)+')">Subir a '+fmt$(r.price+20)+'</button></div></div>'
+      + '<div class="center" style="margin-top:10px"><button class="linklike" style="color:var(--red)" onclick="cancelMandado()">Cancelar mandado</button></div></div>';
+    // v1.4.53: con ofertas, "Cancelar mandado" ya no vive dentro de la
+    // tarjeta (esa tarjeta se quita): es su propio apartado, siempre
+    // visible, debajo de las ofertas — mismo botón y mismo endpoint.
+    const cancelMdHtml = '<div class="center" style="margin-top:14px"><button class="linklike" style="color:var(--red)" onclick="cancelMandado()">Cancelar mandado</button></div>';
+    box.innerHTML = '<h2 class="center">Buscando quién haga tu mandado…</h2>'
+      + '<p class="muted center mt">Tu mandado ya se envió a los conductores. En cuanto uno acepte tu precio, tu mandado queda confirmado y empieza aquí mismo, con su mapa en vivo; si te contraoferta otro precio, su oferta aparece aquí para que decidas.</p>'
+      + (offers.length ? titleHtml + offersHtml + cancelMdHtml : mdCard);
     const car = document.getElementById('offer-carousel');
     if(car){
-      car.addEventListener('touchstart', e=>{ offerTouchX = e.touches[0].clientX; }, {passive:true});
-      car.addEventListener('touchend', e=>{
-        if(offerTouchX==null) return;
-        const dx = e.changedTouches[0].clientX - offerTouchX;
-        if(dx < -40 && offerIdx < offers.length-1){ offerIdx++; renderMandadoSearching(active); }
-        if(dx > 40 && offerIdx > 0){ offerIdx--; renderMandadoSearching(active); }
-        offerTouchX = null;
+      // El sondeo de 5 s repinta la pantalla: se vuelve a la oferta que el
+      // pasajero estaba viendo, sin salto visible.
+      car.scrollLeft = offerIdx * car.clientWidth;
+      car.addEventListener('scroll', ()=>{
+        const w = car.clientWidth||1;
+        const idx = Math.max(0, Math.min(offers.length-1, Math.round(car.scrollLeft/w)));
+        if(idx!==offerIdx){
+          offerIdx = idx;
+          const c = document.getElementById('offer-count');
+          if(c) c.textContent = (offerIdx+1)+' de '+offers.length+' · desliza para verlas';
+          const d = document.getElementById('offer-dots');
+          if(d) d.querySelectorAll('i').forEach((el,i)=>{ el.className = i===offerIdx?'on':''; });
+        }
       }, {passive:true});
     }
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
