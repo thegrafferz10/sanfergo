@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.63'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.64'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -743,6 +743,8 @@ const store = {
 let PLACES = [];
 let LANDMARKS = []; // negocios y lugares con nombre (rótulos del mapa)
 let myPassenger = null, myDriver = null, myAccount = null;
+let negociosLocked = true; // v1.4.64: candado de Negocios — por defecto BLOQUEADO hasta que /api/me diga lo contrario; solo el perfil del dueño (@thegrafferz10) y el admin entran, y el admin lo abre/cierra desde el panel.
+function negociosCanEnter(){ return !negociosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }
 let currentView = 'home';
 let pollTimer = null, pollBusy = false;
 let lastSnapshot = {};
@@ -767,6 +769,7 @@ async function loadMe(){
       try {
         const j = await api('/api/me?token=' + encodeURIComponent(store.token));
         myAccount = j.account;
+        negociosLocked = !!j.negocios_locked; // v1.4.64: el candado viene del servidor (por defecto bloqueado)
         myPassenger = j.passenger || null;
         myDriver = j.driver || null;
         hasSession = true;
@@ -1158,7 +1161,10 @@ function renderHome(){
   if(menu) menu.innerHTML = ''
     + '<button class="menu-card" onclick="go(\'viajes\')"><span class="icbox green">🛺</span><span><b>Viajes</b><span class="muted">Pide tu mototaxi en San Fernando y pon tu precio.</span></span><span class="chev">›</span></button>'
     + '<button class="menu-card" onclick="go(\'mandados\')"><span class="icbox amber">📦</span><span><b>Mandados</b><span class="muted">Encargos y paquetes en moto o mototaxi.</span></span><span class="chev">›</span></button>'
-    + '<button class="menu-card" onclick="openNegocios()"><span class="icbox green">🏪</span><span><b>Negocios</b><span class="muted">Tiendas y negocios locales de San Fernando.</span></span><span class="chev">›</span></button>';
+    // v1.4.64: Negocios con candado — si está bloqueado y la cuenta no es la del dueño ni admin, la tarjeta muestra 🔒 + «Próximamente» y al tocarla solo avisa (no entra).
+    + (negociosCanEnter()
+      ? '<button class="menu-card" onclick="openNegocios()"><span class="icbox green">🏪</span><span><b>Negocios</b><span class="muted">Tiendas y negocios locales de San Fernando.</span></span><span class="chev">›</span></button>'
+      : '<button class="menu-card" style="opacity:.7" onclick="toast(\'Negocios está bloqueado por ahora.\')"><span class="icbox green">🔒</span><span><b>Negocios</b><span class="muted">Próximamente · Tiendas y negocios locales de San Fernando.</span></span></button>');
   const al = $('#home-account-link');
   if(al) al.innerHTML = myAccount
     ? '<a href="#" onclick="go(\'cuenta\');return false" style="color:var(--green);font-weight:700;font-size:14px">Mi cuenta · @'+esc(myAccount.username)+'</a>'
@@ -5412,6 +5418,8 @@ function renderAdminGrid(){
     + '<label class="mt">Confirmar nueva contraseña</label>' + pwInput('adm-new-pass2', 'Repite la contraseña nueva', 'new-password')
     + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>' : '')
     + '</div>'
+    // v1.4.64: interruptor del candado de Negocios (solo lo ve el admin, que es el único que entra al panel). El perfil del dueño (@thegrafferz10) sigue exento aunque el candado esté puesto.
+    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -5427,6 +5435,14 @@ function renderAdminGrid(){
   loadAdminOverview();
   if(adminPoll) clearInterval(adminPoll);
   adminPoll = setInterval(loadAdminOverview, 5000); // revisa cada 5 segundos
+}
+async function toggleNegociosLock(){ // v1.4.64: abre/cierra el candado de Negocios desde el panel (solo admin)
+  try {
+    const j = await api('/api/admin/set-negocios-locked', { token: store.token, locked: !negociosLocked });
+    negociosLocked = !!j.negocios_locked;
+    toast(negociosLocked ? 'Negocios bloqueado. Solo tu perfil puede entrar.' : 'Negocios abierto para todos.');
+    renderAdminGrid();
+  } catch(e){ toast(e.message); }
 }
 // Respaldo de la base de datos (v1.4.19): el admin descarga una copia
 // completa con su token de sesión; el servidor la sirve como archivo.
@@ -5536,7 +5552,7 @@ async function renderAdminBusinessRequests(){
   try {
     const j = await api('/api/admin-business-requests?token=' + encodeURIComponent(store.token));
     const list = j.businesses || [];
-    const act = await api('/api/businesses');
+    const act = await api('/api/businesses?token=' + encodeURIComponent(store.token));
     const active = act.businesses || [];
     const allBiz = await api('/api/admin-businesses?token=' + encodeURIComponent(store.token));
     const suspended = (allBiz.businesses||[]).filter(b=>b.status==='suspendido');
@@ -5865,7 +5881,7 @@ async function renderAdminAds(){
   // Formulario de subida: el tipo ya viene del menú; aquí solo se elige
   // la ubicación y se sube la imagen en su formato.
   try {
-    const biz = await api('/api/businesses');
+    const biz = await api('/api/businesses?token=' + encodeURIComponent(store.token));
     adBizList = biz.businesses || [];
     body.innerHTML = backPill('Regresar', "adScreen='subir';renderAdminAds()")
       + '<div class="card white"><h3>'+(adKind==='libre'?'Subir anuncio Libre':'Subir anuncio de un negocio')+'</h3>'
@@ -5970,7 +5986,7 @@ const BIZ_CATEGORIES = ['Panadería','Comida','Tienda / Abarrotes','Uñas','Pest
 function bizZoneOptions(sel){
   return (PLACES||[]).map(p=>'<option value="'+esc(p.name)+'"'+(sel===p.name?' selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
-function openNegocios(){ bizScreen = 'main'; bizCurrent = null; bizFromAdmin = false; go('negocios'); }
+function openNegocios(){ if(!negociosCanEnter()){ toast('Negocios está bloqueado por ahora.'); return; } bizScreen = 'main'; bizCurrent = null; bizFromAdmin = false; go('negocios'); }
 let bizDetailMenu = false; // (v1.4.58) al abrir desde un anuncio, la ficha baja directo al menú (sus productos/servicios)
 function openBusiness(id, toMenu){ bizDetailMenu = !!toMenu; bizScreen = 'detail'; bizCurrent = id; bizCart = {}; bizFromAdmin = false; bizOrderShow = false; bizBookId = null; bizOrderDone = null; go('negocios'); }
 function scrollBizMenu(){ if(!bizDetailMenu) return; bizDetailMenu = false; const el = document.getElementById('biz-menu'); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
@@ -5992,7 +6008,10 @@ async function renderBizMain(){
   let mine = [];
   try { if(store.token){ const m = await api('/api/my-businesses?token=' + encodeURIComponent(store.token)); mine = m.businesses || []; } } catch(e){}
   let list = [];
-  try { const j = await api('/api/businesses'); list = j.businesses || []; } catch(e){}
+  try { const j = await api('/api/businesses?token=' + encodeURIComponent(store.token || '')); list = j.businesses || []; } catch(e){
+    // v1.4.64: con el candado puesto y sin ser el dueño, el servidor devuelve 403 locked — se muestra el aviso del candado en vez del feed vacío.
+    if(e && e.data && e.data.locked){ box.innerHTML = '<div class="card white center" style="padding:28px 16px"><div style="font-size:40px">🔒</div><h3 class="mt">Negocios bloqueado por ahora</h3><p class="muted mt">Próximamente volverán las tiendas y negocios locales de San Fernando.</p></div>'; return; }
+  }
   bizListCache = list;
   // (v1.4.57) Negocios estilo tienda de TikTok Shop: buscador arriba
   // (filtra en el cliente, sobre lo ya cargado), atajos con icono (las
@@ -6151,7 +6170,7 @@ async function renderBizDetail(){
   page.innerHTML = backPill('Regresar', "bizScreen='main';renderNegocios()") + '<div id="biz-detail"><p class="muted mt">Cargando…</p></div>';
   const box = $('#biz-detail'); if(!box) return;
   try {
-    const j = await api('/api/business?id=' + id);
+    const j = await api('/api/business?id=' + id + '&token=' + encodeURIComponent(store.token || ''));
     const b = j.business;
     const waMsg = 'Hola, vi ' + b.name + ' en SanFerGo y quiero información.';
     const waLink = 'https://wa.me/' + encodeURIComponent((b.whatsapp||'').replace(/\D/g,'')) + '?text=' + encodeURIComponent(waMsg);
@@ -6317,7 +6336,7 @@ async function bizPremiumActivate(id){
 async function renderBizDetailCartOnly(){
   // Re-dibuja solo el carrito sin recargar la ficha.
   try {
-    const j = await api('/api/business?id=' + bizCurrent);
+    const j = await api('/api/business?id=' + bizCurrent + '&token=' + encodeURIComponent(store.token || ''));
     renderBizCart(j.business);
   } catch(e){}
 }
