@@ -1,4 +1,4 @@
-# SanFerGo — versión pública (v1.4.52)
+# SanFerGo — versión pública (v1.4.53)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
@@ -14,6 +14,11 @@ los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 
 - **Pantalla "Buscando tu mototaxi…" con ofertas (reporte del usuario 22:38, captura 10:36 PM con la X roja sobre la tarjeta del viaje de $30 y la contraoferta de $35 de Josué Eduardo):** cuando llega una oferta, la tarjeta "Viaje en mototaxi" (ruta, km/min, BUSCANDO, "Tu precio: $30 (sugerido $20)") se quita y la oferta sube a su lugar, justo debajo del texto ("¡Tienes una contraoferta!" + tarjeta del chofer con sus botones Aceptar / Contraofertar / Rechazar). Con varias ofertas, las tarjetas van en un carrusel horizontal en su sitio (scroll-snap nativo, se desliza de lado en la misma pantalla, no es una página ni un repintado: solo se actualizan los puntos "N de M · desliza para verlas", y el sondeo de 5 s restaura la oferta que se estaba viendo). "Cancelar viaje" ya no vive dentro de la tarjeta: es su propio apartado debajo de las ofertas, con el mismo botón rojo y el mismo comportamiento (al cancelar se levanta el candado de Mandados de v1.4.50). Sin ofertas, la pantalla queda exactamente como antes (tarjeta, aviso de que nadie ha respondido, botones para subir el precio). La pantalla de espera del mandado no se toca (sigue con su carrusel anterior).
 - Pruebas: suite completa contra BD limpia: **711 OK, 0 FAIL** (692 de antes + 19 nuevas en la sección v1.4.52 — 8 estáticas, 3 evaluadas con el armado real de la pantalla y 8 en vivo. Los 7 checks de versión que decían 1.4.51 se actualizaron a 1.4.52).
+
+## v1.4.53 (2026-11-23) — La pantalla de espera del mandado usa el mismo carrusel de ofertas que la del viaje
+
+- **Pantalla "Buscando quién haga tu mandado…" con ofertas (regla del usuario: web y app real idénticas — la app real ya aplicó el acomodo de v1.4.52 a la espera del mandado, la web seguía con su carrusel anterior):** cuando llega una oferta, la tarjeta "Tu mandado" (resumen, km/min, BUSCANDO, "Tu precio") se quita y la oferta sube a su lugar, justo debajo del texto ("¡Tienes una contraoferta!" + tarjeta del chofer con sus botones Aceptar / Contraofertar / Rechazar). Con varias ofertas, las tarjetas van en el mismo carrusel horizontal en su sitio (scroll-snap nativo con las clases .offer-carousel / .offer-slide, puntos "N de M · desliza para verlas", y el sondeo de 5 s restaura la oferta que se estaba viendo). "Cancelar mandado" ya no vive dentro de la tarjeta: es su propio apartado debajo de las ofertas, con el mismo botón rojo y el mismo comportamiento (mismo endpoint /api/cancel-request). Sin ofertas, la pantalla queda exactamente como antes (tarjeta, aviso de que nadie ha respondido, botones para subir el precio y Cancelar mandado dentro de la tarjeta). El carrusel viejo del mandado (transform translateX + touchend) y sus clases .carousel/.track/.slide se eliminaron; la pantalla del viaje (v1.4.52) no se toca.
+- Pruebas: suite completa contra BD limpia: **731 OK, 0 FAIL** (711 de antes + 20 nuevas en la sección v1.4.53 — 9 estáticas, 3 evaluadas con el armado real de la pantalla y 8 en vivo. Los 7 checks de versión que decían 1.4.52 se actualizaron a 1.4.53).
 
 ## v1.4.50 (2026-11-23) — Con un viaje en espera o en curso ya no se puede entrar a Mandados
 
