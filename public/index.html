@@ -356,6 +356,10 @@ input[type=file]{padding:8px}
 #trip-summary-overlay .sumfloat.orange .sumthanks{color:#451a03;text-align:center}
 #trip-summary-overlay .sumfloat.orange .sumprice-big{text-align:center;font-size:56px;font-weight:900;color:#111827;margin:20px 0 8px;line-height:1}
 #trip-summary-overlay .sumfloat.orange .sumremind{background:#c2410c;color:#fff;font-size:18px;font-weight:800;text-align:center;border-radius:14px;padding:14px 12px;margin-top:16px;line-height:1.35}
+#trip-summary-overlay .sumfloat.orange .sumbelong{background:#fff7ed;color:#7c2d12;font-size:17px;font-weight:800;text-align:center;border-radius:14px;padding:12px;margin-top:10px;line-height:1.35}
+#trip-summary-overlay.orange-receipt{align-items:center;padding-top:0}
+#trip-summary-overlay.orange-receipt .adx{top:-22px;right:8px}
+#trip-summary-overlay.orange-receipt .sumfloat.orange{padding-top:26px}
 /* Aviso "Sin internet" en el viaje en curso (v1.4.45): el mapa sigue con
    el GPS local aunque se caiga la red; este aviso chico lo dice en vez
    de congelar la pantalla. */
@@ -591,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.61'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.62'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2724,12 +2728,14 @@ async function showReceipt(requestId, asDriver){
     if(!r){ toast('No se encontró el viaje.'); return; }
     // v1.4.61: "Ver recibo" del historial del PASAJERO (viaje) muestra la
     // misma tarjeta naranja flotante del final del viaje (la app real ya
-    // lo hace así y la web debe ser idéntica). El recibo del chofer y el
-    // del mandado NO se tocan (siguen con el diálogo viejo, intactos).
+    // lo hace así y la web debe ser idéntica). v1.4.62: "Ver recibo" del
+    // historial del CHOFER (viaje) también muestra su tarjeta naranja
+    // nueva. Solo el MANDADO sigue con el diálogo viejo, intacto.
     // El lado lo decide el sitio que llama (historial del pasajero /
     // historial del chofer), NO el driver_id: el mismo usuario puede ser
     // chofer y pasajero a la vez y su propio viaje lo conduciría él.
     if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }
+    if(asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, true); return; }
     const dur = (r.trip_started_at && r.finished_at)
       ? Math.round((new Date(r.finished_at.replace(' ','T')+'Z') - new Date(r.trip_started_at.replace(' ','T')+'Z'))/60000) + ' min'
       : '—';
@@ -3269,20 +3275,44 @@ function showTripSummary(r, asDriver){
     ? '<div class="summinimap" id="sum-minimap"></div>' : '';
   const ov = document.createElement('div');
   ov.id = 'trip-summary-overlay';
+  if(asDriver && r.kind==='viaje'){
+    // v1.4.62: recibo del CHOFER rediseñado IGUAL que el del pasajero
+    // (el usuario lo pidió así: "igual de bonito que el pasajero") —
+    // misma tarjeta flotante toda naranja, sin mini mapa, sin tabla y sin
+    // "Generar recibo": título "Resumen del viaje", gracias, precio
+    // enorme centrado y la línea de pertenencias. NO lleva la línea de
+    // cambio (el chofer RECIBE el efectivo, no paga). X arriba en el
+    // borde y tarjeta centrada en la pantalla, como la del pasajero.
+    ov.classList.add('orange-receipt');
+    ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
+      + '<div class="sumfloat orange"><h2>Resumen del viaje</h2>'
+      + '<div class="sumthanks">Gracias por concluir el viaje</div>'
+      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + '<div class="sumbelong">Recuerda revisar todas tus pertenencias</div>'
+      + '</div></div>';
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
+    document.body.appendChild(ov);
+    return;
+  }
   if(!asDriver && r.kind==='viaje'){
     // v1.4.61: recibo del PASAJERO rediseñado — TODA la tarjeta flotante
     // es naranja (no solo el recordatorio), sin tabla de detalles ni
     // "Generar recibo": solo el título, la línea de gracias, el precio
     // enorme centrado y abajo el recordatorio (solo efectivo), más grande.
     // La X de arriba cierra al instante, como el anuncio de entrada. El
-    // recibo del chofer y el del mandado NO se tocan (siguen abajo,
-    // intactos).
+    // recibo del mandado NO se toca (sigue abajo, intacto).
+    // v1.4.62: segunda línea "Recuerda revisar todas tus pertenencias"
+    // (SIEMPRE, efectivo y transferencia); la X sube al borde superior
+    // de la tarjeta para no tapar el texto y la tarjeta va centrada en
+    // la pantalla (clase orange-receipt en el flotante).
+    ov.classList.add('orange-receipt');
     const cash61 = summaryCashNote(r);
     ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
       + '<div class="sumfloat orange"><h2>¡Viaje terminado!</h2>'
       + '<div class="sumthanks">Tu viaje ha concluido. Gracias por usar SanFerGo.</div>'
       + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
       + (cash61 ? '<div class="sumremind">'+cash61+'</div>' : '')
+      + '<div class="sumbelong">Recuerda revisar todas tus pertenencias</div>'
       + '</div></div>';
     ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
     document.body.appendChild(ov);
