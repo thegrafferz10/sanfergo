@@ -67,6 +67,8 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .notice button{background:#fff;color:#111827;border-radius:10px;padding:8px 12px;font-weight:700;font-size:13px;white-space:nowrap}
 .avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#e5e7eb}
 .avatar.sm{width:44px;height:44px}
+.rowavatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e5e7eb;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#14532d}
+.rowavatar img{width:36px;height:36px;border-radius:50%;object-fit:cover;display:block}
 .flex{display:flex;align-items:center;gap:12px}
 .flex1{flex:1}
 .offer{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px;background:#fff}
@@ -521,7 +523,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.45'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.46'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1968,7 +1970,29 @@ async function repeatTripFrom(last){
   toast('Repetimos tu último viaje: '+wiz.origin.label+' → '+wiz.dest.label);
 }
 async function repeatTrip(id){
-  const last = (histReqs||[]).find(r=>r.id===id);
+  // Repetir un viaje: primero la lista del historial si ya está cargada
+  // (el usuario viene de Historial). PERO la tarjeta "Tu último viaje" de
+  // la pantalla de Viajes NO carga el historial: en esa pantalla histReqs
+  // está vacío ([]), así que buscar solo ahí siempre fallaba con "No se
+  // encontró ese viaje para repetirlo." aunque la tarjeta mostrara el viaje
+  // (captura del usuario 20:56, v1.4.45). Por eso ahora se busca también
+  // en el servidor, y si ese id ya no existe se usa el último finalizado.
+  let last = (histReqs||[]).find(r=>r.id===id);
+  if(!last || last.origin_lat==null || last.dest_lat==null){
+    try {
+      const j = await api('/api/requests?id='+id);
+      const r = (j.requests||[])[0];
+      if(r && r.origin_lat!=null && r.dest_lat!=null) last = r;
+    } catch(e){}
+  }
+  if(!last || last.origin_lat==null || last.dest_lat==null){
+    if(myPassenger){
+      try {
+        const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
+        last = (j.requests||[]).filter(r=>r.kind==='viaje' && r.status==='finalizado' && r.origin_lat!=null && r.dest_lat!=null)[0] || null;
+      } catch(e){}
+    }
+  }
   if(!last || last.origin_lat==null || last.dest_lat==null){ toast('No se encontró ese viaje para repetirlo.'); return; }
   await repeatTripFrom(last);
 }
@@ -2144,7 +2168,7 @@ function nearestZoneName(pos){
    y no "Mi ubicación → Punto de WhatsApp". 1.5 km: el pueblo mide ~3 km
    y las zonas vecinas quedan a menos de eso; fuera de ese radio, o sin
    coordenadas, se queda la etiqueta guardada. */
-const GENERIC_ZONES = ['Mi ubicación','Punto de WhatsApp','Punto de entrega','Punto marcado','Punto de salida','Destino','Entrega en mi punto','Punto'];
+const GENERIC_ZONES = ['Mi ubicación','Punto de WhatsApp','Punto de entrega','Punto marcado','Punto de salida','Destino','Entrega en mi punto','Punto','Punto en el mapa'];
 function nearestZoneWithin(pos, maxKm){
   const all = allPlaces();
   if(!all.length || !pos || pos.lat==null || pos.lng==null) return null;
@@ -2158,6 +2182,16 @@ function displayZoneName(stored, lat, lng){
   // conocida, se queda la etiqueta guardada (puede ser '').
   if(stored && !GENERIC_ZONES.includes(stored)) return stored;
   return nearestZoneWithin({ lat, lng }, 1.5) || stored;
+}
+/* Referencia de lugar para la fila compacta del chofer (v1.4.46): igual
+   que lo que ve el pasajero en su paso de precio — si el punto es un
+   punto genérico del mapa resuelto a un lugar conocido cercano, "cerca de
+   <Lugar>"; si la zona guardada ya es un lugar específico, solo el nombre;
+   si no hay ningún lugar conocido cerca, se queda la etiqueta de antes. */
+function rowPlaceRef(stored, lat, lng){
+  const resolved = displayZoneName(stored, lat, lng);
+  if(stored && GENERIC_ZONES.includes(stored) && resolved && resolved !== stored) return 'cerca de ' + resolved;
+  return resolved || '';
 }
 function updatePickZone(){
   const el = document.getElementById('pick-zone');
@@ -4489,6 +4523,10 @@ async function loadDriverInbox(force){
     for(const r of list){
       r._dispO = displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng) || r.origin_detail || '';
       r._dispD = displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng) || r.dest_detail || '';
+      // Referencia con "cerca de" para la fila compacta (v1.4.46): la misma
+      // que ve el pasajero en su paso de precio.
+      r._refO = rowPlaceRef(r.origin_zone, r.origin_lat, r.origin_lng) || r._dispO;
+      r._refD = rowPlaceRef(r.dest_zone, r.dest_lat, r.dest_lng) || r._dispD;
     }
     // Caché de la bandeja (v1.4.41): el flotante del detalle se abre al
     // instante con estos datos y el refresco los revalida después.
@@ -4497,7 +4535,7 @@ async function loadDriverInbox(force){
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -4552,9 +4590,11 @@ async function loadDriverInbox(force){
       if(r.payment_method) rowMeta.push('Pago: '+esc(r.payment_method));
       return '<div class="card white">'
       + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
-      + '<div class="flex" style="align-items:center">'
+      + '<div class="flex" style="align-items:center;gap:8px">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
-      + '<div class="flex1"><b>'+esc(r._dispO)+' → '+esc(r._dispD)+'</b></div>'
+      + '<span class="rowavatar" id="rowav-'+r.id+'">'+esc((r.passenger_name||'P').trim().slice(0,1).toUpperCase())+'</span>'
+      + '<div class="flex1" style="min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.passenger_name||'Pasajero')+'</div>'
+      + '<div><b>'+esc(r._refO)+' → '+esc(r._refD)+'</b></div></div>'
       + '<b class="price">'+fmt$(r.price)+'</b>'
       + '<span class="muted">▾</span></div>'
       + (rowMeta.length?'<div class="muted" style="margin-top:4px;font-size:12px">'+rowMeta.join(' · ')+'</div>':'')
@@ -4563,6 +4603,7 @@ async function loadDriverInbox(force){
       + '</div></div>';
     }).join('');
     p.innerHTML = html;
+    loadInboxPhotos(list);
     renderInboxOverlay(list);
   } catch(e){
     // Sin conexión o con el servidor dormido: la lista anterior se queda
@@ -4571,6 +4612,32 @@ async function loadDriverInbox(force){
     // (v1.4.42: antes el "Cargando…" podía quedarse para siempre).
     if(!inboxLoaded) p.innerHTML = head + '<p class="muted center mt">No se pudo cargar. Revisa tu conexión; se reintentará solo.</p><div class="center"><button class="btn small" onclick="loadDriverInbox(true)">Reintentar</button></div>';
   } finally { inboxLoading = false; paintDriverActiveBanners(); }
+}
+/* Foto chica del pasajero en la fila compacta (v1.4.46): la lista light
+   (v1.4.42) NO trae fotos para no pesar megabytes en el sondeo de 5 s,
+   así que la foto se carga bajo demanda, una sola vez por solicitud, con
+   /api/requests?id= (la misma llamada que abre el detalle flotante). El
+   caché por id evita volver a pedirla en cada ciclo del sondeo; si no hay
+   foto o la carga falla, queda la inicial del nombre. El detalle flotante
+   no cambia: sigue mostrando la foto grande y todo completo. */
+const inboxPhotoCache = {};
+function paintRowAvatar(id, ph){
+  const el = document.getElementById('rowav-'+id);
+  if(!el || !ph) return;
+  el.innerHTML = '<img src="'+ph+'" alt="">';
+}
+async function loadInboxPhotos(list){
+  for(const r of list){
+    if(inboxPhotoCache[r.id] !== undefined){ paintRowAvatar(r.id, inboxPhotoCache[r.id]); continue; }
+    inboxPhotoCache[r.id] = null; // en vuelo: no pedirla dos veces
+    try {
+      const j = await api('/api/requests?id='+r.id);
+      const row = (j.requests||[])[0];
+      const ph = row && row.passenger_photo ? row.passenger_photo : '';
+      inboxPhotoCache[r.id] = ph;
+      paintRowAvatar(r.id, ph);
+    } catch(e){ inboxPhotoCache[r.id] = ''; }
+  }
 }
 function inboxDetailHtml(r, sub, atLimit){
   // Contenido del detalle de una solicitud (v1.4.41): EXACTAMENTE lo que
