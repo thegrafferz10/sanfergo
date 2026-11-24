@@ -136,6 +136,15 @@ CREATE TABLE IF NOT EXISTS driver_dismissed (
   created_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY(driver_id, request_id)
 );
+-- v1.4.66: recorridos de taxímetro terminados, para la ficha del chofer
+-- (total y hoy) en el panel de admin. El historial del taxímetro vive en
+-- el teléfono del chofer (localStorage); el servidor solo guarda el
+-- conteo. No toca el límite gratis: ese se sigue contando en el teléfono.
+CREATE TABLE IF NOT EXISTS taxi_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  driver_id INTEGER NOT NULL, price REAL, km REAL, secs INTEGER,
+  created_at TEXT DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS lost_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_type TEXT NOT NULL, reporter_name TEXT, reporter_phone TEXT,
@@ -582,6 +591,18 @@ function driverServicesTotal(driverId) {
     `SELECT COUNT(*) c FROM requests WHERE driver_id=? AND status IN ('aceptado','finalizado')`).get(driverId);
   return row ? row.c : 0;
 }
+// v1.4.66: recorridos de taxímetro terminados (para la ficha del chofer en
+// el panel de admin). Mismo "día" en hora de Chiapas que driverServicesToday.
+function taxiRunsTotal(driverId) {
+  const row = db.prepare(`SELECT COUNT(*) c FROM taxi_runs WHERE driver_id=?`).get(driverId);
+  return row ? row.c : 0;
+}
+function taxiRunsToday(driverId) {
+  const row = db.prepare(
+    `SELECT COUNT(*) c FROM taxi_runs WHERE driver_id=?
+     AND substr(datetime(created_at,'-6 hours'),1,10)=?`).get(driverId, todayStr());
+  return row ? row.c : 0;
+}
 function driverHasSub(driver) {
   return driver && driver.subscription_until && new Date(driver.subscription_until) > new Date();
 }
@@ -611,6 +632,7 @@ function publicDriver(d) {
   if (!d) return null;
   // Precios de suscripción en los tres planes (v1.3.0).
   return { ...d, services_done: driverServicesTotal(d.id),
+    taxi_runs_total: taxiRunsTotal(d.id), taxi_runs_today: taxiRunsToday(d.id),
     subscription_price: SUB_PLANS.weekly.price,
     subscription_price_monthly: SUB_PLANS.monthly.price,
     subscription_price_yearly: SUB_PLANS.yearly.price };
@@ -734,7 +756,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.65' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.66' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -815,6 +837,20 @@ async function api(req, res, pathname) {
     if (online && !driverComplete(d)) return send(res, 400, { ok: false, error: 'Completa tu registro: falta tu foto o la foto de tu mototaxi/moto.' });
     db.prepare('UPDATE drivers SET online=? WHERE id=?').run(online ? 1 : 0, driver_id);
     return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id)) });
+  }
+  if (pathname === '/api/taxi-run') {
+    // v1.4.66: registrar un recorrido de taxímetro terminado (para la
+    // ficha del chofer en el panel de admin: total y hoy). El chofer se
+    // saca de la cuenta, no del cuerpo: nadie puede inflar el conteo de
+    // otro. No toca el límite gratis (5/día), que se sigue contando en
+    // el historial del teléfono del chofer.
+    const a = accountFromToken(body.token);
+    if (!a || !a.driver_id) return send(res, 403, { ok: false, error: 'Inicia sesión como chofer.' });
+    const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id);
+    if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
+    const price = Number(body.price) || 0, km = Number(body.km) || 0, secs = Math.floor(Number(body.secs) || 0);
+    db.prepare(`INSERT INTO taxi_runs (driver_id, price, km, secs) VALUES (?,?,?,?)`).run(d.id, price, km, secs);
+    return send(res, 200, { ok: true, taxi_runs_total: taxiRunsTotal(d.id), taxi_runs_today: taxiRunsToday(d.id) });
   }
   if (pathname === '/api/subscribe-driver') {
     const { driver_id, plan } = body;

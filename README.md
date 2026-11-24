@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.65)
+# SanFerGo — versión pública (v1.4.66)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.66 (2026-11-24) — La ficha del chofer muestra también el taxímetro
+
+- La ficha del chofer en el panel de admin mostraba «Servicios» (viajes/mandados, total y hoy) pero no cuántas veces usó el taxímetro. Ahora tiene una fila «Taxímetro» (total y hoy) bajo Servicios, y el bloque SUSCRIPCIÓN cuenta los recorridos de taxímetro de hoy junto a los servicios (gratis: «N de 5 recorridos de taxímetro de hoy»; con suscripción: «Taxímetro ilimitado · N recorridos de taxímetro hoy»).
+- El taxímetro vivía solo en el teléfono del chofer (localStorage); el servidor no guardaba nada, así que el admin no podía verlo. Ahora cada recorrido terminado se registra con POST /api/taxi-run (el chofer sale de la cuenta, no del cuerpo: nadie puede inflar el conteo ajeno) y el admin lo ve en /api/admin-drivers (taxi_runs_total / taxi_runs_today). Solo corren desde esta versión: no se inventan datos viejos.
+- El límite gratis (5 recorridos de taxímetro por día) NO cambia: se sigue contando en el historial del teléfono del chofer, y el registro en el servidor no bloquea si no hay internet o falla.
+- Pruebas: suite completa contra BD limpia: **1055 OK, 0 FAIL** (1039 de antes + 16 nuevas: 6 estáticas de la fila/bloque/endpoint/límite intacto y 10 en vivo del registro, el rechazo sin chofer, y total/hoy con un recorrido de ayer; checks actualizados: 7 de versión a 1.4.66 y 1 viejo — v1.4.45, cuya rebanada ahora empieza en drvOnPos por el refactor Capacitor del watch GPS).
 
 ## v1.4.65 (2026-11-24) — El mapa del pasajero ya se mueve en vivo, igual que el del chofer
 

@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.65 en /api/health', h.ok && h.version === '1.4.65', JSON.stringify(h));
+  check('versión 1.4.66 en /api/health', h.ok && h.version === '1.4.66', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.65', h134.ok && h134.version === '1.4.65', JSON.stringify(h134));
+  check('versión 1.4.66', h134.ok && h134.version === '1.4.66', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.65)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.65';") && h.version === '1.4.65', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.66)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.66';") && h.version === '1.4.66', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.65 en /api/health (sección)', h27.ok && h27.version === '1.4.65', JSON.stringify(h27));
+  check('versión 1.4.66 en /api/health (sección)', h27.ok && h27.version === '1.4.66', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.65 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.65', JSON.stringify(h28));
+  check('versión 1.4.66 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.66', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.65 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.65', JSON.stringify(h29));
+  check('versión 1.4.66 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.66', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.65 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.65', JSON.stringify(h30));
+  check('versión 1.4.66 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.66', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1848,7 +1848,10 @@ async function api(path, body) {
   // Diagnóstico (reporte del usuario 20:46): el GPS solo mandaba la
   // posición al servidor y al fallar se tiraba; el sondeo tragaba el
   // error en silencio y nada se movía. Ahora el GPS dibuja en local.
-  const watchSec = html.slice(html.indexOf('function startDriverGpsWatch(reqId){'), html.indexOf('/* ===== TAXÍMETRO'));
+  // La lectura del GPS vive en drvOnPos (el refactor Capacitor de la app
+  // instalada extrajo el manejo de cada posición de startDriverGpsWatch
+  // a drvOnPos/drvSendPos; el comportamiento es el mismo).
+  const watchSec = html.slice(html.indexOf('function drvOnPos(lat, lng){'), html.indexOf('/* ===== TAXÍMETRO'));
   check('v1.4.45: el GPS del chofer mueve el mapa EN LOCAL con cada lectura y encola el reporte si no hay internet (v1.4.65: el dibujo local es solo con el mapa en vivo del chofer abierto — en la vista del pasajero el GPS no dibuja, solo reporta)', watchSec.includes('liveGpsPos = { lat, lng, t: now };') && watchSec.includes("if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);") && watchSec.includes('liveLocQueue.push({ lat, lng });') && watchSec.includes('if(liveLocQueue.length > 20) liveLocQueue.shift();'));
   check('v1.4.45: el sondeo ya no se congela sin internet (guardia anti-solape, aviso chico, cola y avance pendiente al recuperar)', pollSec.includes('if(livePollBusy) return; livePollBusy = true;') && pollSec.includes('liveSetOffline(false);') && pollSec.includes('liveSetOffline(true);') && pollSec.includes('finally { livePollBusy = false; }') && pollSec.includes('liveFlushLocQueue();') && pollSec.includes('if(livePendingAdvance){ const st = livePendingAdvance; livePendingAdvance = null; advanceLive(st); }'));
   check('v1.4.45: el avance que falla por red se guarda pendiente y se reintenta solo (un rechazo del servidor no se reintenta)', html.includes('livePendingAdvance = stage;') && html.includes("toast('Sin internet — el avance se enviará cuando vuelva la conexión.');") && html.includes("window.addEventListener('online'") && html.includes('id="live-offline">📶 Sin internet'));
@@ -3800,6 +3803,57 @@ async function api(path, body) {
   const seenB65 = await api('/api/requests?id=' + trip65.request.id);
   check('v1.4.65: en vivo — el sondeo del pasajero ve la 2ª posición (el feed del mapa avanza con cada reporte)', locB65.ok && seenB65.ok && seenB65.requests[0].driver_lat === 16.8685 && seenB65.requests[0].driver_lng === -93.209, JSON.stringify(seenB65.requests && seenB65.requests[0] && { lat: seenB65.requests[0].driver_lat, lng: seenB65.requests[0].driver_lng }));
   await api('/api/advance-stage', { driver_id: drv65.driver.id, request_id: trip65.request.id, stage: 'finalizado' });
+
+  // ===== v1.4.66 (2026-11-24): la ficha del chofer en el panel de admin
+  // muestra también el taxímetro (total y hoy) y el bloque SUSCRIPCIÓN
+  // cuenta los recorridos de hoy. El taxímetro vivía solo en el teléfono
+  // del chofer (localStorage); el servidor no guardaba nada. Ahora cada
+  // recorrido terminado se registra con POST /api/taxi-run (el chofer sale
+  // de la cuenta, no del cuerpo: nadie infla el conteo ajeno) y el admin
+  // lo ve en /api/admin-drivers (taxi_runs_total / taxi_runs_today).
+  // Solo corren desde esta versión: no se inventan datos viejos. El
+  // límite gratis (5 recorridos/día, contado en el teléfono) NO cambia. =====
+  const detSec66 = html.slice(html.indexOf('function renderAdminDetail'), html.indexOf('async function adminBlock'));
+  check('v1.4.66: la ficha del chofer tiene fila Taxímetro (total · hoy) bajo Servicios', detSec66.includes("<span>Taxímetro</span><b>'+(d.taxi_runs_total||0)+' en total · '+(d.taxi_runs_today||0)+' hoy</b>"));
+  check('v1.4.66: SUSCRIPCIÓN gratis cuenta los recorridos de taxímetro de hoy junto a los servicios', detSec66.includes("'+(d.taxi_runs_today||0)+' de '+FREE_DAILY_LIMIT+' recorridos de taxímetro de hoy · '"));
+  check('v1.4.66: SUSCRIPCIÓN de paga dice Taxímetro ilimitado + recorridos de hoy (sin marco de 5)', detSec66.includes("Taxímetro ilimitado · '+(d.taxi_runs_today||0)+' recorridos de taxímetro hoy · vence el '"));
+  const stopSec66 = html.slice(html.indexOf('function stopTaxi()'), html.indexOf('function taxiReceipt()'));
+  check('v1.4.66: al terminar el recorrido se registra en el servidor (POST /api/taxi-run, sin bloquear si falla)', stopSec66.includes("api('/api/taxi-run'") && stopSec66.includes('taxiSaveHist(hist)') && stopSec66.includes('.catch(()=>{})'));
+  check('v1.4.66: el límite gratis del taxímetro sigue contándose en el teléfono (taxiRunsToday >= FREE_DAILY_LIMIT; el servidor solo guarda)', html.includes('taxiRunsToday() >= FREE_DAILY_LIMIT') && html.includes('function taxiRunsToday(){') && srv.includes('CREATE TABLE IF NOT EXISTS taxi_runs'));
+  const taxiRunSec66 = srv.slice(srv.indexOf("'/api/taxi-run'"), srv.indexOf("'/api/subscribe-driver'"));
+  check('v1.4.66: /api/taxi-run existe, saca el chofer de la cuenta (anti-inflado) y guarda el recorrido', taxiRunSec66.includes('accountFromToken(body.token)') && taxiRunSec66.includes('INSERT INTO taxi_runs') && taxiRunSec66.includes('taxi_runs_total') && taxiRunSec66.includes('taxi_runs_today'));
+  // En vivo: chofer de prueba con cuenta enlazada registra recorridos.
+  const acc66 = await api('/api/register-account', { name: 'Taxista 66', username: 'taxi66_' + RUN, phone: '961660' + RUN.slice(0, 4), password: 'secreta123' });
+  check('v1.4.66: en vivo, cuenta de prueba para el chofer del taxímetro', acc66.ok && acc66.account.id, JSON.stringify(acc66));
+  const li66 = await api('/api/login', { identifier: 'taxi66_' + RUN, password: 'secreta123' });
+  check('v1.4.66: en vivo, login de la cuenta del chofer', li66.ok && !!li66.token, JSON.stringify(li66));
+  const drv66 = await api('/api/register-driver', { name: 'Chofer Taxi 66', phone: '961660' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'T-66', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.66: en vivo, chofer de prueba registrado', drv66.ok && drv66.driver.id, JSON.stringify(drv66));
+  await approveDriver(drv66.driver.id);
+  const link66 = await api('/api/link-profiles', { token: li66.token, driver_id: drv66.driver.id });
+  check('v1.4.66: en vivo, chofer enlazado a su cuenta', link66.ok && link66.account.driver_id === drv66.driver.id, JSON.stringify(link66));
+  const noTok66 = await api('/api/taxi-run', { price: 25, km: 1.2, secs: 300 });
+  check('v1.4.66: en vivo, /api/taxi-run sin token rechazado', !noTok66.ok, JSON.stringify(noTok66));
+  const noDrv66 = await api('/api/taxi-run', { token: liMail.token, price: 25, km: 1.2, secs: 300 });
+  check('v1.4.66: en vivo, /api/taxi-run con cuenta sin chofer rechazado (no se puede inflar el conteo ajeno)', !noDrv66.ok, JSON.stringify(noDrv66));
+  const run66a = await api('/api/taxi-run', { token: li66.token, price: 25, km: 1.2, secs: 300 });
+  check('v1.4.66: en vivo, 1.er recorrido registrado (total 1, hoy 1)', run66a.ok && run66a.taxi_runs_total === 1 && run66a.taxi_runs_today === 1, JSON.stringify(run66a));
+  const run66b = await api('/api/taxi-run', { token: li66.token, price: 40, km: 3.5, secs: 600 });
+  check('v1.4.66: en vivo, 2.º recorrido registrado (total 2, hoy 2)', run66b.ok && run66b.taxi_runs_total === 2 && run66b.taxi_runs_today === 2, JSON.stringify(run66b));
+  // Un recorrido de ayer: se atrasa created_at directo en la BD y el
+  // total se mantiene pero el de hoy baja.
+  {
+    const { DatabaseSync } = require('node:sqlite');
+    const dbPath = path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'sanfergo.db');
+    const tdb = new DatabaseSync(dbPath);
+    tdb.prepare(`UPDATE taxi_runs SET created_at=datetime('now','-1 day') WHERE id=(SELECT id FROM taxi_runs WHERE driver_id=? ORDER BY id DESC LIMIT 1)`).run(drv66.driver.id);
+    tdb.close();
+  }
+  const adm66 = await api('/api/admin-drivers', { token: ADM.token });
+  const d66 = (adm66.drivers || []).find(d => d.id === drv66.driver.id);
+  check('v1.4.66: en vivo, el admin ve taxi_runs_total=2 y taxi_runs_today=1 (el de ayer no cuenta para hoy)', adm66.ok && !!d66 && d66.taxi_runs_total === 2 && d66.taxi_runs_today === 1, JSON.stringify(d66 && { total: d66.taxi_runs_total, today: d66.taxi_runs_today }));
+  const run66c = await api('/api/taxi-run', { token: li66.token, price: 20, km: 0.8, secs: 180 });
+  check('v1.4.66: en vivo, 3.er recorrido de hoy (total 3, hoy 2)', run66c.ok && run66c.taxi_runs_total === 3 && run66c.taxi_runs_today === 2, JSON.stringify(run66c));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
