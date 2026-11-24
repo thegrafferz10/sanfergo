@@ -190,8 +190,10 @@ input[type=file]{padding:8px}
 .pickup-pin{display:flex;flex-direction:column;align-items:center;gap:2px}
 .pickup-lbl{background:#14532d;color:#fff;border:2px solid #fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 .pickup-dot{width:14px;height:14px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}
-.driver-entry{display:flex;justify-content:space-between;align-items:center;width:100%;padding:16px;background:#fff;border:1.5px solid var(--green);border-radius:14px;margin-top:10px;font-size:16px;text-align:left}
-.driver-entry b{font-size:16px}
+.driver-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:18px;background:#fff;border:2px solid var(--green);border-radius:18px;margin-top:12px;font-size:17px;text-align:left;box-shadow:0 2px 10px rgba(20,83,45,.08)}
+.driver-entry b{font-size:17px}
+.driver-entry .ic{flex:none;width:46px;height:46px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:24px}
+.driver-entry:active{transform:scale(.98)}
 .plan-opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
 .plan-opt.sel{border-color:var(--green);background:#e8f5ee}
 .plan-opt b{display:block;font-size:17px}
@@ -357,6 +359,8 @@ input[type=file]{padding:8px}
    puntos abajo, auto-avance cada 5 s que se pausa al tocar. */
 #biz-ads-carousel{margin-top:12px}
 #biz-ads-carousel:empty{display:none}
+#driver-ads-carousel{margin-top:12px}
+#driver-ads-carousel:empty{display:none}
 .biz-carousel{position:relative}
 .biz-carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:16px}
 .biz-carousel-track::-webkit-scrollbar{display:none}
@@ -577,13 +581,13 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.57'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.58'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
 /* Tarifa oficial 2026-11-20: $10 base + $2.50 cada 300 m; espera $1.25/min parado; mínimo $20 */
 const BASE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
-const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 50, PREMIUM_MIN_PRICE = 80;
+const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 const SUB_PLANS = [{key:'weekly',days:7,price:50,label:'Semanal',desc:'$50 por semana · 7 días'},{key:'monthly',days:30,price:150,label:'Mensual',desc:'$150 por mes · 30 días'},{key:'yearly',days:365,price:500,label:'Anual',desc:'$500 por año · 365 días'}];
 const fmt$ = n => '$' + Math.round(n);
 function fare(km){ return BASE + (km / 0.3) * PER_300M; }
@@ -1265,7 +1269,7 @@ function renderEntryAd(ad){
 }
 function entryAdTap(adId, businessId){
   closeEntryAd();
-  if(businessId) openBusiness(businessId);
+  if(businessId) openBusiness(businessId, true);
 }
 function closeEntryAd(){
   const ov = document.getElementById('entry-ad-overlay');
@@ -3419,7 +3423,7 @@ function taxiLoadHist(){
   try { return JSON.parse(localStorage.getItem(TAXI_HIST_KEY) || '[]'); } catch(e){ return []; }
 }
 function taxiSaveHist(list){ localStorage.setItem(TAXI_HIST_KEY, JSON.stringify(list.slice(0, 60))); }
-/* Límite del taxímetro en plan gratis: 50 recorridos por día (para pruebas), contados desde el
+/* Límite del taxímetro en plan gratis: 5 recorridos por día (valor final pre-lanzamiento, decisión del usuario 2026-11-24), contados desde el
    historial del teléfono en hora de America/Mexico_City, SEPARADO del contador
    de viajes/mandados. Premium (suscripción vigente) = ilimitado. */
 function taxiIsPremium(){ return !!(myDriver && myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date()); }
@@ -4502,14 +4506,16 @@ function renderDriverHome(){
     + '<button class="btn '+(d.online?'danger':'')+'" '+(canGoOnline?'':'disabled')+' onclick="toggleOnline()">'+(d.online?'Ponerme fuera de línea':'Ponerme en línea')+'</button>'
     + (onlineWhy ? '<p class="muted center mt">'+onlineWhy+'</p>' : '')
     + '<button class="btn ghost" onclick="openRegistro(\'chofer\',\'chofer\')">Editar mi perfil</button></div>'
-    + '<button class="driver-entry" onclick="driverHomeExpand(\'plan\')"><span><b>Mi plan y suscripción</b><div class="muted" id="de-plan-sub">Cargando…</div></span><span>'+planPill+' <span style="font-size:20px;color:var(--green)">›</span></span></button>'
-    + '<button class="driver-entry" onclick="driverHomeExpand(\'trips\')"><span><b id="de-trips-title">Mis viajes confirmados</b><div class="muted" id="de-trips-sub">Cargando…</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
-    + '<button class="driver-entry" onclick="driverHomeExpand(\'hist\')"><span><b>Historial de viajes</b><div class="muted">Tus viajes terminados y cancelados.</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
-    + '<button class="driver-entry" onclick="go(\'taxihist\')"><span><b>Historial del taxímetro</b><div class="muted">Tus recorridos del taxímetro.</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
+    + '<div id="driver-ads-carousel"></div>'
+    + '<button class="driver-entry" onclick="driverHomeExpand(\'plan\')"><span class="ic">💳</span><span><b>Mi plan y suscripción</b><div class="muted" id="de-plan-sub">Cargando…</div></span><span>'+planPill+' <span style="font-size:20px;color:var(--green)">›</span></span></button>'
+    + '<button class="driver-entry" onclick="driverHomeExpand(\'trips\')"><span class="ic">🛺</span><span><b id="de-trips-title">Mis viajes confirmados</b><div class="muted" id="de-trips-sub">Cargando…</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
+    + '<button class="driver-entry" onclick="driverHomeExpand(\'hist\')"><span class="ic">🕘</span><span><b>Historial de viajes</b><div class="muted">Tus viajes terminados y cancelados.</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
+    + '<button class="driver-entry" onclick="go(\'taxihist\')"><span class="ic">🧾</span><span><b>Historial del taxímetro</b><div class="muted">Tus recorridos del taxímetro.</div></span><span style="font-size:20px;color:var(--green)">›</span></button>'
     + '<div id="driver-home-expanded"></div>'
     + '<button class="btn" style="border:2px solid var(--red);color:var(--red);background:#fff" onclick="exitDriverMode()">Salir del modo chofer</button>';
   renderDriverExpanded();
   paintDriverActiveBanners(); // el aviso que ya se conoce sale al instante, sin esperar a driverCounts
+  renderBizAdsCarousel('driver-ads-carousel'); // (v1.4.58) anuncios en horizontal debajo del perfil, mismo carrusel que Negocios
   driverCounts().then(c=>{
     const ps = document.getElementById('de-plan-sub');
     if(ps) ps.textContent = sub ? ('De paga · ilimitado · te quedan ' + Math.max(0, Math.ceil((new Date(d.subscription_until) - Date.now())/86400000)) + ' días') : ('Gratis · ' + c.today + ' de '+FREE_DAILY_LIMIT+' servicios hoy · $50/sem · $150/mes · $500/año');
@@ -4545,6 +4551,14 @@ function renderDriverExpanded(){
   else box.innerHTML = '';
 }
 let subPlanSel = 0, subConfirm = false;
+// (v1.4.58) Pagar el plan por transferencia: el chofer le escribe al admin
+// por WhatsApp (9614868605) con el mensaje listo pidiendo el número para
+// transferir y con los planes y precios. La CLABE, el banco y el titular
+// todavía no los ha dado el usuario: el mensaje PIDE el número, no se
+// inventa ningún dato de cuenta.
+function driverPayWaLink(){
+  return 'https://wa.me/529614868605?text=' + encodeURIComponent('Hola, quiero pagar mi suscripción de SanFerGo. ¿Me pasas el número para transferir? Planes: Semanal $50, Mensual $150, Anual $500.');
+}
 function renderPlan(){
   const sub = myDriver.subscription_until && new Date(myDriver.subscription_until) > new Date();
   const pl = SUB_PLANS[subPlanSel];
@@ -4562,10 +4576,12 @@ function renderPlan(){
   if(subConfirm){
     html += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Suscripción '+pl.label.toLowerCase()+' · '+fmt$(pl.price)+' · '+pl.days+' días</b>'
       + '<p class="mt"><b>Paso 1:</b> transfiere '+fmt$(pl.price)+' a la cuenta de SanFerGo (pide los datos de la transferencia por WhatsApp si todavía no los tienes).</p>'
+      + '<a class="btn" style="text-decoration:none;text-align:center;background:#25d366;border-color:#25d366;color:#fff;margin-top:8px" href="'+driverPayWaLink()+'" target="_blank">Pagar por transferencia · pedir el número por WhatsApp</a>'
       + '<p class="mt"><b>Paso 2:</b> ya que hiciste la transferencia, confírmalo aquí y tu suscripción se activa por '+pl.days+' días.</p>'
       + '<div class="btnrow"><button class="btn amber" onclick="confirmSubscribe()">Ya hice la transferencia · Activar</button><button class="btn ghost" onclick="subConfirm=false;renderDriverHome()">Todavía no · Volver</button></div></div>';
   } else {
     html += '<button class="btn amber" onclick="subConfirm=true;renderDriverHome()">'+(sub ? 'Renovar · ' : 'Suscribirme · ')+pl.label+' '+fmt$(pl.price)+'</button>';
+    html += '<p class="muted center mt"><a href="'+driverPayWaLink()+'" target="_blank" style="color:var(--green);font-weight:700">Pagar por transferencia · pedir el número por WhatsApp</a></p>';
   }
   return html + '</div>';
 }
@@ -5294,6 +5310,8 @@ async function renderAdminBusinessRequests(){
     const list = j.businesses || [];
     const act = await api('/api/businesses');
     const active = act.businesses || [];
+    const allBiz = await api('/api/admin-businesses?token=' + encodeURIComponent(store.token));
+    const suspended = (allBiz.businesses||[]).filter(b=>b.status==='suspendido');
     body.innerHTML = (list.length
       ? '<p class="muted mt">'+list.length+' negocio(s) esperando activación. Solo al activarlos aparecen en Negocios.</p>'
         + list.map(b=>'<div class="card white"><div class="flex">'
@@ -5306,9 +5324,18 @@ async function renderAdminBusinessRequests(){
       + '<h3 class="mt2">Negocios activos ('+active.length+')</h3>'
       + (active.length ? active.map(b=>'<div class="card white"><div class="flex"><div class="flex1"><b>'+esc(b.name)+'</b>'
         + (b.is_premium ? ' <span class="chip amber">★ Premium · Verificado</span>' : '')
-        + '<div class="muted">'+bizTypeLabel(b.type)+'</div></div></div>'
-        + '<button class="btn ghost small" onclick="openBusinessManage('+b.id+', true)">Abrir su panel</button></div>').join('')
-        : '<p class="muted center mt">Todavía no hay negocios aceptados en la app.</p>');
+        + '<div class="muted">'+bizTypeLabel(b.type)+' · '+(b.is_premium ? 'Premium · vence el '+new Date(b.premium_until).toLocaleDateString('es-MX') : 'Gratis')+'</div></div></div>'
+        + '<div class="btnrow"><button class="btn ghost small" onclick="openBusinessManage('+b.id+', true)">Abrir su panel</button>'
+        + '<button class="btn amber small" onclick="adminActivateBizPremium('+b.id+')">'+(b.is_premium?'Renovar Premium · $100/mes':'Activar Premium · $100/mes')+'</button></div>'
+        + '<div class="btnrow"><button class="btn ghost small" onclick="adminSuspendBusiness('+b.id+')">Suspender</button>'
+        + '<button class="btn danger small" onclick="adminDeleteBusiness('+b.id+', \''+esc(b.name).replace(/'/g,"")+'\')">Eliminar</button></div></div>').join('')
+        : '<p class="muted center mt">Todavía no hay negocios aceptados en la app.</p>')
+      + (suspended.length ? '<h3 class="mt2">Negocios suspendidos ('+suspended.length+')</h3><p class="muted mt">No se ven en Negocios, pero conservan todos sus datos y se pueden reactivar.</p>'
+        + suspended.map(b=>'<div class="card white"><div class="flex"><div class="flex1"><b>'+esc(b.name)+'</b>'
+        + (b.is_premium ? ' <span class="chip amber">★ Premium · Verificado</span>' : '')
+        + '<div class="muted">'+bizTypeLabel(b.type)+'</div></div><span class="chip red">Suspendido</span></div>'
+        + '<div class="btnrow"><button class="btn small" onclick="adminSuspendBusiness('+b.id+')">Reactivar</button>'
+        + '<button class="btn danger small" onclick="adminDeleteBusiness('+b.id+', \''+esc(b.name).replace(/'/g,"")+'\')">Eliminar</button></div></div>').join('') : '');
   } catch(e){ body.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
 }
 async function adminApproveBusiness(id){
@@ -5318,6 +5345,19 @@ async function adminApproveBusiness(id){
 async function adminRejectBusiness(id){
   if(!confirm('¿Rechazar esta solicitud de negocio?')) return;
   try { await api('/api/reject-business', { token: store.token, business_id: id }); toast('Solicitud rechazada.'); renderAdminBusinessRequests(); }
+  catch(e){ toast(e.message); }
+}
+async function adminActivateBizPremium(id){
+  try { const j = await api('/api/subscribe-business', { token: store.token, business_id: id }); const until = j.business && j.business.premium_until ? new Date(j.business.premium_until) : null; toast('Paquete Premium activado por 30 días' + (until ? ' · vence el '+until.toLocaleDateString('es-MX') : '') + '.'); renderAdminBusinessRequests(); }
+  catch(e){ toast(e.message); }
+}
+async function adminSuspendBusiness(id){
+  try { const j = await api('/api/admin/suspend-business', { token: store.token, business_id: id }); toast(j.business && j.business.status==='suspendido' ? 'Negocio suspendido: ya no se ve en Negocios.' : 'Negocio reactivado: ya se ve en Negocios.'); renderAdminBusinessRequests(); }
+  catch(e){ toast(e.message); }
+}
+async function adminDeleteBusiness(id, name){
+  if(!confirm('¿Eliminar "'+name+'"? Se borran el negocio, sus productos, sus servicios, sus pedidos y sus citas. Esta acción no se puede deshacer.')) return;
+  try { await api('/api/admin/delete-business', { token: store.token, business_id: id }); toast('Negocio eliminado.'); renderAdminBusinessRequests(); }
   catch(e){ toast(e.message); }
 }
 /* --- Administrar choferes --- */
@@ -5368,7 +5408,7 @@ async function renderAdminDetail(){
     todayCount = list.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
   } catch(e){}
   const subBlock = sub
-    ? '<b>Suscripción de paga activa · Servicios ilimitados · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>'
+    ? '<b>Suscripción de paga activa · Servicios ilimitados · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>' + (d.subscription_start ? '<p class="muted mt">Activa desde el '+new Date(d.subscription_start).toLocaleDateString('es-MX')+'.</p>' : '')
     : '<b>Plan gratis · '+todayCount+' de '+FREE_DAILY_LIMIT+' servicios de hoy · '+(todayCount>=FREE_DAILY_LIMIT ? 'ya llegó a su límite de hoy' : 'todavía puede aceptar más hoy')+'</b>'
       + '<p class="muted mt">Precios de la suscripción: $50 por semana · $150 por mes · $500 por año (el chofer elige y paga por transferencia).</p>';
   body.innerHTML = '<button class="backpill" onclick="adminDetail=null;adminBlockStep=false;adminDeleteStep=false;renderAdminDrivers()">Regresar a la lista de choferes</button>'
@@ -5385,6 +5425,7 @@ async function renderAdminDetail(){
     + '<div class="kv"><span>Servicios</span><b>'+(d.services_done||0)+' en total · '+todayCount+' hoy</b></div>'
     + '<div class="kv"><span>Registro</span><b>'+fmtDateTime(d.created_at)+'</b></div></div>'
     + '<div class="card white"><h3>SUSCRIPCIÓN</h3><p class="mt">'+subBlock+'</p></div>'
+    + '<div class="card white"><h3>ACTIVAR SUSCRIPCIÓN</h3><p class="muted mt">El chofer te mandó la transferencia: actívale aquí su plan. Si ya tiene uno vigente, se le suman los días (no pierde los que le quedan).</p><div class="btnrow"><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'weekly\')">Semanal · $50 · 7 días</button><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'monthly\')">Mensual · $150 · 30 días</button><button class="btn amber small" onclick="adminSetSubscription('+d.id+', \'yearly\')">Anual · $500 · 365 días</button></div></div>'
     + (d.is_blocked ? '<div class="card red"><b>Bloqueado</b><p class="mt">Motivo: '+esc(d.block_reason||'—')+'</p><p class="muted mt">Bloqueado el '+fmtDateTime(d.blocked_at)+'. No puede ponerse en línea ni recibir viajes o mandados nuevos hasta que lo desbloquees.</p></div>'
         + '<button class="btn" onclick="adminUnblock('+d.id+')">Desbloquear conductor</button>' : '')
     + (d.status==='pendiente' ? '<div class="card warn"><b>Registro pendiente de aprobación</b><p class="muted mt">Revisa su registro y actívalo para que pueda ponerse en línea.</p><button class="btn small" onclick="adminApproveDriver('+d.id+');adminDetail=null;renderAdminDrivers()">Aceptar y activar su cuenta</button></div>' : '')
@@ -5405,6 +5446,10 @@ async function adminBlock(did){
 }
 async function adminUnblock(did){
   try { await api('/api/unblock-driver', { token: store.token, driver_id: did }); toast('Conductor desbloqueado.'); adminDetail=null; renderAdminDrivers(); }
+  catch(e){ toast(e.message); }
+}
+async function adminSetSubscription(did, plan){
+  try { const j = await api('/api/admin/set-subscription', { token: store.token, driver_id: did, plan }); toast('Suscripción activada por '+j.days+' días ('+fmt$(j.price)+').'); renderAdminDetail(); }
   catch(e){ toast(e.message); }
 }
 async function adminDeleteDriver(did, name){
@@ -5686,7 +5731,9 @@ function bizZoneOptions(sel){
   return (PLACES||[]).map(p=>'<option value="'+esc(p.name)+'"'+(sel===p.name?' selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
 function openNegocios(){ bizScreen = 'main'; bizCurrent = null; bizFromAdmin = false; go('negocios'); }
-function openBusiness(id){ bizScreen = 'detail'; bizCurrent = id; bizCart = {}; bizFromAdmin = false; bizOrderShow = false; bizBookId = null; bizOrderDone = null; go('negocios'); }
+let bizDetailMenu = false; // (v1.4.58) al abrir desde un anuncio, la ficha baja directo al menú (sus productos/servicios)
+function openBusiness(id, toMenu){ bizDetailMenu = !!toMenu; bizScreen = 'detail'; bizCurrent = id; bizCart = {}; bizFromAdmin = false; bizOrderShow = false; bizBookId = null; bizOrderDone = null; go('negocios'); }
+function scrollBizMenu(){ if(!bizDetailMenu) return; bizDetailMenu = false; const el = document.getElementById('biz-menu'); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function renderNegocios(){
   const page = $('#negocios-page'); if(!page) return;
   if(bizScreen==='detail') return renderBizDetail();
@@ -5807,12 +5854,14 @@ function renderBizFeed(){
    dos que ya están en vivo no dejan de aparecer hasta que el admin los
    vuelva a subir en horizontal. Swipe con scroll-snap, puntos abajo,
    auto-avance cada 5 s (se pausa al tocar). Tocar un anuncio vinculado
-   abre la ficha del negocio; el libre no hace nada. Sin anuncios activos
+   abre DIRECTO el menú del negocio (v1.4.58); el libre no hace nada. Sin anuncios activos
    no se muestra nada (sin caja vacía). */
-let bizCarouselTimer = null;
-function bizCarouselStop(){ if(bizCarouselTimer){ clearInterval(bizCarouselTimer); bizCarouselTimer = null; } }
-async function renderBizAdsCarousel(){
-  const wrap = document.getElementById('biz-ads-carousel'); if(!wrap) return;
+let bizCarouselTimer = null, bizCarouselTrack = null;
+function bizCarouselStop(){ if(bizCarouselTimer){ clearInterval(bizCarouselTimer); bizCarouselTimer = null; } bizCarouselTrack = null; }
+// (v1.4.58) El mismo carrusel sirve en Negocios y en el inicio del chofer:
+// wrapId es el contenedor donde se monta ('biz-ads-carousel' por defecto).
+async function renderBizAdsCarousel(wrapId){
+  const wrap = document.getElementById(wrapId || 'biz-ads-carousel'); if(!wrap) return;
   bizCarouselStop();
   let ads = [];
   try { const j = await api('/api/ads'); ads = (j.ads||[]).filter(a=>a.banner_image); } catch(e){}
@@ -5824,21 +5873,22 @@ async function renderBizAdsCarousel(){
       + ads.map((a,i)=>'<button type="button" aria-label="Anuncio '+(i+1)+'" data-i="'+i+'" class="'+(i===0?'on':'')+'"></button>').join('')
       + '</div>' : '')
     + '</div>';
-  const track = document.getElementById('biz-carousel-track');
-  const dots = Array.from(document.querySelectorAll('#biz-carousel-dots button'));
+  const track = wrap.querySelector('.biz-carousel-track');
+  const dots = Array.from(wrap.querySelectorAll('.biz-carousel-dots button'));
   const cur = ()=> Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
   const paint = ()=>{ const i = cur(); dots.forEach((d,k)=>d.classList.toggle('on', k===i)); };
   const goTo = (i)=>{ const n = ads.length; const idx = ((i % n) + n) % n; track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' }); };
   track.addEventListener('scroll', paint, { passive: true });
   dots.forEach(d=>d.addEventListener('click', ()=>goTo(+d.dataset.i)));
-  // Tap (sin arrastre) en un anuncio vinculado abre su negocio; el libre
-  // no hace nada. Se mide el desplazamiento para no abrirlo al deslizar.
+  // Tap (sin arrastre) en un anuncio vinculado abre DIRECTO el menú del
+  // negocio (sus productos/servicios, v1.4.58); el libre no hace nada.
+  // Se mide el desplazamiento para no abrirlo al deslizar.
   let px = 0, py = 0;
   track.addEventListener('pointerdown', e=>{ px = e.clientX; py = e.clientY; bizCarouselStop(); });
   track.addEventListener('pointerup', e=>{
     if(Math.hypot(e.clientX - px, e.clientY - py) < 8){
       const slide = e.target.closest('.biz-carousel-slide');
-      if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);
+      if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz, true);
     }
     bizCarouselStart();
   });
@@ -5847,9 +5897,10 @@ async function renderBizAdsCarousel(){
   function bizCarouselStart(){
     bizCarouselStop();
     if(ads.length < 2) return;
+    bizCarouselTrack = track;
     bizCarouselTimer = setInterval(()=>{
-      const t = document.getElementById('biz-carousel-track');
-      if(!t){ bizCarouselStop(); return; }
+      const t = bizCarouselTrack;
+      if(!t || !t.isConnected){ bizCarouselStop(); return; }
       goTo(cur() + 1);
     }, 5000);
   }
@@ -5886,7 +5937,7 @@ async function renderBizDetail(){
     }
     if(b.type === 'entrega'){
       const prods = b.products || [];
-      html += '<h3 class="mt2">Sus productos</h3>'
+      html += '<h3 class="mt2" id="biz-menu">Sus productos</h3>'
         + (prods.length ? prods.map(p=>{
           const qty = bizCart[p.id] || 0;
           return '<div class="card white"><div class="flex">'
@@ -5902,6 +5953,7 @@ async function renderBizDetail(){
         + '<div id="biz-cart"></div>';
       box.innerHTML = html;
       renderBizCart(b);
+      scrollBizMenu();
       return;
     }
     if(b.type === 'catalogo'){
@@ -5913,18 +5965,19 @@ async function renderBizDetail(){
         + (it.available===0 ? '<div style="color:var(--red);font-weight:700;margin-top:4px">No disponible hoy</div>' : '')
         + '</div></div>'
         + '<a class="btn ghost small" style="text-decoration:none;text-align:center;margin-top:8px" href="https://wa.me/'+encodeURIComponent((b.whatsapp||'').replace(/\D/g,''))+'?text='+encodeURIComponent('Hola, vi «'+it.name+'» ('+fmt$(it.price)+') en SanFerGo y me interesa. ¿Me das más información?')+'">Preguntar por WhatsApp</a></div>';
-      html += '<h3 class="mt2">Sus productos</h3>'
+      html += '<h3 class="mt2" id="biz-menu">Sus productos</h3>'
         + (prods.length ? prods.map(p=>itemCard(p,false)).join('') : '<p class="muted center mt">Este negocio todavía no sube productos.</p>')
         + '<h3 class="mt2">Sus servicios</h3>'
         + (servs.length ? servs.map(sv=>itemCard(sv,true)).join('') : '<p class="muted center mt">Este negocio todavía no sube servicios.</p>')
         + ((!prods.length && !servs.length) ? '<p class="muted center mt">Este negocio todavía no sube su catálogo a la app. Puedes escribirle o llamarle con los botones de arriba.</p>' : '')
         + '<p class="muted center mt">Este negocio muestra su catálogo aquí, en la app, y se le contacta por WhatsApp o llamada para acordar la compra y la entrega.</p>';
       box.innerHTML = html;
+      scrollBizMenu();
       return;
     }
     // citas
     const servs = b.services || [];
-    html += '<h3 class="mt2">Sus servicios</h3>';
+    html += '<h3 class="mt2" id="biz-menu">Sus servicios</h3>';
     if(bizBookId){
       const sv = servs.find(x=>x.id===bizBookId);
       if(sv){
@@ -5955,6 +6008,7 @@ async function renderBizDetail(){
       + (sv.available===0 ? '' : '<button class="btn small" style="margin-top:8px" onclick="bizBookId='+sv.id+';renderBizDetail()">Reservar cita</button>')+'</div>').join('')
       : '<p class="muted center mt">Este negocio aún no sube sus servicios.</p>');
     box.innerHTML = html;
+    scrollBizMenu();
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar: '+esc(e.message)+'</p>'; }
 }
 function bizCartAdd(pid){ bizCartSet(pid, 1); }
@@ -6262,7 +6316,7 @@ async function renderBizMine(){
         + (b.photo?'<img class="avatar" src="'+b.photo+'">':'<div class="avatar">S/F</div>')
         + '<div class="flex1"><b>'+esc(b.name)+'</b>'
         + (b.is_premium ? ' <span class="chip amber">★ PREMIUM · VERIFICADO</span>' : '')
-        + '<div class="muted">'+bizTypeLabel(b.type)+' · '+(b.status==='activo'?'Activo en la app':'Pendiente de aprobación')+'</div></div></div>'
+        + '<div class="muted">'+bizTypeLabel(b.type)+' · '+(b.status==='activo'?'Activo en la app':b.status==='suspendido'?'Suspendido por el administrador':'Pendiente de aprobación')+'</div></div></div>'
         + '<button class="btn small" onclick="openBusinessManage('+b.id+', false)">Administrar</button></div>').join('') : '<p class="muted center mt">Todavía no has creado ningún negocio.</p>')
       + (list.length>=1 && !hasPremium && !isAdmin ? '<div class="card warn"><b>Versión gratis: solo puedes crear un negocio en SanFerGo, y ya tienes el tuyo. Aquí lo administras: sus productos o servicios, sus pedidos y sus citas. Para crear más negocios, activa el Paquete Premium de la tarjeta de arriba.</b></div>' : '')
       + (canCreateMore ? '<button class="btn" style="border:2px dashed #f59e0b;color:#b45309;background:#fff" onclick="bizScreen=\'create\';renderNegocios()">+ Crear otro negocio</button>' : '');
