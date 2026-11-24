@@ -382,6 +382,7 @@ input[type=file]{padding:8px}
 .veh-opt.sel{border-color:#14532d;background:#14532d;color:#fff}
 .pay-opt{flex:1;text-align:center;padding:14px 8px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:16px;font-weight:700}
 .pay-opt.sel{border-color:var(--green);background:#e8f5ee;color:var(--green)}
+.pay-opt[disabled]{opacity:.55;cursor:not-allowed;border-style:dashed;background:#f9fafb;color:var(--muted)}
 /* v1.4.31: selector de ubicación del anuncio (Subir anuncio): dos opciones
    apiladas a lo ancho, misma altura, título corto + subtítulo en una línea. */
 .adplace{display:block;width:100%;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;margin-top:8px;font-family:inherit}
@@ -523,7 +524,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.47'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.48'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -535,6 +536,12 @@ const fmt$ = n => '$' + Math.round(n);
 function fare(km){ return BASE + (km / 0.3) * PER_300M; }
 function roundUp5(x){ return Math.max(MIN_TRIP, Math.ceil(x / 5) * 5); }
 function suggestedPrice(km){ return roundUp5(fare(km)); }
+// v1.4.48: mínimo por número de personas (modelo B): 1=$20, 2=$25, 3=$30.
+// Solo sube el mínimo; la tarifa NO cambia.
+function minForPax(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return MIN_TRIP + 5*(n-1); }
+function roundUp5For(x, pax){ return Math.max(minForPax(pax), Math.ceil(x / 5) * 5); }
+function suggestedPriceFor(km, pax){ return roundUp5For(fare(km), pax); }
+function paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? ' persona' : ' personas'); }
 function havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180;
   const x=r(c-a), y=r(d-b);
   return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }
@@ -1780,7 +1787,7 @@ async function saveAccountPhone(){
 
 /* ===== VIAJES — asistente para pedir ===== */
 let wiz = null;
-function newWizard(){ return { step:0, origin:null, dest:null, km:0, eta:0, price:0, suggested:0, payment:'efectivo', desc:'', requestId:null }; }
+function newWizard(){ return { step:0, origin:null, dest:null, km:0, eta:0, price:0, suggested:0, payment:'efectivo', desc:'', requestId:null, pax:1 }; }
 async function myActiveRequest(kind){
   if(!myPassenger) return null;
   try {
@@ -1968,7 +1975,12 @@ async function repeatTripFrom(last){
   wiz = newWizard();
   wiz.origin = { lat:last.origin_lat, lng:last.origin_lng, label:last.origin_detail||last.origin_zone||'Punto de salida', zone:last.origin_zone||'Punto de salida' };
   wiz.dest = { lat:last.dest_lat, lng:last.dest_lng, label:last.dest_detail||last.dest_zone||'Destino', zone:last.dest_zone||'Destino' };
-  wiz.payment = last.payment_method || 'efectivo';
+  // v1.4.48: se repite con las mismas personas de ese viaje; y el pago
+  // ya no puede ser transferencia (ese botón ahora es "Tarjeta ·
+  // Próximamente"): si el viaje viejo era por transferencia, queda en
+  // efectivo, que es la única forma disponible.
+  wiz.pax = Math.min(3, Math.max(1, Number(last.passenger_count)||1));
+  wiz.payment = last.payment_method === 'transferencia' ? 'efectivo' : (last.payment_method || 'efectivo');
   await computeTrip();
   renderViajes();
   toast('Repetimos tu último viaje: '+wiz.origin.label+' → '+wiz.dest.label);
@@ -2024,7 +2036,7 @@ async function computeTrip(){
   const est = await estimateKm(wiz.origin, wiz.dest);
   wiz.km = Math.max(0.8, Math.round(est.km * 10) / 10);
   wiz.eta = etaMin(wiz.km);
-  wiz.suggested = suggestedPrice(wiz.km);
+  wiz.suggested = suggestedPriceFor(wiz.km, wiz.pax);
   wiz.price = wiz.suggested;
   wiz.step = 3;
 }
@@ -2246,14 +2258,24 @@ async function confirmPick(){
 }
 function priceSheetHtml(kind){
   // Hoja inferior del paso de precio (app real), igual para viajes y
-  // mandados: stepper con "Sugerido: $X", pago con dos botones, nota de
-  // pago y botón ámbar para publicar.
+  // mandados: stepper con "Sugerido: $X", pago (Efectivo + Tarjeta ·
+  // Próximamente deshabilitada, v1.4.48), nota de pago y botón ámbar para
+  // publicar. En viajes, selector de cuántas personas (el mínimo sube:
+  // 1=$20, 2=$25, 3=$30).
   const isTrip = kind === 'viaje';
   const st = isTrip ? wiz : md;
   const sugg = st.suggested;
-  const payNote = st.payment === 'efectivo'
-    ? 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(isTrip?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(isTrip?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.'
-    : 'Pagas '+fmt$(st.price)+' por transferencia directo al conductor al terminar el '+(isTrip?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(isTrip?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
+  const payNote = 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(isTrip?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(isTrip?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
+  // v1.4.48: cuántas personas van (solo viajes): el mínimo sube con las
+  // personas (1=$20, 2=$25, 3=$30) y el sugerido se recalcula al cambiar.
+  let paxHtml = '';
+  if(isTrip){
+    paxHtml = '<div style="font-weight:700;margin-top:10px">¿Cuántas personas?</div>'
+      + '<div class="btnrow" style="margin-top:8px">'
+      + [1,2,3].map(n=>'<button type="button" class="pay-opt '+(wiz.pax===n?'sel':'')+'" onclick="priceSetPax(\'viaje\','+n+')">'+n+(n===1?' persona':' personas')+'</button>').join('')
+      + '</div>'
+      + '<p class="muted center mt">Mínimo para '+paxText(wiz.pax)+': '+fmt$(minForPax(wiz.pax))+'. El precio del viaje no cambia, solo el mínimo.</p>';
+  }
   let extra = '';
   if(!isTrip){
     const n = Math.max(0, (md.stops||[]).length - 1);
@@ -2267,8 +2289,9 @@ function priceSheetHtml(kind){
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-weight:700">Tu precio</span><button class="sugg-pill" onclick="priceSetSuggested(\''+kind+'\')">Sugerido: '+fmt$(sugg)+'</button></div>'
     + '<div class="stepper"><button class="pm" onclick="priceStep(\''+kind+'\',-5)">−</button><span class="val" id="price-val">'+fmt$(st.price)+'</span><button class="pm" onclick="priceStep(\''+kind+'\',5)">+</button></div>'
     + (isTrip ? '<p class="muted center mt">Tú pones el precio, de $5 en $5. El conductor lo acepta o te ofrece el suyo.</p>' : '')
+    + paxHtml
     + '<div style="font-weight:700;margin-top:10px">¿Cómo vas a pagar?</div>'
-    + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(st.payment==='efectivo'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'efectivo\')">Efectivo</button><button type="button" class="pay-opt '+(st.payment==='transferencia'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'transferencia\')">Transferencia</button></div>'
+    + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(st.payment==='efectivo'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'efectivo\')">Efectivo</button><button type="button" class="pay-opt" disabled>Tarjeta · Próximamente</button></div>'
     + (isTrip ? '<p class="muted mt" id="price-pay-note">'+payNote+'</p>' : '')
     + '<button class="amber" style="background:#f59e0b" onclick="'+(isTrip ? 'publishTrip()' : 'publishMandado()')+'">'+(isTrip ? 'Pedir viaje' : 'Publicar mandado')+'</button>'
     + (isTrip ? '<p class="muted center mt">Al publicar, tu '+(isTrip?'viaje':'mandado')+' se envía a los choferes. En cuanto uno acepte tu precio, queda confirmado con el pago que elegiste aquí.</p>' : '');
@@ -2295,7 +2318,7 @@ function mdPublishSummaryHtml(){
     if(md.orderPay==='pagado') rows.push(['Pedido', 'Ya pagado']);
     else if(md.orderPay==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(Number(md.orderAmount)||0)+' para recogerlo']);
   }
-  rows.push(['Tu precio', '<span id="md-sum-price">'+fmt$(md.price)+'</span> · <span id="md-sum-pay">'+(md.payment==='transferencia'?'Transferencia':'Efectivo')+'</span>']);
+  rows.push(['Tu precio', '<span id="md-sum-price">'+fmt$(md.price)+'</span> · <span id="md-sum-pay">Efectivo</span>']);
   return '<div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-top:8px"><b>Resumen de tu mandado</b>'
     + rows.map(r=>'<div class="kv"><span>'+r[0]+'</span><b style="text-align:right">'+r[1]+'</b></div>').join('') + '</div>';
 }
@@ -2308,11 +2331,14 @@ function mdSummaryLine(){
 }
 function priceStep(kind, d){
   const st = kind==='viaje' ? wiz : md;
-  st.price = Math.max(20, st.price + d);
+  // v1.4.48: el piso del stepper es el mínimo por personas en viajes
+  // (1=$20, 2=$25, 3=$30); en mandados sigue $20.
+  const floor = kind==='viaje' ? minForPax(st.pax) : MIN_TRIP;
+  st.price = Math.max(floor, st.price + d);
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
   const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
   const n = document.getElementById('price-pay-note');
-  if(n) n.textContent = (st.payment==='efectivo' ? 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.' : 'Pagas '+fmt$(st.price)+' por transferencia directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.');
+  if(n) n.textContent = 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
 }
 function priceSetSuggested(kind){
   const st = kind==='viaje' ? wiz : md;
@@ -2326,17 +2352,31 @@ function priceSetPay(kind, m){
   if(kind==='viaje'){ wiz.step = 4; renderViajes(); }
   else renderMandados();
 }
+function priceSetPax(kind, n){
+  // v1.4.48: cuántas personas van (solo viajes): el mínimo sube
+  // (1=$20, 2=$25, 3=$30) y el sugerido se recalcula; el precio vuelve
+  // al sugerido, como al tocar "Sugerido".
+  const st = kind==='viaje' ? wiz : md;
+  st.pax = Math.min(3, Math.max(1, Number(n)||1));
+  st.suggested = suggestedPriceFor(st.km, st.pax);
+  st.price = st.suggested;
+  if(kind==='viaje'){ renderViajes(); }
+  else renderMandados();
+}
 async function publishTrip(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','viajes'); return; }
   const price = wiz.price;
-  if(!price || price < MIN_TRIP || price > 1000 || price % 5 !== 0){ toast('El precio debe ir de cinco en cinco: $20, $25, $30, $35…'); return; }
+  // v1.4.48: el precio no puede bajar del mínimo por personas
+  // (1=$20, 2=$25, 3=$30) y sigue de cinco en cinco.
+  const minP = minForPax(wiz.pax);
+  if(!price || price < minP || price > 1000 || price % 5 !== 0){ toast('Para '+paxText(wiz.pax)+' el mínimo es '+fmt$(minP)+'. El precio va de cinco en cinco.'); return; }
   const pay = wiz.payment, desc = '';
   try {
     const j = await api('/api/create-request', {
       passenger_id: myPassenger.id, kind:'viaje',
       origin_zone: wiz.origin.zone, origin_detail: wiz.origin.label, origin_lat: wiz.origin.lat, origin_lng: wiz.origin.lng,
       dest_zone: wiz.dest.zone, dest_detail: wiz.dest.label, dest_lat: wiz.dest.lat, dest_lng: wiz.dest.lng,
-      distance_km: wiz.km, eta_minutes: wiz.eta, price, payment_method: pay, paymentMethod: pay, description: desc });
+      distance_km: wiz.km, eta_minutes: wiz.eta, price, payment_method: pay, paymentMethod: pay, description: desc, passenger_count: wiz.pax });
     wiz.requestId = j.request.id; wiz.step = 5;
     requestNotificationPermission();
     try { localStorage.setItem('sfg_last_trip', JSON.stringify({ origin_lat: wiz.origin.lat, origin_lng: wiz.origin.lng, origin_zone: wiz.origin.zone, origin_detail: wiz.origin.label, dest_lat: wiz.dest.lat, dest_lng: wiz.dest.lng, dest_zone: wiz.dest.zone, dest_detail: wiz.dest.label, payment_method: pay })); } catch(e){}
@@ -2433,7 +2473,7 @@ function offerCard(r, o){
     + (counter?'<p class="muted mt">Tu contraoferta: <b>'+fmt$(counter)+'</b> · esperando al chofer…</p>':'')
     + (o.kind==='contraoferta'
       ? '<div class="btnrow"><button class="btn" onclick="respondOffer('+r.id+', '+o.id+', \'acepta\')">Aceptar '+fmt$(o.price)+'</button>'
-      + '<button class="btn ghost" onclick="counterOfferPrompt('+r.id+', '+o.id+', '+o.price+')">Contraofertar</button></div>'
+      + '<button class="btn ghost" onclick="counterOfferPrompt('+r.id+', '+o.id+', '+o.price+', '+(r.kind==='viaje'?minForPax(r.passenger_count):20)+')">Contraofertar</button></div>'
       + '<button class="btn ghost small" onclick="respondOffer('+r.id+', '+o.id+', \'rechaza\')">Rechazar</button>'
       : '<p class="muted center mt"><b>¡El chofer aceptó tu precio!</b><br>Confirmando tu viaje…</p>')
     + '</div>';
@@ -2446,17 +2486,19 @@ async function respondOffer(rid, oid, action){
   } catch(e){ toast(e.message); }
 }
 let counterState = null; // {rid, oid, price}
-function counterOfferPrompt(rid, oid, price){
+function counterOfferPrompt(rid, oid, price, minPrice){
   // Contraoferta EN LÍNEA (app real): − / + de $5, precio grande y botones
   // "Enviar contraoferta" / "Volver". Nada de prompt() nativo.
-  counterState = { rid, oid, price: roundUp5(price) };
+  // v1.4.48: el mínimo es el del viaje por personas (1=$20, 2=$25, 3=$30).
+  const floor = minPrice||20;
+  counterState = { rid, oid, price: Math.max(floor, roundUp5(price)), min: floor };
   const host = document.getElementById('searching') || document.getElementById('md-searching');
   if(!host) return;
   const box = document.createElement('div');
   box.id = 'counter-inline';
   box.innerHTML = '<div class="card white"><h3>Tu contraoferta</h3>'
     + '<div class="stepper"><button class="pm" onclick="counterStep(-5)">−</button><span class="val" id="counter-val">'+fmt$(counterState.price)+'</span><button class="pm" onclick="counterStep(5)">+</button></div>'
-    + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
+    + '<p class="muted center mt">De $5 en $5, mínimo '+fmt$(counterState.min)+'.</p>'
     + '<button class="btn" onclick="counterSend()">Enviar contraoferta</button>'
     + '<button class="btn ghost" onclick="counterCancel()">Volver</button></div>';
   host.appendChild(box);
@@ -2464,7 +2506,7 @@ function counterOfferPrompt(rid, oid, price){
 }
 function counterStep(d){
   if(!counterState) return;
-  counterState.price = Math.max(20, counterState.price + d);
+  counterState.price = Math.max(counterState.min||20, counterState.price + d);
   const v = document.getElementById('counter-val'); if(v) v.textContent = fmt$(counterState.price);
 }
 function counterSend(){
@@ -2526,6 +2568,7 @@ async function showReceipt(requestId){
       + 'Fecha: '+fmtDateTime(r.created_at)+'\n'
       + 'De: '+(r.origin_zone||r.origin_detail||'')+'\nA: '+(r.dest_zone||r.dest_detail||'')+'\n'
       + 'Distancia: '+(r.distance_km||'—')+' km\nDuración real: '+dur+'\n'
+      + (r.kind==='viaje' ? 'Personas: '+paxText(r.passenger_count)+'\n' : '')
       + 'Chofer: '+(r.driver_name||'—')+' · Unidad '+(r.driver_unit||'—')+'\n'
       + 'Pago: '+(r.payment_method||'efectivo')+'\nTotal: '+fmt$(r.final_price||r.price)+'\nSan Fernando, Chiapas';
     window.__receiptTxt = txt; window.__receiptName = 'recibo-sanfergo-'+r.id+'.txt';
@@ -2534,6 +2577,7 @@ async function showReceipt(requestId){
       + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
       + '<div class="kv"><span>Fecha</span><b>'+fmtDateTime(r.created_at)+'</b></div>'
       + '<div class="kv"><span>Distancia</span><b>'+(r.distance_km||'—')+' km</b></div>'
+      + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
       + '<div class="kv"><span>Duración real</span><b>'+dur+'</b></div>'
       + '<div class="kv"><span>Chofer</span><b>'+esc(r.driver_name||'—')+' · '+esc(r.driver_unit||'—')+'</b></div>'
       + '<div class="kv"><span>Pago</span><b>'+esc(r.payment_method||'efectivo')+'</b></div>'
@@ -2824,7 +2868,7 @@ function renderLiveStrips(){
     const miniLinks = [];
     if(r.trip_stage==='en_camino' || r.trip_stage==='llego') miniLinks.push('<a class="minilink" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>');
     if(r.kind==='mandado') miniLinks.push('<a class="minilink" href="javascript:void(0)" onclick="driverPasteLocationInline('+r.id+')">📍 Pegar ubicación de WhatsApp</a>');
-    bot.innerHTML = '<div class="row live-mini"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
+    bot.innerHTML = '<div class="row live-mini"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
       + (recvLine ? '<div class="row live-mini"><span>'+recvLine+'</span></div>' : '')
       + (payLine ? '<div class="row live-mini"><span>'+payLine+'</span></div>' : '')
       + (miniLinks.length ? '<div class="row live-mini-links">'+miniLinks.join('')+'</div>' : '')
@@ -2870,7 +2914,7 @@ function renderLiveStrips(){
     }
     top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
       + '<div class="statuscard"><div class="row"><b>'+esc(passengerStageTitle(r))+'</b><span class="chip">'+stagePill+'</span></div>'
-      + '<div class="row" style="margin-top:6px"><span>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+' · '+(r.kind==='mandado'?'Mandado':'Viaje en mototaxi')+(r.distance_km ? ' · '+r.distance_km+' km' : '')+'</span></div>'
+      + '<div class="row" style="margin-top:6px"><span>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+' · '+(r.kind==='mandado'?'Mandado':'Viaje en mototaxi')+(r.distance_km ? ' · '+r.distance_km+' km' : '')+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span></div>'
       + (hintLine ? '<div class="row" style="margin-top:6px"><span>'+hintLine+'</span></div>' : '')+'</div>';
     pill.classList.add('hidden');
     // Tarjeta del chofer (app real): nombre en su línea, vehículo · unidad,
@@ -2882,9 +2926,10 @@ function renderLiveStrips(){
       + '<div style="font-size:13px;opacity:.85">'+esc(r.driver_vehicle||'')+' · Unidad '+esc(r.driver_unit||'—')+'</div>'
       + '<div style="font-size:13px;opacity:.85">WhatsApp '+esc(r.driver_phone||'')+'</div></div>'
       + '<div style="text-align:right"><div style="font-size:11px;opacity:.75">Precio final</div><b class="big2">'+fmt$(r.final_price||r.price)+'</b></div></div>'
-      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor.'+(r.trip_stage==='confirmado' ? ' <a href="#" onclick="changePayLive(event,'+r.id+',\''+pay+'\')">Cambiar</a>' : '')+'</span></div></div>';
-    // v1.4.43: "Cambiar" solo existe mientras sigue confirmado (antes de
-    // salir); al aceptar el chofer ya va en camino y el pago quedó fijado.
+      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor.</span></div></div>';
+    // v1.4.48: ya no hay "Cambiar" de pago en el viaje en curso: el pago
+    // es efectivo desde que se publica (Transferencia ahora es "Tarjeta ·
+    // Próximamente", deshabilitada) y queda fijado al aceptar.
     // La brújula ya no necesita bajar: arriba solo van Regresar + estado.
     // El botón de recentrar debe librar la columna de abajo (Cancelar +
     // aviso verde + tarjeta del chofer).
@@ -2906,16 +2951,6 @@ function openGmaps(oLat,oLng,dLat,dLng,toDest){
 async function cancelLiveRequest(rid){
   try { await api('/api/cancel-request', { request_id: rid }); exitLive(); toast('Servicio cancelado.'); }
   catch(e){ toast(e.message); }
-}
-async function changePayLive(ev, rid, current){
-  if(ev) ev.preventDefault();
-  const next = current==='efectivo' ? 'transferencia' : 'efectivo';
-  try {
-    await api('/api/set-payment-method', { request_id: rid, method: next });
-    if(liveReq) liveReq.payment_method = next;
-    renderLiveStrips();
-    toast('Ahora pagas con '+next+'.');
-  } catch(e){ toast(e.message); }
 }
 function exitLive(){
   releaseWakeLock();
@@ -2990,6 +3025,7 @@ function showTripSummary(r, asDriver){
     + 'Fecha: '+fmtDateTime(r.finished_at||r.created_at)+'\n'
     + 'De: '+(r.origin_zone||r.origin_detail||'')+'\nA: '+(r.dest_zone||r.dest_detail||'')+'\n'
     + 'Distancia: '+(r.distance_km||'—')+' km\nDuración real: '+(dur!=null ? dur+' min' : '—')+'\n'
+    + (r.kind==='viaje' ? 'Personas: '+paxText(r.passenger_count)+'\n' : '')
     + 'Chofer: '+(r.driver_name||'—')+' · Unidad '+(r.driver_unit||'—')+'\n'
     + 'Pasajero: '+(r.passenger_name||'—')+' · '+ (r.passenger_phone||'')+'\n'
     + 'Pago: '+(r.payment_method||'efectivo')+'\nTotal: '+fmt$(r.final_price||r.price)+'\nSan Fernando, Chiapas';
@@ -3009,6 +3045,7 @@ function showTripSummary(r, asDriver){
     + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
     + '<div class="kv"><span>Fecha</span><b>'+fmtDateTime(r.finished_at||r.created_at)+'</b></div>'
     + '<div class="kv"><span>Distancia</span><b>'+(r.distance_km||'—')+' km</b></div>'
+    + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
     + (dur!=null ? '<div class="kv"><span>Duración real</span><b>'+dur+' min</b></div>' : '')
     + '<div class="kv"><span>Precio final</span><b class="price">'+fmt$(r.final_price||r.price)+'</b></div>'
     + '<div class="kv"><span>Pago</span><b>'+esc(r.payment_method||'efectivo')+'</b></div>'
@@ -4665,6 +4702,7 @@ function inboxDetailHtml(r, sub, atLimit){
   + '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
   + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
   + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
+  + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
   + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
   + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
   + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
@@ -4685,7 +4723,7 @@ function inboxDetailHtml(r, sub, atLimit){
   } else if(driverCounter && driverCounter.rid===r.id){
     h += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
       + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
-      + '<p class="muted center mt">De $5 en $5, mínimo $20.</p>'
+      + '<p class="muted center mt">De $5 en $5, mínimo '+fmt$(r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP)+'.</p>'
       + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
   } else {
     h += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
@@ -4739,7 +4777,11 @@ function closeInboxOverlay(){
 }
 function driverCounterStep(d){
   if(!driverCounter) return;
-  driverCounter.price = Math.max(20, driverCounter.price + d);
+  // v1.4.48: el piso es el mínimo por personas del viaje (1=$20, 2=$25,
+  // 3=$30); en mandados sigue $20.
+  const rr = (inboxLastList||[]).find(x=>x.id===driverCounter.rid);
+  const floor = rr && rr.kind==='viaje' ? minForPax(rr.passenger_count) : MIN_TRIP;
+  driverCounter.price = Math.max(floor, driverCounter.price + d);
   const v = document.getElementById('dc-val'); if(v) v.textContent = fmt$(driverCounter.price);
 }
 function driverCounterPrompt(rid, price){
@@ -5596,7 +5638,7 @@ function bizOrderFormHtml(b, sub, fee, total){
     + '<label class="mt">Tu teléfono / WhatsApp</label><input id="biz-o-phone" placeholder="Ej. 961 000 0000" value="'+esc(myPassenger?myPassenger.phone:'')+'">'
     + '<label class="mt">¿En qué colonia se entrega?</label><select id="biz-o-zone"><option value="">Elige una colonia…</option>'+bizZoneOptions('')+'</select>'
     + '<label class="mt">Referencia de tu casa</label><input id="biz-o-addr" placeholder="Ej. Casa verde junto a la tienda, calle principal">'
-    + '<label class="mt">¿Cómo pagas?</label><div class="btnrow"><button type="button" class="pay-opt '+(pay==='efectivo'?'sel':'')+'" onclick="bizOrderPay=\'efectivo\';renderBizDetailCartOnly()">Efectivo al recibir</button><button type="button" class="pay-opt '+(pay==='transferencia'?'sel':'')+'" onclick="bizOrderPay=\'transferencia\';renderBizDetailCartOnly()">Transferencia</button></div>'
+    + '<label class="mt">¿Cómo pagas?</label><div class="btnrow"><button type="button" class="pay-opt '+(pay==='efectivo'?'sel':'')+'" onclick="bizOrderPay=\'efectivo\';renderBizDetailCartOnly()">Efectivo al recibir</button><button type="button" class="pay-opt" disabled>Tarjeta · Próximamente</button></div>'
     + '<p class="muted mt">Pagas directo: los productos al negocio y el envío al mototaxista.</p>'
     + '<label class="mt">Nota para el negocio (opcional)</label><input id="biz-o-note" placeholder="Ej. Sin cebolla, por favor">'
     + '<button class="btn" onclick="bizOrder('+b.id+')">Pedir ahora · '+fmt$(total)+'</button></div>';
