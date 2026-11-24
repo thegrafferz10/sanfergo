@@ -423,6 +423,40 @@ input[type=file]{padding:8px}
 .radio-card.sel .cat-check{display:inline-block}
 .cat-pill{display:inline-block;padding:8px 14px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:14px;font-weight:700;margin:4px 4px 0 0}
 .cat-pill.sel{background:#14532d;color:#fff;border-color:#14532d}
+/* Negocios estilo tienda (v1.4.57, petición del usuario con capturas de
+   TikTok Shop: buscador arriba, atajos con icono, carrusel, fila
+   'Ofertas del día', pestañas de categoría y UNA sola cuadrícula
+   mezclada: cada negocio chico seguido de sus productos, luego el
+   siguiente negocio. Sin descuentos ni precios tachados: SanFerGo no
+   tiene ese dato y no se inventa ninguno. */
+.biz-search{display:flex;gap:8px;margin-top:10px}
+.biz-search input{flex:1;min-width:0;height:44px;border:2px solid #111827;border-radius:12px;padding:0 12px;font-size:15px;background:#fff}
+.biz-search button{height:44px;background:#111827;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:14px;padding:0 16px;cursor:pointer;flex:none}
+.biz-shortcuts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.biz-shortcut{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:10px 4px 8px;text-align:center;cursor:pointer;font-family:inherit}
+.biz-shortcut .ic{font-size:24px;line-height:1;display:block}
+.biz-shortcut .lb{display:block;font-size:12px;font-weight:700;margin-top:5px}
+.biz-cats{display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.biz-cats::-webkit-scrollbar{display:none}
+.biz-cats .cat-pill{flex:none;margin:0}
+.biz-ofertas-title{margin-top:16px}
+.biz-ofertas-title h3{margin:0;font-size:19px}
+.biz-ofertas-row{display:flex;gap:10px;overflow-x:auto;margin-top:10px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.biz-ofertas-row::-webkit-scrollbar{display:none}
+.biz-ofertas-card{flex:0 0 128px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer}
+.biz-ofertas-card img{width:100%;height:96px;object-fit:cover;display:block;background:#f3f4f6}
+.biz-ofertas-card .inf{padding:8px}
+.biz-ofertas-card .nm{font-size:13px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.biz-ofertas-card .pr{font-size:14px;font-weight:800;margin-top:3px}
+.biz-ofertas-card .bz{font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.biz-feed-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.biz-mini{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer}
+.biz-mini img{width:100%;height:110px;object-fit:cover;display:block;background:#f3f4f6}
+.biz-mini .inf{padding:8px 10px 10px}
+.biz-mini .nm{font-size:13px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.biz-mini .pr{font-size:14px;font-weight:800;margin-top:3px}
+.biz-mini .sub{font-size:11px;color:#6b7280;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.biz-mini .chiprow{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
 .map-ctl{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:65;display:flex;flex-direction:column;gap:10px}
 .map-ctl button{width:46px;height:46px;border-radius:50%;background:#fff;color:#111827;border:1px solid var(--line);font-size:24px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.25);line-height:1}
 .map-ctl button.comp{font-size:22px}
@@ -543,7 +577,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.56'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.57'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1070,18 +1104,27 @@ function backPill(label, fn){ return '<button class="backpill" onclick="'+fn+'">
 function setPageNoScroll(pageId, on){ const el = document.getElementById(pageId); if(el) el.classList.toggle('noscroll', !!on); }
 
 /* ===== Fotos ===== */
-function fileToPhoto(input, cb){
+// (v1.4.57) Dos calidades: las fotos que se VEN GRANDES (anuncios y
+// fotos de negocios/productos) se guardan en alta resolución (lado
+// mayor 1600 px, JPEG 0.88); las fotos chicas de perfil (selfie del
+// pasajero/chofer y foto del vehículo) siguen en 480 px, JPEG 0.75.
+// Antes TODO pasaba por 480 px: los anuncios quedaban guardados a
+// 270×480 / 322×480 y se veían borrosos al mostrarse a ~700 px en el
+// teléfono. Los anuncios viejos ya guardados NO se reparan con código
+// (la resolución perdida no vuelve): hay que borrarlos y volverlos a
+// subir desde los originales.
+function fileToPhoto(input, cb, hi){
   const f = input.files && input.files[0];
   if(!f) return;
   const img = new Image();
   const url = URL.createObjectURL(f);
   img.onload = ()=>{
-    const max = 480, k = Math.min(1, max / Math.max(img.width, img.height));
+    const max = hi ? 1600 : 480, k = Math.min(1, max / Math.max(img.width, img.height));
     const cv = document.createElement('canvas');
     cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
     cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
     URL.revokeObjectURL(url);
-    cb(cv.toDataURL('image/jpeg', 0.75));
+    cb(cv.toDataURL('image/jpeg', hi ? 0.88 : 0.75));
   };
   img.src = url;
 }
@@ -5575,7 +5618,7 @@ function adPickFile(input){
   adFileName = f ? f.name : '';
   const nameEl = document.getElementById('ad-filename');
   if(nameEl) nameEl.textContent = adFileName || 'Sin imagen elegida';
-  if(f) fileToPhoto(input, d=>{adImgData=d; const p=document.getElementById('ad-prev'); if(p) p.innerHTML='<img src='+JSON.stringify(d)+'>';});
+  if(f) fileToPhoto(input, d=>{adImgData=d; const p=document.getElementById('ad-prev'); if(p) p.innerHTML='<img src='+JSON.stringify(d)+'>';}, true);
 }
 async function createAd(){
   const kind = adKind;
@@ -5631,10 +5674,12 @@ async function renderAdminStores(){
    servicios ilimitados, pedidos y citas ilimitados, estadísticas,
    publicidad gratis. Topes gratis: 10 productos, 10 servicios,
    30 pedidos/citas al mes. */
-let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCategory = 'Panadería', bizCart = {}, bizPhoto = null, bizFromAdmin = false, bizStep = 0;
+let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCategory = 'Panadería', bizCart = {}, bizPhoto = null, bizItemPhoto = null, bizFromAdmin = false, bizStep = 0;
 let bizOrderShow = false, bizBookId = null, bizOrderDone = null;
 function bizTypeLabel(t){ return t==='entrega' ? 'Pedir a domicilio' : t==='catalogo' ? 'Catálogo y contacto' : 'Reservar cita'; }
 let bizCatFilter = 'Todas';
+let bizSearch = ''; // texto del buscador de Negocios (filtra negocios y productos, en el cliente, sobre lo ya cargado)
+let bizListCache = []; // negocios activos con sus productos/servicios, ya cargados por renderBizMain
 function bizTypeAction(t){ return t==='entrega' ? 'Ver productos y pedir' : t==='catalogo' ? 'Ver su catálogo' : 'Ver servicios y reservar cita'; }
 const BIZ_CATEGORIES = ['Panadería','Comida','Tienda / Abarrotes','Uñas','Pestañas','Peluquería / Barbería','Farmacia','Otro'];
 function bizZoneOptions(sel){
@@ -5661,27 +5706,98 @@ async function renderBizMain(){
   try { if(store.token){ const m = await api('/api/my-businesses?token=' + encodeURIComponent(store.token)); mine = m.businesses || []; } } catch(e){}
   let list = [];
   try { const j = await api('/api/businesses'); list = j.businesses || []; } catch(e){}
-  const cats = [...new Set(list.map(b=>b.category).filter(Boolean))];
-  const filtered = bizCatFilter==='Todas' ? list : list.filter(b=>b.category===bizCatFilter);
-  box.innerHTML = '<div id="biz-options-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'
-    + '<button style="height:42px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\''+(mine.length?'mine':'create')+'\';renderNegocios()">'+(mine.length?'Administrar':'Crear')+'</button>'
-    + '<button style="height:42px;background:#fff;color:#5b21b6;border:2px solid #5b21b6;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\'my-appts\';renderNegocios()">Ver mi cita</button>'
-    + '<button style="height:42px;background:#fff;color:#14532d;border:2px solid #14532d;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer" onclick="bizScreen=\'my-orders\';renderNegocios()">Ver mi pedido</button></div>'
+  bizListCache = list;
+  // (v1.4.57) Negocios estilo tienda de TikTok Shop: buscador arriba
+  // (filtra en el cliente, sobre lo ya cargado), atajos con icono (las
+  // mismas 3 acciones de siempre), carrusel SIN TOCAR, y el contenido
+  // (ofertas, pestañas, cuadrícula mezclada) en #biz-feed, que se vuelve
+  // a pintar solo al buscar o cambiar de categoría, sin perder el foco
+  // del buscador ni recargar nada. Orden: buscador → atajos → carrusel →
+  // ofertas → pestañas → cuadrícula.
+  box.innerHTML = '<div class="biz-search"><input id="biz-search-input" type="search" placeholder="Buscar negocios y productos…" value="'+esc(bizSearch)+'" oninput="bizSearch=this.value;renderBizFeed()"><button type="button" onclick="bizSearch=(document.getElementById(\'biz-search-input\')||{value:bizSearch}).value;renderBizFeed()">Buscar</button></div>'
+    + '<div id="biz-options-row" class="biz-shortcuts">'
+    + '<button type="button" class="biz-shortcut" onclick="bizScreen=\''+(mine.length?'mine':'create')+'\';renderNegocios()"><span class="ic">🏪</span><span class="lb" style="color:#b45309">'+(mine.length?'Administrar':'Crear')+'</span></button>'
+    + '<button type="button" class="biz-shortcut" onclick="bizScreen=\'my-appts\';renderNegocios()"><span class="ic">📅</span><span class="lb" style="color:#5b21b6">Ver mi cita</span></button>'
+    + '<button type="button" class="biz-shortcut" onclick="bizScreen=\'my-orders\';renderNegocios()"><span class="ic">📦</span><span class="lb" style="color:#14532d">Ver mi pedido</span></button></div>'
     + '<div id="biz-ads-carousel"></div>'
-    + (cats.length>2 ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'
-      + ['Todas',...cats].map(c=>'<button class="cat-pill'+(bizCatFilter===c?' sel':'')+'" onclick="bizCatFilter=\''+esc(c)+'\';renderBizMain()">'+esc(c)+'</button>').join('') + '</div>' : '')
-    + (filtered.length ? filtered.map(b=>'<div class="card white" style="padding:0;overflow:hidden">'
-      + (b.photo?'<img src="'+b.photo+'" style="width:100%;height:176px;object-fit:cover;display:block">':'<div style="height:176px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#9ca3af">Sin foto</div>')
-      + '<div style="padding:14px"><b style="font-size:17px">'+esc(b.name)+'</b>'
-      + (b.is_premium ? ' <span class="chip amber">DESTACADO</span> <span class="chip amber">★ PREMIUM · VERIFICADO</span>' : '')
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><span class="chip">'+bizTypeLabel(b.type)+'</span>'
-      + (b.category ? '<span class="chip">'+esc(b.category)+'</span>' : '')
-      + '<span class="chip '+(b.open?'':'red')+'">'+(b.open?'ABIERTO':'CERRADO')+'</span></div>'
-      + (b.description?'<p class="muted mt" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">'+esc(b.description)+'</p>':'')
-      + ((b.colony||b.schedule) ? '<p class="muted mt">'+esc(b.colony||'')+(b.colony&&b.schedule?' · ':'')+esc(b.schedule||'')+'</p>' : '')
-      + '<button class="btn small" style="margin-top:10px" onclick="openBusiness('+b.id+')">'+bizTypeAction(b.type)+'</button></div></div>').join('')
-      : '<p class="muted center mt">'+(list.length ? 'No hay negocios de esta categoría todavía. Prueba con «Todas».' : 'Todavía no hay negocios aceptados en la app.')+'</p>');
+    + '<div id="biz-feed"></div>';
   renderBizAdsCarousel();
+  renderBizFeed();
+}
+/* (v1.4.57) La cuadrícula mezclada de Negocios: UNA sola lista en la
+   que cada negocio chico va seguido de inmediato por las tarjetas
+   chicas de sus productos/servicios, luego el siguiente negocio con
+   los suyos. Un negocio sin productos sale solo con su tarjeta. La
+   categoría y la búsqueda filtran esa misma lista (y la fila de
+   ofertas). Todo con datos reales de /api/businesses: nada inventado
+   (sin descuentos ni precios tachados: SanFerGo no tiene ese dato). */
+function bizFeedItems(list, cat, q){
+  const query = (q||'').trim().toLowerCase();
+  const match = (s)=> !query || String(s||'').toLowerCase().includes(query);
+  const out = [];
+  for(const b of (list||[])){
+    if(cat!=='Todas' && b.category!==cat) continue;
+    const items = [...(b.products||[]), ...(b.services||[])].filter(it=>it.available!==0).map(it=>({kind:'item', biz:b, it}));
+    const bizMatch = match(b.name) || match(b.description) || match(b.category);
+    const itemsMatch = items.filter(x=> match(x.it.name) || match(x.it.description));
+    if(query && !bizMatch && !itemsMatch.length) continue;
+    out.push({kind:'biz', biz:b});
+    // Si la búsqueda casa con el negocio, se muestran todos sus
+    // productos; si solo casa con algunos productos, solo esos.
+    out.push(...(query && bizMatch ? items : (query ? itemsMatch : items)));
+  }
+  return out;
+}
+function bizMiniBizCard(b){
+  return '<div class="biz-mini" onclick="openBusiness('+b.id+')">'
+    + (b.photo?'<img src="'+b.photo+'" alt="">':'<div style="height:110px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:24px">🏪</div>')
+    + '<div class="inf"><div class="nm">'+esc(b.name)+'</div>'
+    + (b.is_premium ? '<div class="sub">★ Premium · Verificado</div>' : '')
+    + '<div class="chiprow">'
+    + (b.category ? '<span class="chip">'+esc(b.category)+'</span>' : '')
+    + '<span class="chip '+(b.open?'':'red')+'">'+(b.open?'ABIERTO':'CERRADO')+'</span></div>'
+    + '</div></div>';
+}
+function bizMiniItemCard(b, it){
+  return '<div class="biz-mini" onclick="openBusiness('+b.id+')">'
+    + (it.image?'<img src="'+it.image+'" alt="">':'<div style="height:110px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:24px">🛍️</div>')
+    + '<div class="inf"><div class="nm">'+esc(it.name)+'</div><div class="pr">'+fmt$(it.price)+'</div><div class="sub">'+esc(b.name)+'</div></div></div>';
+}
+function renderBizFeed(){
+  const wrap = document.getElementById('biz-feed'); if(!wrap) return;
+  const list = bizListCache || [];
+  const cats = [...new Set(list.map(b=>b.category).filter(Boolean))];
+  const feed = bizFeedItems(list, bizCatFilter, bizSearch);
+  const items = feed.filter(x=>x.kind==='item');
+  let h = '';
+  // 'Ofertas del día': fila horizontal de productos/servicios (foto +
+  // precio, sin descuentos ni precios tachados: no existe ese dato).
+  // Sin productos no se muestra nada (sin hueco vacío).
+  if(items.length){
+    h += '<div class="biz-ofertas-title"><h3>Ofertas del día</h3></div>'
+      + '<div class="biz-ofertas-row">'
+      + items.map(x=>'<div class="biz-ofertas-card" onclick="openBusiness('+x.biz.id+')">'
+        + (x.it.image?'<img src="'+x.it.image+'" alt="">':'<div style="height:96px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">Sin foto</div>')
+        + '<div class="inf"><div class="nm">'+esc(x.it.name)+'</div><div class="pr">'+fmt$(x.it.price)+'</div><div class="bz">'+esc(x.biz.name)+'</div></div></div>').join('')
+      + '</div>';
+  }
+  // Pestañas de categoría (Todos + cada categoría con negocios).
+  if(cats.length){
+    h += '<div class="biz-cats">'
+      + ['Todas',...cats].map(c=>'<button class="cat-pill'+(bizCatFilter===c?' sel':'')+'" onclick="bizCatFilter=\''+esc(c)+'\';renderBizFeed()">'+(c==='Todas'?'Todos':esc(c))+'</button>').join('')
+      + '</div>';
+  }
+  // Una sola cuadrícula mezclada: negocio chico + sus productos, luego
+  // el siguiente negocio + los suyos. Sin negocios en el filtro, aviso.
+  if(feed.length){
+    h += '<div class="biz-feed-grid">'
+      + feed.map(x=> x.kind==='biz' ? bizMiniBizCard(x.biz) : bizMiniItemCard(x.biz, x.it)).join('')
+      + '</div>';
+    if(!items.length) h += '<p class="muted center mt">Los negocios aún no han subido productos.</p>';
+  } else {
+    h += '<p class="muted center mt">'+(list.length ? (String(bizSearch||'').trim() ? 'Nada coincide con tu búsqueda. Prueba con otra palabra.' : 'No hay negocios de esta categoría todavía. Prueba con «Todos».') : 'Todavía no hay negocios aceptados en la app.')+'</p>';
+  }
+  wrap.innerHTML = h;
 }
 /* Carrusel de anuncios en Negocios (v1.4.16): banners horizontales con
    los anuncios ACTIVOS que tienen banner ('banner_image'). v1.4.30: un
@@ -6035,7 +6151,7 @@ function renderBizCreateForm(){
     + '</div>'
     + '<div id="nb-step4" class="hidden">' 
     + '<div class="photobox"><b>Foto de tu negocio o de tu producto</b><div id="nb-prev"></div>'
-    + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'nb-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+    + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'nb-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';}, true)"></div>'
     + '<button class="btn" onclick="submitBusiness()">Enviar la solicitud de mi negocio</button>'
     + '<button class="btn ghost" onclick="showBizStep(3)">Regresar</button>'
     + '</div>';
@@ -6200,7 +6316,7 @@ async function renderBizManage(){
         + '<label class="mt">Horario</label><input id="be-schedule" value="'+esc(b.schedule||'')+'" placeholder="Ej. Lunes a sábado, 9 AM a 7 PM">'
         + (b.type==='entrega' ? '<label class="mt">Costo del envío a domicilio</label><input id="be-fee" type="number" min="20" step="5" value="'+(b.delivery_fee!=null?b.delivery_fee:20)+'"><p class="muted mt">De $20 en adelante, de cinco en cinco. El envío es para el mototaxista.</p>' : '')
         + '<div class="photobox"><b>Foto del negocio</b><div id="be-prev">'+(b.photo?'<img src="'+b.photo+'">':'')+'</div>'
-        + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'be-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+        + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'be-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';}, true)"></div>'
         + '<button class="btn" onclick="bizSaveFicha('+b.id+')">Guardar mi ficha</button><div id="biz-ficha-ok"></div></div>';
       bizPhoto = b.photo || null;
       return;
@@ -6209,6 +6325,7 @@ async function renderBizManage(){
       const isProd = bizTab==='productos';
       const items = isProd ? (b.products||[]) : (b.services||[]);
       const max = 10;
+      bizItemPhoto = null; // la foto es por producto/servicio: al repintar la pestaña no queda la del anterior
       tab.innerHTML = '<div class="card white"><h3>'+(isProd?'Productos':'Servicios')+'</h3>'
         + '<p class="muted mt">'+(b.is_premium ? (isProd?'Productos ilimitados · Paquete Premium':'Servicios ilimitados · Paquete Premium') : items.length+' de '+max+' '+(isProd?'productos':'servicios')+' · Versión gratis (con el Paquete Premium son ilimitados)')+'</p>'
         + (items.length ? items.map(it=>'<div class="kv"><span>'+esc(it.name)+' · '+fmt$(it.price)+(isProd?'':(it.duration_minutes?' · '+it.duration_minutes+' min':''))+(it.available===0?' · <b style="color:var(--red)">No disponible</b>':'')+'</span>'
@@ -6218,6 +6335,7 @@ async function renderBizManage(){
         + '<label class="mt">Descripción (opcional)</label><input id="bi-desc" placeholder="Ej. Con queso y pepperoni">'
         + '<label class="mt">Precio</label><input id="bi-price" type="number" min="1" placeholder="120">'
         + (isProd ? '<label class="chk"><input type="checkbox" id="bi-avail" checked> Disponible hoy</label>' : '<label class="mt">Duración (min, opcional)</label><input id="bi-dur" type="number" min="5" placeholder="30">')
+        + '<div class="photobox"><b>Foto (opcional)</b><div id="bi-prev"></div><input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizItemPhoto=d; document.getElementById(\'bi-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';}, true)"></div>'
         + '<button class="btn small" onclick="bizAddItem('+b.id+',\''+(isProd?'product':'service')+'\')">Agregar '+(isProd?'producto':'servicio')+'</button></div>';
       return;
     }
@@ -6297,11 +6415,12 @@ async function bizAddItem(id, kind){
   try {
     if(kind==='product'){
       const avail = document.getElementById('bi-avail') ? (document.getElementById('bi-avail').checked ? 1 : 0) : 1;
-      await api('/api/add-product', { token: store.token, business_id: id, name, price, description: desc, available: avail });
+      await api('/api/add-product', { token: store.token, business_id: id, name, price, description: desc, available: avail, image: bizItemPhoto });
     } else {
       const dur = parseInt(($('#bi-dur')||{}).value || '', 10);
-      await api('/api/add-service', { token: store.token, business_id: id, name, price, description: desc, duration_minutes: dur || null });
+      await api('/api/add-service', { token: store.token, business_id: id, name, price, description: desc, duration_minutes: dur || null, image: bizItemPhoto });
     }
+    bizItemPhoto = null;
     toast(kind==='product' ? 'Producto agregado.' : 'Servicio agregado.');
     renderBizManage();
   } catch(e){ toast(e.message); }
