@@ -690,7 +690,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.41' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.42' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1815,11 +1815,23 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/requests') {
     let rows;
-    if (q.get('passenger_id')) rows = db.prepare('SELECT * FROM requests WHERE passenger_id=? ORDER BY id DESC LIMIT 50').all(q.get('passenger_id'));
+    if (q.get('id')) { const one = db.prepare('SELECT * FROM requests WHERE id=?').get(q.get('id')); rows = one ? [one] : []; }
+    else if (q.get('passenger_id')) rows = db.prepare('SELECT * FROM requests WHERE passenger_id=? ORDER BY id DESC LIMIT 50').all(q.get('passenger_id'));
     else if (q.get('driver_id')) rows = db.prepare('SELECT * FROM requests WHERE driver_id=? ORDER BY id DESC LIMIT 50').all(q.get('driver_id'));
     else if (q.get('open')) rows = db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY id DESC LIMIT 50`).all();
     else rows = db.prepare('SELECT * FROM requests ORDER BY id DESC LIMIT 50').all();
-    return send(res, 200, { ok: true, requests: requestsWithOffers(rows) });
+    // v1.4.42: ?light=1 quita las fotos base64 de las filas y de las ofertas:
+    // las listas solo necesitan zonas, precio y estado, y con las fotos cada
+    // lista pesa 1.4-2.5 MB; en el móvil eso atascaba el sondeo y dejaba la
+    // bandeja del chofer en "Cargando..." para siempre. ?id= devuelve UNA
+    // solicitud (para abrir el mapa en vivo o el detalle con su foto).
+    let out = requestsWithOffers(rows);
+    if (q.get('light')) out = out.map(r => {
+      const c = { ...r, passenger_photo: null, driver_photo: null, vehicle_photo: null };
+      if (c.offers) c.offers = c.offers.map(o => ({ ...o, driver_photo: null, vehicle_photo: null }));
+      return c;
+    });
+    return send(res, 200, { ok: true, requests: out });
   }
   if (pathname === '/api/driver-respond') {
     const { driver_id, request_id, price, eta_minutes } = body;

@@ -339,7 +339,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.41', JSON.stringify(h));
+  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.42', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -440,7 +440,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.41', JSON.stringify(h134));
+  check('versión 1.4.36', h134.ok && h134.version === '1.4.42', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +602,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.41';") && h.version === '1.4.41', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.42';") && h.version === '1.4.42', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -925,7 +925,7 @@ async function api(path, body) {
   // desde myActiveRequest) con el mismo botón. La X solo oculta en la
   // sesión (dismissed*Id en memoria: al recargar vuelve). En Viajes el
   // viaje aceptado ya se reabre solo en el mapa en vivo (renderViajes).
-  check('banner chofer: aviso arriba del Inicio de chofer con botón al mapa en vivo (v1.4.14)', html.includes('<div id="driver-active-banner"></div>') && html.includes('¡El pasajero confirmó tu viaje!') && html.includes("onclick=\"goLive('+c.active.id+', true)\">") && html.includes('Ver mi viaje en curso') && html.includes('dismissedDriverActiveId') && html.includes('function dismissDriverActiveBanner()'));
+  check('banner chofer: aviso arriba del Inicio de chofer con botón al mapa en vivo (v1.4.14)', html.includes('<div class="driver-active-banner" id="driver-active-banner"></div>') && html.includes('¡El pasajero confirmó tu viaje!') && html.includes("onclick=\"goLive('+active.id+', true)\">") && html.includes('Ver mi viaje en curso') && html.includes('dismissedDriverActiveId') && html.includes('function dismissDriverActiveBanner()'));
   check('banner pasajero: aviso en Inicio con botón al mapa en vivo (v1.4.14)', html.includes('<div id="home-active-banner"></div>') && html.includes('async function fillHomeActiveBanner()') && html.includes('¡Tu viaje fue aceptado! Tu mototaxi viene en camino') && html.includes("onclick=\"goLive('+active.id+', false)\">") && html.includes('dismissedPaxActiveId') && html.includes('function dismissPaxActiveBanner()'));
   check('Viajes: el viaje aceptado se reabre solo en el mapa en vivo al entrar (v1.4.14)', html.includes("if(active.status==='aceptado'){ goLive(active.id, false); return; }"));
   // Mapa en vivo a prueba de OSRM caído (v1.4.14): si el fetch de la ruta
@@ -1396,7 +1396,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.41', JSON.stringify(h27));
+  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.42', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1441,7 +1441,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.41', JSON.stringify(h28));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.42', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1455,7 +1455,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.41', JSON.stringify(h29));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.42', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1464,7 +1464,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.41', JSON.stringify(h30));
+  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.42', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1604,9 +1604,9 @@ async function api(path, body) {
   check('v1.4.35: el mapa en vivo del chofer también trae el resumen del mandado', liveSec.includes('mandadoDriverSummaryHtml(r)') && liveSec.includes('liveAsDriver'));
   // --- v1.4.36: la bandeja del chofer no parpadea y es lista, no páginas ---
   check('v1.4.36: Recibir Viajes pinta Cargando… SOLO en la primera carga (lista anterior intacta)', html.includes('let inboxLoaded = false, inboxSig = ') && html.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">Cargando…</p>'") && html.includes('async function loadDriverInbox(force){'));
-  check('v1.4.36: el refresco no repinta si nada cambió (firma de datos) y no se solapa', inboxSec.includes('inboxSig') && inboxSec.includes('if(inboxLoaded && !force && sig===inboxSig) return;') && inboxSec.includes('if(inboxLoading) return;') && inboxSec.includes('} finally { inboxLoading = false; }'));
+  check('v1.4.36: el refresco no repinta si nada cambió (firma de datos) y no se solapa', inboxSec.includes('inboxSig') && inboxSec.includes('if(inboxLoaded && !force && sig===inboxSig) return;') && inboxSec.includes('if(inboxLoading) return;') && inboxSec.includes('} finally { inboxLoading = false; paintDriverActiveBanners(); }'));
   check('v1.4.36: un error de red no borra la lista anterior (solo avisa en primera carga)', inboxSec.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">No se pudo cargar."));
-  check('v1.4.36: las dos llamadas de la bandeja van en paralelo y la insignia sale del mismo ciclo que la lista', inboxSec.includes('await Promise.all') && inboxSec.includes("api('/api/requests?driver_id='+myDriver.id)") && inboxSec.includes("api('/api/requests?open=1')") && inboxSec.includes('updateDriverBadge(list.length)'));
+  check('v1.4.36: las dos llamadas de la bandeja van en paralelo y la insignia sale del mismo ciclo que la lista', inboxSec.includes('await Promise.all') && inboxSec.includes("api('/api/requests?driver_id='+myDriver.id+'&light=1')") && inboxSec.includes("api('/api/requests?open=1&light=1')") && inboxSec.includes('updateDriverBadge(list.length)'));
   check('v1.4.36: el sondeo llama al refresco silencioso y al volver a la app se refresca al instante', html.includes("loadDriverInbox(false); // refresco silencioso") && html.includes("document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && myDriver && store.mode==='driver' && currentView==='chofer' && driverTabName==='recibir') loadDriverInbox(false); })"));
   check('v1.4.36: las solicitudes son lista apilada, sin paginador; el contador vive en la pestaña', inboxSec.includes('list.map(r=>') && inboxSec.includes("Solicitudes ('+list.length+')") && !inboxSec.includes('driverPageIdx') && !inboxSec.includes('‹ Anterior') && !inboxSec.includes('Siguiente ›') && !inboxSec.includes("de '+list.length+' solicitudes"));
   // --- v1.4.37: solicitudes compactas en Recibir Viajes, toca para ver el detalle ---
@@ -1635,6 +1635,31 @@ async function api(path, body) {
   check('v1.4.41: la X cierra al instante (quita el flotante antes de cualquier llamada de red) y vuelve a la lista compacta', inboxSec.includes('function closeInboxOverlay(){') && inboxSec.indexOf("if(ov) ov.remove();", inboxSec.indexOf('function closeInboxOverlay(){')) < inboxSec.indexOf('loadDriverInbox(false);', inboxSec.indexOf('function closeInboxOverlay(){')));
   check('v1.4.41: el flotante sobrevive al refresco (firma propia, no se repinta si nada cambió) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('function renderInboxOverlay(list){') && inboxSec.includes('const r = inboxExpandedId ? list.find(x=>x.id===inboxExpandedId) : null;') && inboxSec.includes('if(ov && sig===inboxOvSig) return;') && inboxSec.includes('inboxOvSig'));
   check('v1.4.41: al ir al mapa en vivo (goLive) el flotante se cierra para no quedar sobre el mapa', html.includes("const ov41 = document.getElementById('inbox-detail-overlay'); if(ov41) ov41.remove();") && html.indexOf("const ov41 = document.getElementById('inbox-detail-overlay'); if(ov41) ov41.remove();") < html.indexOf("document.getElementById('view-live').classList.add('active');"));
+  // --- v1.4.42: aceptar como chofer ya no marca error ni deja la bandeja en "Cargando..." ---
+  check('v1.4.42: api() tiene tiempo límite (AbortController 20 s): una llamada lenta falla rápido en vez de colgarse para siempre', html.includes('const ctrl = new AbortController();') && html.includes('setTimeout(()=>ctrl.abort(), 20000)') && html.includes('La conexión tardó demasiado'));
+  check('v1.4.42: driverRespond tiene guardia contra doble toque y, si el servidor dice "Ya respondiste" o "ya no está buscando", verifica el estado y va al mapa en vivo en vez de mostrar el error', html.includes('let driverRespondBusy = false;') && html.includes('if(driverRespondBusy) return;') && html.includes("e.message.indexOf('Ya respondiste')>=0") && html.includes("e.message.indexOf('ya no está buscando')>=0") && html.includes("api('/api/requests?id='+rid)"));
+  check('v1.4.42: abrir el mapa en vivo y su sondeo piden UNA solicitud por id (no la lista completa de 2.5 MB), y si falla el chofer vuelve a la bandeja en vez de quedarse en un mapa vacío', html.includes("api('/api/requests?id='+requestId)") && html.includes("api('/api/requests?id='+liveReq.id)") && html.includes("if(liveAsDriver){ go('chofer'); driverTab('recibir'); }"));
+  check('v1.4.42: el sondeo nunca solapa dos ciclos (pollBusy) y las listas del chofer se descargan ligeras (sin fotos)', html.includes('if(pollBusy) return; pollBusy = true;') && html.includes('finally { pollBusy = false; }') && html.includes("api('/api/requests?open=1&light=1')") && html.includes("api('/api/requests?driver_id='+myDriver.id+'&light=1')"));
+  check('v1.4.42: el aviso de viaje activo del chofer es un estado compartido (no solo el driverCounts del inicio) con pintor propio y botón para ir al viaje', html.includes('let driverActiveTrip = null;') && html.includes('function driverActiveBannerHtml(active){') && html.includes('function paintDriverActiveBanners(){') && html.includes('function setDriverActiveFromList(list){') && html.includes('function refreshDriverActiveBanner(){') && html.includes("Ver mi mandado en curso") && html.includes("Ver mi viaje en curso") && !html.includes("const db2 = document.getElementById('driver-active-banner');"));
+  check('v1.4.42: el aviso vive en Inicio, Recibir Viajes y Taxímetro (misma clase en los tres) y se refresca al entrar a cada pestaña', html.includes('<div class="driver-active-banner" id="driver-active-banner"></div>') && html.includes("const head = '<div class=\"driver-active-banner\"></div><h2>Recibir Viajes</h2>") && html.includes('#view-taximetro .driver-active-banner{position:absolute;top:calc(env(safe-area-inset-top,0px) + 76px);left:12px;right:12px;z-index:61}') && html.includes('refreshDriverActiveBanner();'));
+  check('v1.4.42: una carga fallida ya no deja "Cargando..." para siempre: la bandeja y los viajes del chofer traen botón Reintentar', html.includes('onclick="loadDriverInbox(true)">Reintentar</button>') && html.includes('onclick="loadDriverTrips()">Reintentar</button>') && html.includes('onclick="loadDriverHist()">Reintentar</button>'));
+  check('v1.4.42: el detalle trae la foto del pasajero con una descarga aparte por id (la bandeja ligera no la trae)', html.includes("api('/api/requests?id='+rid).then(j=>{") && html.includes("inboxOvSig=''; renderInboxOverlay(inboxLastList);"));
+  // --- v1.4.42 (en vivo): aceptar el mandado, segundo Aceptar, lista ligera sin fotos ---
+  const req42 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const acc42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 20 });
+  check('v1.4.42: aceptar el mandado como chofer lo confirma al instante (sin segundo paso del pasajero)', req42.ok && acc42.ok && acc42.request.status === 'aceptado' && acc42.request.final_price === 20 && acc42.request.driver_id === drv.driver.id, JSON.stringify(acc42));
+  const one42 = await api('/api/requests?id=' + req42.request.id);
+  check('v1.4.42: /api/requests?id= devuelve UNA solicitud, la aceptada con su chofer (lo que abre el mapa en vivo, sin bajar la lista de 2.5 MB)', one42.ok && one42.requests.length === 1 && one42.requests[0].id === req42.request.id && one42.requests[0].status === 'aceptado' && one42.requests[0].driver_id === drv.driver.id, JSON.stringify(one42.requests && one42.requests[0]));
+  const dup42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 20 });
+  check('v1.4.42: un segundo Aceptar (doble toque) rebota en el servidor ("ya no está buscando conductor." porque el viaje ya quedó aceptado) y el viaje sigue aceptado (el cliente ya no muestra ese error: verifica y va al mapa)', !dup42.ok && /Ya respondiste|ya no está buscando/.test(dup42.error || '') && one42.requests[0].status === 'aceptado', JSON.stringify(dup42));
+  const light42 = await api('/api/requests?driver_id=' + drv.driver.id + '&light=1');
+  const row42 = light42.requests.find(r=>r.id===req42.request.id);
+  check('v1.4.42: la lista ligera del chofer trae el viaje aceptado (fuente del aviso de viaje activo) SIN las fotos base64', light42.ok && row42 && row42.status === 'aceptado' && row42.passenger_photo == null && row42.driver_photo == null && row42.vehicle_photo == null, JSON.stringify(row42 && {st: row42.status, pp: row42.passenger_photo, dp: row42.driver_photo, vp: row42.vehicle_photo}));
+  const openLight42 = await api('/api/requests?open=1&light=1');
+  check('v1.4.42: /api/requests?open=1&light=1 quita las fotos de todas las filas y de las ofertas', openLight42.ok && openLight42.requests.every(r=>r.passenger_photo == null && r.driver_photo == null && r.vehicle_photo == null && (r.offers||[]).every(o=>o.driver_photo == null && o.vehicle_photo == null)), JSON.stringify(openLight42.requests.length));
+  const full42 = await api('/api/requests?driver_id=' + drv.driver.id);
+  const rowFull42 = full42.requests.find(r=>r.id===req42.request.id);
+  check('v1.4.42: sin light=1 la misma fila SÍ trae las fotos (la foto del pasajero sigue llegando al detalle)', full42.ok && rowFull42 && rowFull42.passenger_photo && rowFull42.driver_photo, JSON.stringify(rowFull42 && {pp: !!rowFull42.passenger_photo, dp: !!rowFull42.driver_photo}));
   const open36a = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   const open36b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Copalar', dest_detail: 'Copalar', dest_lat: 16.855, dest_lng: -93.198, distance_km: 2.5, eta_minutes: 9, price: 35, payment_method: 'efectivo' });
   const open36 = await api('/api/requests?open=1');
