@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.56 en /api/health', h.ok && h.version === '1.4.56', JSON.stringify(h));
+  check('versión 1.4.57 en /api/health', h.ok && h.version === '1.4.57', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.56', h134.ok && h134.version === '1.4.56', JSON.stringify(h134));
+  check('versión 1.4.57', h134.ok && h134.version === '1.4.57', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.56)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.56';") && h.version === '1.4.56', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.57)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.57';") && h.version === '1.4.57', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -988,13 +988,9 @@ async function api(path, body) {
   // tarjetas); la web replica eso midiendo la altura real de la tarjeta
   // de arriba y la hoja de abajo y pasándola como padding a fitBounds.
   check('detalles: el mapa encuadra los dos puntos en la franja visible entre las tarjetas (v1.4.15)', html.includes("const fm = el.closest('.fullmap');") && html.includes("fm.querySelector('.strip.top')") && html.includes("fm.querySelector('.strip.bottom')") && html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]], { top: topPad, bottom: botPad, left: 24, right: 24 });') && !html.includes('fitPoints(wizMap, [[wiz.origin.lng, wiz.origin.lat], [wiz.dest.lng, wiz.dest.lat]]);'));
-  // Carrusel de anuncios en Negocios (v1.4.16, petición del usuario con
-  // captura de referencia: como el inicio de la app de la captura:
-  // banners horizontales ARRIBA y las tarjetas de negocios abajo). En
-  // v1.4.28 la fila de opciones pasó ARRIBA del carrusel y se hizo
-  // compacta (petición del usuario con captura): el orden ahora es
-  // título → opciones → carrusel → pills → tarjetas.
-  check('Negocios: la fila de opciones va arriba del carrusel (v1.4.28)', html.includes("box.innerHTML = '<div id=\"biz-options-row\"") && html.includes("'<div id=\"biz-ads-carousel\"></div>'") && html.indexOf('id="biz-options-row"') !== -1 && html.indexOf('id="biz-ads-carousel"') !== -1 && html.indexOf('id="biz-options-row"') < html.indexOf('id="biz-ads-carousel"'));
+  // En v1.4.57 el orden es buscador → atajos → carrusel → feed (la fila
+  // de opciones sigue ANTES del carrusel, ahora como atajos con icono).
+  check('Negocios: buscador y atajos van arriba del carrusel (v1.4.57)', html.includes('id="biz-search-input"') && html.includes('id="biz-options-row"') && html.includes('id="biz-ads-carousel"') && html.indexOf('id="biz-search-input"') < html.indexOf('id="biz-options-row"') && html.indexOf('id="biz-options-row"') < html.indexOf('id="biz-ads-carousel"'));
   // Banners anchos con scroll-snap, puntos abajo (el activo verde y más
   // ancho), imagen cover centrada a 210 px para que el precio/oferta del
   // centro no se corte. La verificación visual está en la captura del
@@ -1409,7 +1405,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.56 en /api/health (sección)', h27.ok && h27.version === '1.4.56', JSON.stringify(h27));
+  check('versión 1.4.57 en /api/health (sección)', h27.ok && h27.version === '1.4.57', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,12 +1450,12 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.56 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.56', JSON.stringify(h28));
+  check('versión 1.4.57 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.57', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
-  check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
-  check('Negocios: el primer botón dice Administrar/Crear sin la palabra negocio; Ver mi cita y Ver mi pedido iguales', rbmBody.includes("mine.length?'Administrar':'Crear'") && !rbmBody.includes('Administrar negocio') && !rbmBody.includes('Crear un negocio') && rbmBody.includes('>Ver mi cita</button>') && rbmBody.includes('>Ver mi pedido</button>'));
-  check('Negocios: los tres botones son compactos (42px, fuente 13px), no 72px', rbmBody.includes('height:42px') && rbmBody.includes('font-size:13px') && !rbmBody.includes('height:72px'));
+  check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
+  check('Negocios: el primer atajo dice Administrar/Crear sin la palabra negocio; Ver mi cita y Ver mi pedido iguales (v1.4.57)', rbmBody.includes("mine.length?'Administrar':'Crear'") && !rbmBody.includes('Administrar negocio') && !rbmBody.includes('Crear un negocio') && rbmBody.includes('>Ver mi cita</span>') && rbmBody.includes('>Ver mi pedido</span>'));
+  check('Negocios: los atajos son celdas compactas con icono + etiqueta, no botones de 42px (v1.4.57)', rbmBody.includes('class="biz-shortcuts"') && rbmBody.includes('class="biz-shortcut"') && rbmBody.includes('<span class="ic">') && rbmBody.includes('<span class="lb"') && !rbmBody.includes('height:42px'));
   check('Negocios: las tres acciones siguen iguales (mi negocio/crear, mis citas, mis pedidos)', rbmBody.includes("bizScreen=\\'my-appts\\';renderNegocios()") && rbmBody.includes("bizScreen=\\'my-orders\\';renderNegocios()") && rbmBody.includes("(mine.length?'mine':'create')"));
 
   // v1.4.29: la tarjeta 'Administrador' del panel está colapsada por
@@ -1468,7 +1464,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.56 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.56', JSON.stringify(h29));
+  check('versión 1.4.57 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.57', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1473,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.56 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.56', JSON.stringify(h30));
+  check('versión 1.4.57 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.57', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2763,6 +2759,139 @@ async function api(path, body) {
   const reOff56c = await api('/api/driver-respond', { driver_id: drv56b.driver.id, request_id: trip56c.request.id, kind: 'contraoferta', price: 35 });
   check('v1.4.56: en vivo, tras un rechazo SIN republicar el chofer B puede contraofertar DE NUEVO ($35)', reOff56c.ok && reOff56c.offer.status === 'pendiente', JSON.stringify(reOff56c));
   await api('/api/cancel-request', { request_id: trip56c.request.id });
+
+  // --- v1.4.57: Negocios como la tienda de TikTok Shop (una sola
+  //     cuadrícula mezclada: negocio chico + sus productos) + fotos en
+  //     alta resolución (anuncios y fotos de negocio/producto a 1600px;
+  //     selfies siguen a 480px). Petición del usuario 2026-11-24 06:44
+  //     con capturas de TikTok Shop; aclaraciones 06:45 ('Ahora aparece
+  //     asi en grande': la tarjeta gigante por negocio) y 06:46 ('Las
+  //     tiendas más pequeñas e intercalarlas con sus productos que
+  //     vende') y 06:48 (los anuncios se ven de baja calidad).
+  console.log('== v1.4.57: Negocios estilo TikTok + fotos en alta resolución ==');
+  // Estático: orden y piezas nuevas del feed.
+  const rbm57 = html.slice(html.indexOf('async function renderBizMain(){'), html.indexOf('/* Carrusel de anuncios', html.indexOf('async function renderBizMain(){')));
+  check('v1.4.57: buscador arriba (lupa + botón Buscar, filtra en el cliente al escribir)', rbm57.includes('id="biz-search-input"') && rbm57.includes('placeholder="Buscar negocios y productos') && rbm57.includes('>Buscar</button>') && rbm57.includes('oninput="bizSearch=this.value;renderBizFeed()"'));
+  check('v1.4.57: atajos con icono con las 3 acciones (Crear/Administrar, Ver mi cita, Ver mi pedido)', rbm57.includes('class="biz-shortcut"') && rbm57.includes("mine.length?'Administrar':'Crear'") && rbm57.includes('>Ver mi cita</span>') && rbm57.includes('>Ver mi pedido</span>') && rbm57.includes("bizScreen=\\'my-appts\\';renderNegocios()") && rbm57.includes("bizScreen=\\'my-orders\\';renderNegocios()"));
+  check('v1.4.57: el carrusel de anuncios NO se tocó (misma función, banners 210px, auto-avance 5 s, tap vinculado abre el negocio)', html.includes('async function renderBizAdsCarousel(){') && html.includes("ads = (j.ads||[]).filter(a=>a.banner_image)") && html.includes('height:210px') && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);"));
+  check('v1.4.57: el feed mezclado existe (bizFeedItems + renderBizFeed + tarjetas chicas en cuadrícula de 2 columnas)', html.includes('function bizFeedItems(list, cat, q){') && html.includes('function renderBizFeed(){') && html.includes('function bizMiniBizCard(b){') && html.includes('function bizMiniItemCard(b, it){') && html.includes('class="biz-feed-grid"') && html.includes('grid-template-columns:1fr 1fr'));
+  const miniBizSec57 = html.slice(html.indexOf('function bizMiniBizCard(b){'), html.indexOf('function bizMiniItemCard(b, it){'));
+  check('v1.4.57: la tarjeta chica de negocio trae foto, nombre, categoría y ABIERTO/CERRADO (sin descripción ni botón grande)', miniBizSec57.includes("'<span class=\"chip\">'+esc(b.category)+'</span>'") && miniBizSec57.includes('ABIERTO') && !miniBizSec57.includes('bizTypeAction') && !miniBizSec57.includes('Ver productos'));
+  const miniItemSec57 = html.slice(html.indexOf('function bizMiniItemCard(b, it){'), html.indexOf('function renderBizFeed(){'));
+  check('v1.4.57: la tarjeta chica de producto trae foto, nombre, precio y nombre del negocio; al tocarla abre su negocio', miniItemSec57.includes("it.image?'<img src=\"'+it.image+'\"") && miniItemSec57.includes('<div class="pr">') && miniItemSec57.includes('fmt$(it.price)') && miniItemSec57.includes('esc(b.name)') && miniItemSec57.includes("onclick=\"openBusiness('+b.id+')\""));
+  const feedSec57 = html.slice(html.indexOf('function bizMiniBizCard(b){'), html.indexOf('/* Carrusel de anuncios', html.indexOf('function renderBizFeed(){')));
+  check('v1.4.57: sin descuentos inventados en el feed (sin insignia de %, sin precio tachado, sin "Descuento")', !feedSec57.includes('-%') && !feedSec57.includes('<s>') && !feedSec57.includes('line-through') && !feedSec57.includes('Descuento'));
+  check('v1.4.57: fila "Ofertas del día" y aviso cuando no hay productos ("Los negocios aún no han subido productos.")', html.includes('Ofertas del día') && html.includes('Los negocios aún no han subido productos.'));
+  // Estático: calidad de fotos por uso.
+  const photoSec57 = html.slice(html.indexOf('function fileToPhoto(input, cb, hi){'), html.indexOf('/* ===== INICIO ====='));
+  check('v1.4.57: fileToPhoto tiene tope por uso (alta: 1600px JPEG 0.88; perfil: 480px JPEG 0.75; sin ampliar fotos chicas)', photoSec57.includes('const max = hi ? 1600 : 480') && photoSec57.includes("cb(cv.toDataURL('image/jpeg', hi ? 0.88 : 0.75));") && photoSec57.includes('Math.min(1, max / Math.max(img.width, img.height))'));
+  const calls57 = [...html.matchAll(/fileToPhoto\((?:input|this), d=>\{[^}]*\}(?:, true)?\)/g)].map(m=>m[0]);
+  check('v1.4.57: 9 usos de fileToPhoto: 4 en alta (anuncio, foto de negocio al crear/editar, foto de producto/servicio) y 5 de perfil a 480px', calls57.length === 9 && calls57.filter(c=>c.endsWith(', true)')).length === 4 && calls57.filter(c=>!c.endsWith(', true)')).length === 5, JSON.stringify(calls57.map(c=>c.slice(0, 70))));
+  const adLine57 = html.split('\n').find(l=>l.includes('fileToPhoto(input, d=>{adImgData'));
+  check('v1.4.57: el anuncio usa alta resolución (adPickFile pasa true: cubre los dos slots, vertical y banner, porque suben por el mismo input)', !!adLine57 && adLine57.includes('}, true);'));
+  const nbLine57 = html.split('\n').find(l=>l.includes('fileToPhoto') && l.includes('nb-prev'));
+  const beLine57 = html.split('\n').find(l=>l.includes('fileToPhoto') && l.includes('be-prev'));
+  check('v1.4.57: la foto del negocio usa alta resolución al crear y al editar', !!nbLine57 && nbLine57.includes('}, true)') && !!beLine57 && beLine57.includes('}, true)'));
+  const biLine57 = html.split('\n').find(l=>l.includes('fileToPhoto') && l.includes('bi-prev'));
+  check('v1.4.57: el producto/servicio YA tiene foto (nuevo campo opcional en el formulario, en alta, y se manda con image: bizItemPhoto)', !!biLine57 && biLine57.includes('}, true)') && html.includes('id="bi-prev"') && html.includes('image: bizItemPhoto') && html.includes('bizItemPhoto = null;'));
+  const profLines57 = html.split('\n').filter(l=>l.includes('fileToPhoto') && (l.includes('regPhoto1') || l.includes('regPhoto2')));
+  check('v1.4.57: las selfies y fotos de vehículo siguen a 480px (los 5 inputs de registro/chofer NO pasan true)', profLines57.length === 5 && profLines57.every(l=>!l.includes(', true)')));
+  // Evaluando el feed real con datos de mentira.
+  const feedFns57 = html.slice(html.indexOf('function bizFeedItems(list, cat, q){'), html.indexOf('function renderBizFeed(){'));
+  const renderFeedSrc57 = html.slice(html.indexOf('function renderBizFeed(){'), html.indexOf('/* Carrusel de anuncios', html.indexOf('function renderBizFeed(){')));
+  function biz57(id, name, category, open, products, services){
+    return { id, name, category, open: open?1:0, is_premium: 0, photo: null, description: 'Desc ' + name, products: products||[], services: services||[] };
+  }
+  function prod57(id, name, price, avail){ return { id, name, price, available: (avail==null?1:avail), image: null, description: '' }; }
+  const list57 = [
+    biz57(1, 'Tienda A Comida', 'Comida', 1, [prod57(11,'Pizza pepperoni',120), prod57(12,'Pizza hawaiana',130)], []),
+    biz57(2, 'Salón B Belleza', 'Belleza', 1, [], [prod57(21,'Tinte completo',200)]),
+    biz57(3, 'Tienda C Sin Productos', 'Comida', 0, [], []),
+  ];
+  const seq57 = (arr)=> arr.map(x=> x.kind==='biz' ? 'NEG:'+x.biz.name : 'PROD:'+x.it.name).join(' | ');
+  function feedItems57(list, cat, q){
+    const fn = new Function('list','cat','q', feedFns57 + '; return bizFeedItems(list, cat, q);');
+    return fn(list, cat, q);
+  }
+  function runFeed57(list, cat, q){
+    const box57 = { innerHTML: '' };
+    const fn = new Function('bizListCache','bizCatFilter','bizSearch','document','esc','fmt$', feedFns57 + renderFeedSrc57 + '; renderBizFeed(); return document.getElementById("biz-feed").innerHTML;');
+    return fn(list, cat, q, { getElementById: (id)=> id==='biz-feed' ? box57 : null }, (s)=>String(s==null?'':s), (n)=>'$'+Math.round(Number(n)||0));
+  }
+  check('v1.4.57: evaluado — el feed mezcla: negocio A, sus 2 productos, negocio B, su servicio, negocio C solo (sin productos)', seq57(feedItems57(list57,'Todas','')) === 'NEG:Tienda A Comida | PROD:Pizza pepperoni | PROD:Pizza hawaiana | NEG:Salón B Belleza | PROD:Tinte completo | NEG:Tienda C Sin Productos', seq57(feedItems57(list57,'Todas','')));
+  check('v1.4.57: evaluado — categoría Comida: A con sus 2 productos + C solo; B queda fuera y el intercalado se mantiene', seq57(feedItems57(list57,'Comida','')) === 'NEG:Tienda A Comida | PROD:Pizza pepperoni | PROD:Pizza hawaiana | NEG:Tienda C Sin Productos', seq57(feedItems57(list57,'Comida','')));
+  check('v1.4.57: evaluado — buscar "tinte": solo el salón B con su servicio', seq57(feedItems57(list57,'Todas','tinte')) === 'NEG:Salón B Belleza | PROD:Tinte completo', seq57(feedItems57(list57,'Todas','tinte')));
+  check('v1.4.57: evaluado — buscar "pepperoni": solo ese producto (no todo el menú del negocio)', seq57(feedItems57(list57,'Todas','pepperoni')) === 'NEG:Tienda A Comida | PROD:Pizza pepperoni', seq57(feedItems57(list57,'Todas','pepperoni')));
+  check('v1.4.57: evaluado — buscar "zzz": feed vacío', feedItems57(list57,'Todas','zzz').length === 0);
+  let feedHtml57 = '';
+  try { feedHtml57 = runFeed57(list57,'Todas',''); } catch(e){ feedHtml57 = 'ERR:' + String(e && e.message || e); }
+  check('v1.4.57: evaluado — el HTML del feed trae Ofertas del día, pestañas (Todos, Comida, Belleza), cuadrícula con precio y negocio, ABIERTO y CERRADO, sin descuentos', feedHtml57.includes('Ofertas del día') && feedHtml57.includes('biz-ofertas-row') && feedHtml57.includes('biz-cats') && feedHtml57.includes('>Todos<') && feedHtml57.includes('>Comida<') && feedHtml57.includes('>Belleza<') && feedHtml57.includes('biz-feed-grid') && feedHtml57.includes('$120') && feedHtml57.includes('Pizza pepperoni') && feedHtml57.includes('Tienda A Comida') && feedHtml57.includes('ABIERTO') && feedHtml57.includes('CERRADO') && !feedHtml57.includes('-%') && !feedHtml57.includes('<s>'), feedHtml57.slice(0, 300));
+  let feedHtml57b = '';
+  try { feedHtml57b = runFeed57([list57[2]],'Todas',''); } catch(e){ feedHtml57b = 'ERR:' + String(e && e.message || e); }
+  check('v1.4.57: evaluado — negocio sin productos: solo su tarjeta chica + "Los negocios aún no han subido productos." y sin fila de ofertas', feedHtml57b.includes('Tienda C Sin Productos') && feedHtml57b.includes('Los negocios aún no han subido productos.') && !feedHtml57b.includes('Ofertas del día'), feedHtml57b.slice(0, 300));
+  let feedHtml57c = '';
+  try { feedHtml57c = runFeed57([],'Todas',''); } catch(e){ feedHtml57c = 'ERR:' + String(e && e.message || e); }
+  check('v1.4.57: evaluado — sin negocios: "Todavía no hay negocios aceptados en la app."', feedHtml57c.includes('Todavía no hay negocios aceptados en la app.'));
+  let feedHtml57d = '';
+  try { feedHtml57d = runFeed57(list57,'Belleza',''); } catch(e){ feedHtml57d = 'ERR:' + String(e && e.message || e); }
+  check('v1.4.57: evaluado — categoría Belleza en el HTML: salón B + Tinte, sin la tienda A', feedHtml57d.includes('Salón B Belleza') && feedHtml57d.includes('Tinte completo') && !feedHtml57d.includes('Tienda A Comida'));
+  // Evaluando fileToPhoto real con lienzo e imagen de mentira.
+  function runPhoto57(w, h, hi){
+    const photoSrc57 = html.slice(html.indexOf('function fileToPhoto(input, cb, hi){'), html.indexOf('/* ===== INICIO ====='));
+    let canvas = null;
+    const imgStub = class { constructor(){ this.width = w; this.height = h; } set src(v){ if(this.onload) this.onload(); } };
+    const urlStub = { createObjectURL: ()=> 'blob:x', revokeObjectURL: ()=>{} };
+    const docStub = { createElement: ()=>{ canvas = { width: 0, height: 0, getContext: ()=>({ drawImage(){ } }), toDataURL: (t,q)=> 'data:image/jpeg;q'+q+';W'+canvas.width+'x'+canvas.height }; return canvas; } };
+    let out = null;
+    const fn = new Function('Image','URL','document', photoSrc57 + '; return fileToPhoto;');
+    fn(imgStub, urlStub, docStub)({ files: [{}] }, (d)=>{ out = d; }, hi);
+    return { out, w: canvas ? canvas.width : null, h: canvas ? canvas.height : null };
+  }
+  const ph57a = runPhoto57(1080, 1920, true);
+  check('v1.4.57: evaluado — foto vertical 1080×1920 por la ruta de anuncio: queda 900×1600 (lado mayor 1600, JPEG 0.88)', ph57a.w === 900 && ph57a.h === 1600 && ph57a.out && ph57a.out.includes('q0.88'), JSON.stringify(ph57a));
+  const ph57b = runPhoto57(4000, 3000, true);
+  check('v1.4.57: evaluado — foto horizontal 4000×3000 en alta: queda 1600×1200', ph57b.w === 1600 && ph57b.h === 1200 && ph57b.out && ph57b.out.includes('q0.88'), JSON.stringify(ph57b));
+  const ph57c = runPhoto57(1080, 1920, false);
+  check('v1.4.57: evaluado — la misma foto 1080×1920 como selfie: queda 270×480 (lado mayor 480, JPEG 0.75)', ph57c.w === 270 && ph57c.h === 480 && ph57c.out && ph57c.out.includes('q0.75'), JSON.stringify(ph57c));
+  const ph57d = runPhoto57(300, 200, true);
+  check('v1.4.57: evaluado — foto chica 300×200 en alta: NO se amplía (queda 300×200)', ph57d.w === 300 && ph57d.h === 200, JSON.stringify(ph57d));
+  // En vivo: 3 negocios de prueba (A con 2 productos, B con 1 servicio,
+  // C sin productos) y el feed sobre los datos reales del servidor.
+  const acc57a = await api('/api/register-account', { name: 'Ana 57A', username: 'ana57a_' + RUN, phone: '961570' + RUN.slice(0, 4), password: 'secreta123' });
+  check('v1.4.57: en vivo, cuenta A registrada', acc57a.ok && !!acc57a.token, JSON.stringify(acc57a));
+  const biz57a = await api('/api/request-business', { token: acc57a.token, name: 'Tienda 57A ' + RUN, type: 'entrega', whatsapp: '9610000057', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Comida 57' });
+  check('v1.4.57: en vivo, negocio A (entrega, Comida) creado', biz57a.ok && biz57a.business.id, JSON.stringify(biz57a));
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz57a.business.id });
+  const pr57a1 = await api('/api/add-product', { token: acc57a.token, business_id: biz57a.business.id, name: 'Pizza pepperoni 57', price: 120, description: 'Con queso', image: 'data:image/jpeg;base64,' + 'A'.repeat(1000) });
+  const pr57a2 = await api('/api/add-product', { token: acc57a.token, business_id: biz57a.business.id, name: 'Pizza hawaiana 57', price: 130 });
+  check('v1.4.57: en vivo, negocio A con 2 productos (uno con foto)', pr57a1.ok && pr57a1.product.id && pr57a2.ok && pr57a2.product.id, JSON.stringify([pr57a1, pr57a2]));
+  const acc57b = await api('/api/register-account', { name: 'Bea 57B', username: 'bea57b_' + RUN, phone: '961571' + RUN.slice(0, 4), password: 'secreta123' });
+  const biz57b = await api('/api/request-business', { token: acc57b.token, name: 'Salón 57B ' + RUN, type: 'citas', whatsapp: '9610000058', category: 'Belleza', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', description: 'Belleza 57' });
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz57b.business.id });
+  const sv57b = await api('/api/add-service', { token: acc57b.token, business_id: biz57b.business.id, name: 'Tinte 57', price: 200, duration_minutes: 90 });
+  check('v1.4.57: en vivo, negocio B (citas, Belleza) con 1 servicio', biz57b.ok && sv57b.ok && sv57b.service.id, JSON.stringify(sv57b));
+  const acc57c = await api('/api/register-account', { name: 'Cid 57C', username: 'cid57c_' + RUN, phone: '961572' + RUN.slice(0, 4), password: 'secreta123' });
+  const biz57c = await api('/api/request-business', { token: acc57c.token, name: 'Tienda 57C ' + RUN, type: 'entrega', whatsapp: '9610000059', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Sin productos 57' });
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz57c.business.id });
+  check('v1.4.57: en vivo, negocio C (entrega, Comida) sin productos creado', biz57c.ok && biz57c.business.id, JSON.stringify(biz57c));
+  const listLive57 = await api('/api/businesses');
+  const live57 = (listLive57.businesses||[]).filter(b=>['Tienda 57A ', 'Salón 57B ', 'Tienda 57C '].some(p=>String(b.name||'').startsWith(p)));
+  const liveA57 = live57.find(b=>String(b.name||'').startsWith('Tienda 57A '));
+  const liveB57 = live57.find(b=>String(b.name||'').startsWith('Salón 57B '));
+  const liveC57 = live57.find(b=>String(b.name||'').startsWith('Tienda 57C '));
+  check('v1.4.57: en vivo, /api/businesses trae los 3 negocios con sus productos/servicios (la fuente del feed)', live57.length === 3 && liveA57 && (liveA57.products||[]).length === 2 && liveB57 && (liveB57.services||[]).length === 1 && liveC57 && (liveC57.products||[]).length === 0 && (liveC57.services||[]).length === 0, JSON.stringify(live57.map(b=>({ n: b.name, p: (b.products||[]).length, s: (b.services||[]).length }))));
+  check('v1.4.57: en vivo, la foto del producto se guarda tal cual se mandó (el servidor no la re-escala)', liveA57 && (liveA57.products||[]).find(p=>p.name==='Pizza pepperoni 57') && (liveA57.products||[]).find(p=>p.name==='Pizza pepperoni 57').image === 'data:image/jpeg;base64,' + 'A'.repeat(1000), JSON.stringify((liveA57.products||[]).map(p=>({ n: p.name, img: (p.image||'').length }))));
+  check('v1.4.57: en vivo, el feed sobre los datos REALES del servidor mezcla igual (A, sus 2 productos, B, su servicio, C solo)', seq57(feedItems57(live57,'Todas','')) === 'NEG:'+liveA57.name+' | PROD:Pizza pepperoni 57 | PROD:Pizza hawaiana 57 | NEG:'+liveB57.name+' | PROD:Tinte 57 | NEG:'+liveC57.name, seq57(feedItems57(live57,'Todas','')));
+  check('v1.4.57: en vivo, categoría Comida sobre datos reales: A con sus productos + C solo; B fuera', seq57(feedItems57(live57,'Comida','')) === 'NEG:'+liveA57.name+' | PROD:Pizza pepperoni 57 | PROD:Pizza hawaiana 57 | NEG:'+liveC57.name, seq57(feedItems57(live57,'Comida','')));
+  check('v1.4.57: en vivo, buscar "tinte" sobre datos reales: solo B con su servicio', seq57(feedItems57(live57,'Todas','tinte')) === 'NEG:'+liveB57.name+' | PROD:Tinte 57', seq57(feedItems57(live57,'Todas','tinte')));
+  // En vivo: el servidor guarda la imagen del anuncio tal cual (sin
+  // re-escalarla): la calidad la decide el cliente al subirla.
+  const bigImg57 = 'data:image/jpeg;base64,' + 'B'.repeat(60000);
+  const ad57 = await api('/api/create-ad', { token: admLogin.token, kind: 'libre', label: 'Ad 57 ' + RUN, image: bigImg57, entries: ['negocios'], slot: 'flotante' });
+  check('v1.4.57: en vivo, el anuncio se crea con la imagen grande intacta', ad57.ok && ad57.ad.image === bigImg57, JSON.stringify(ad57.ad && { id: ad57.ad.id, len: (ad57.ad.image||'').length }));
+  const ads57 = await api('/api/ads');
+  const ad57Live = (ads57.ads||[]).find(a=>a.id===(ad57.ad && ad57.ad.id));
+  check('v1.4.57: en vivo, /api/ads devuelve el anuncio con la imagen grande intacta (lo que se sube es lo que se sirve)', !!ad57Live && ad57Live.image === bigImg57, JSON.stringify(ad57Live && { id: ad57Live.id, len: (ad57Live.image||'').length }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
