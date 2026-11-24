@@ -59,7 +59,12 @@ async function api(path, body) {
   check('chofer comparte ubicación en vivo', loc.ok);
 
   console.log('== Etapas del viaje ==');
-  for (const st of ['en_camino', 'llego', 'en_viaje', 'finalizado']) {
+  // v1.4.43: al aceptar ya va automáticamente en camino (sin botón "Voy
+  // en camino"); "Ya estoy afuera" lleva directo a en_viaje (ahí empieza
+  // el recorrido y se marca trip_started_at) y "Llegué a destino" cierra.
+  const rAfterAcc = (await api('/api/requests?id=' + rid)).requests[0];
+  check('al aceptar, el viaje ya va automáticamente en camino (sin botón)', rAfterAcc.trip_stage === 'en_camino', JSON.stringify(rAfterAcc.trip_stage));
+  for (const st of ['en_viaje', 'finalizado']) {
     const a = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: rid, stage: st });
     check('avanzar a ' + st, a.ok && a.request.trip_stage === st, JSON.stringify(a));
   }
@@ -73,10 +78,15 @@ async function api(path, body) {
   check('chofer contraoferta mandado $35', moff.ok && moff.offer.kind === 'contraoferta');
   const macc = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: man.request.id, offer_id: moff.offer.id, action: 'acepta' });
   check('pasajera acepta contraoferta del mandado', macc.ok && macc.request.status === 'aceptado' && macc.request.final_price === 35);
-  for (const st of ['en_camino', 'llego', 'recogido', 'en_viaje', 'entregado']) {
+  // v1.4.43: mandado simplificado — "Ya estoy afuera para recoger el
+  // paquete" (llego) → "Ya voy en camino" (en_viaje, salta 'recogido') →
+  // "Entregado" (entregado, estado finalizado).
+  for (const st of ['llego', 'en_viaje', 'entregado']) {
     const a = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man.request.id, stage: st });
     check('mandado avanza a ' + st, a.ok && a.request.trip_stage === st, JSON.stringify(a));
   }
+  const manEnd = (await api('/api/requests?id=' + man.request.id)).requests[0];
+  check('mandado entregado queda con estado finalizado', manEnd.status === 'finalizado' && !!manEnd.finished_at, JSON.stringify({ st: manEnd.status, fin: manEnd.finished_at }));
 
   console.log('== Reglas: moto no hace viajes, $80+ solo suscripción ==');
   const req2 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Copalar', dest_detail: 'Copalar', dest_lat: 16.855, dest_lng: -93.198, distance_km: 2.5, eta_minutes: 9, price: 30, payment_method: 'efectivo' });
@@ -135,12 +145,15 @@ async function api(path, body) {
     return rq.request.id;
   }
   const rc1 = await acceptedTrip(25);
-  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc1, stage: 'en_camino' });
+  // v1.4.43: al aceptar ya está en camino; avanzar a la misma etapa es
+  // éxito (doble toque no es error).
+  const rc1st = await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc1, stage: 'en_camino' });
+  check('avanzar a la etapa en la que ya está es éxito (doble toque no es error, v1.4.43)', rc1st.ok && rc1st.request.trip_stage === 'en_camino', JSON.stringify(rc1st));
   const c1 = await api('/api/cancel-request', { request_id: rc1 });
   check('cancelar en camino (antes de empezar) sí se puede', c1.ok, JSON.stringify(c1));
   const rc2 = await acceptedTrip(25);
-  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc2, stage: 'en_camino' });
-  await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc2, stage: 'llego' });
+  // v1.4.43: "Ya estoy afuera" lleva directo a en_viaje (ahí empieza el
+  // recorrido); ya no hay etapa 'llego' en viajes nuevos.
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rc2, stage: 'en_viaje' });
   const r2 = (await api('/api/requests?driver_id=' + drv3.driver.id)).requests.find(r => r.id === rc2);
   check('trip_started_at se marca al iniciar el viaje', !!r2.trip_started_at, JSON.stringify(r2.trip_started_at));
@@ -339,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.42', JSON.stringify(h));
+  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.43', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -350,7 +363,7 @@ async function api(path, body) {
   const rqT = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'transferencia' });
   check('publicar con transferencia', rqT.ok && rqT.request.payment_method === 'transferencia' && rqT.request.status === 'buscando', JSON.stringify(rqT));
   const accT = await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqT.request.id, kind: 'aceptar_precio', price: 25 });
-  check('chofer acepta precio: viaje aceptado al instante', accT.ok && accT.request.status === 'aceptado' && accT.request.trip_stage === 'confirmado' && accT.request.final_price === 25 && accT.request.payment_method === 'transferencia' && accT.request.driver_id === drv3.driver.id && accT.request.driver_name === 'Gratis Tres', JSON.stringify(accT));
+  check('chofer acepta precio: viaje aceptado al instante y ya va en camino (v1.4.43)', accT.ok && accT.request.status === 'aceptado' && accT.request.trip_stage === 'en_camino' && accT.request.final_price === 25 && accT.request.payment_method === 'transferencia' && accT.request.driver_id === drv3.driver.id && accT.request.driver_name === 'Gratis Tres', JSON.stringify(accT));
   const gotT = (await api('/api/requests?passenger_id=' + pax.passenger.id)).requests.find(r => r.id === rqT.request.id);
   check('GET /api/requests devuelve payment_method transferencia y estado aceptado', !!gotT && gotT.payment_method === 'transferencia' && gotT.status === 'aceptado', JSON.stringify(gotT && { payment_method: gotT.payment_method, status: gotT.status }));
   // (b) contraoferta queda pendiente; el pasajero acepta con response 'aceptar' y confirma en efectivo
@@ -440,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.42', JSON.stringify(h134));
+  check('versión 1.4.36', h134.ok && h134.version === '1.4.43', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.42';") && h.version === '1.4.42', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.43';") && h.version === '1.4.43', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -934,7 +947,7 @@ async function api(path, body) {
   // render del mapa, así las tiras (etapa, Precio final, botón de avance)
   // se dibujan igual y solo falta la línea azul. Igual en los mapas de
   // vista previa del asistente y de mandados.
-  check('mapa en vivo: si OSRM falla, las tiras se dibujan igual (v1.4.14)', html.includes('try { rt = await osrmRoute(from, target); } catch(e){ rt = null; }') && html.includes('try { await renderLiveMap(); } catch(e)') && html.includes('try { rt = await osrmRoute(wiz.origin, wiz.dest); } catch(e){}') && html.includes('try { rt = await osrmRoute(first, dest); } catch(e){}'));
+  check('mapa en vivo: si OSRM falla, las tiras se dibujan igual (v1.4.14)', html.includes('try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; }') && html.includes('try { await renderLiveMap(); } catch(e)') && html.includes('try { rt = await osrmRoute(wiz.origin, wiz.dest); } catch(e){}') && html.includes('try { rt = await osrmRoute(first, dest); } catch(e){}'));
   // Paso de detalles igual a la app real (v1.4.15, captura del usuario
   // 7:29): las dos filas de puntos se aplastaban en tiritas verticales
   // porque .strip button{width:100%} hacía que "Cambiar" ocupara casi
@@ -953,7 +966,7 @@ async function api(path, body) {
   // destino (la ruta hacia donde van a llegar). Sin GPS del chofer, se
   // centra el punto objetivo a zoom de calle (maxZoom 16 de fitPoints).
   // El lado pasajero no cambia (ya centraba la recogida a zoom 16).
-  check('mapa en vivo chofer: encuadre por etapa — recogida antes de iniciar, destino después (v1.4.15)', html.includes('const framePts = inTrip') && html.includes('? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])') && html.includes(': (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);') && html.includes('fitPoints(liveMap, framePts, liveFollowPadding())') && !html.includes('fitPoints(liveMap, pts, liveAsDriver ? 70'), detHtml.slice(0, 100));
+  check('mapa en vivo chofer: encuadre por etapa — recogida antes de iniciar, destino después (v1.4.15; respaldo cuando no hay ruta OSRM, v1.4.43 encuadra la ruta completa)', html.includes('const framePts = inTrip') && html.includes('? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])') && html.includes(': (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);') && html.includes('fitPoints(liveMap, framePts, liveFollowPadding())') && !html.includes('fitPoints(liveMap, pts, liveAsDriver ? 70'), detHtml.slice(0, 100));
   // Marcador de recogida "Recoge aquí" (v1.4.15, petición EXPLÍCITA del
   // usuario 19:35): camino a recoger, el punto es un PIN compacto con la
   // etiqueta "Recoge aquí" — la píldora verde con el nombre del pasajero
@@ -1090,7 +1103,7 @@ async function api(path, body) {
   const rqP2 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
   await api('/api/driver-respond', { driver_id: drv3.driver.id, request_id: rqP2.request.id, kind: 'acepta', price: 25 });
   const payNo = await api('/api/set-payment-method', { request_id: rqP2.request.id, method: 'transferencia' });
-  check('cambiar pago con viaje aceptado SÍ se puede mientras sigue confirmado (antes de salir, v1.4.0)', payNo.ok, JSON.stringify(payNo));
+  check('cambiar pago con viaje aceptado ya NO se puede (al aceptar ya va en camino y el pago quedó fijado, v1.4.43)', !payNo.ok && /fijada/.test(payNo.error || ''), JSON.stringify(payNo));
   await api('/api/advance-stage', { driver_id: drv3.driver.id, request_id: rqP2.request.id, stage: 'en_camino' });
   const payNo2 = await api('/api/set-payment-method', { request_id: rqP2.request.id, method: 'efectivo' });
   check('cambiar pago ya en camino rechazado (quedó fijada)', !payNo2.ok && /fijada/.test(payNo2.error || ''), JSON.stringify(payNo2));
@@ -1396,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.42', JSON.stringify(h27));
+  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.43', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1441,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.42', JSON.stringify(h28));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.43', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1455,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.42', JSON.stringify(h29));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.43', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1464,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.42', JSON.stringify(h30));
+  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.43', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1601,7 +1614,7 @@ async function api(path, body) {
   check('v1.4.35: el precio del resumen se actualiza al mover el stepper', html.includes("getElementById('md-sum-price')") && html.includes('priceStep(') && html.includes('priceSetSuggested('));
   check('v1.4.35: la tarjeta del chofer usa el resumen en solicitudes y en curso', inboxSec.includes('mandadoDriverSummaryHtml(r)') && inboxSec.includes("driverInboxTab==='curso'") && inboxSec.includes('Abrir mapa del servicio'));
   const liveSec = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function driverPasteLocationInline'));
-  check('v1.4.35: el mapa en vivo del chofer también trae el resumen del mandado', liveSec.includes('mandadoDriverSummaryHtml(r)') && liveSec.includes('liveAsDriver'));
+  check('v1.4.35: el resumen del mandado sigue en las tarjetas del chofer (bandeja/en curso), pero ya NO en el mapa en vivo (v1.4.43: pantalla despejada)', !liveSec.includes('mandadoDriverSummaryHtml(r)') && (html.match(/mandadoDriverSummaryHtml\(r\)/g)||[]).length >= 3);
   // --- v1.4.36: la bandeja del chofer no parpadea y es lista, no páginas ---
   check('v1.4.36: Recibir Viajes pinta Cargando… SOLO en la primera carga (lista anterior intacta)', html.includes('let inboxLoaded = false, inboxSig = ') && html.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">Cargando…</p>'") && html.includes('async function loadDriverInbox(force){'));
   check('v1.4.36: el refresco no repinta si nada cambió (firma de datos) y no se solapa', inboxSec.includes('inboxSig') && inboxSec.includes('if(inboxLoaded && !force && sig===inboxSig) return;') && inboxSec.includes('if(inboxLoading) return;') && inboxSec.includes('} finally { inboxLoading = false; paintDriverActiveBanners(); }'));
@@ -1690,6 +1703,67 @@ async function api(path, body) {
   // Limpieza: los dos anuncios de la prueba se borran (quedan los de otras secciones).
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adF.ad.id });
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adP.ad.id });
+
+  // --- v1.4.43: flujo simplificado del chofer + pantalla en vivo despejada + ruta completa ---
+  // Estáticas: el servidor confirma en camino, el mapa de transiciones y la
+  // idempotencia; el cliente con los botones nuevos y la tira despejada.
+  check('v1.4.43: al aceptar el servidor deja el servicio automáticamente en camino (sin botón "Voy en camino")', srv.includes("trip_stage='en_camino', trip_stage_at=datetime('now')"));
+  check('v1.4.43: el mapa de transiciones salta las etapas viejas pero las sigue aceptando (servicios en curso)', srv.includes("en_camino: ['llego', 'en_viaje']") && srv.includes("llego: ['recogido', 'en_viaje']") && srv.includes("recogido: ['en_viaje', 'entregado']"));
+  check('v1.4.43: avanzar a la etapa en la que ya está es éxito (doble toque no es error)', srv.includes("if (stage === r.trip_stage) return send(res, 200, { ok: true, request: r });"));
+  check('v1.4.43: el cliente simplificó los botones ("Ya estoy afuera" → "Ya voy en camino" → "Entregado"/"Llegué a destino") y ya no trae los viejos', html.includes("if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino' || r.trip_stage==='llego') return 'en_viaje';") && html.includes("llego:'Ya estoy afuera para recoger el paquete'") && html.includes("en_viaje:'Ya voy en camino'") && html.includes("entregado:'Entregado'") && !html.includes("'Voy en camino'") && !html.includes("'Iniciar viaje'") && !html.includes("'Ya llegué a recoger'") && !html.includes("'Ya recogí el encargo'") && !html.includes("'En camino a entregarlo'") && !html.includes("'Ya lo entregué'") && !html.includes("'Voy por el encargo'"));
+  const liveSec43 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+  check('v1.4.43: la pantalla en vivo del chofer ya no trae la caja verde de resumen ni el botón ancho de pegar ubicación: Recibe y Pedido son renglones chicos y pegar ubicación es un enlace chico', liveSec43.includes('live-mini') && liveSec43.includes('minilink') && liveSec43.includes('Recibe: ') && !liveSec43.includes('mandadoDriverSummaryHtml(r)') && !liveSec43.includes('class="ghostb"') && !liveSec43.includes('Pedir ubicación por WhatsApp a quien recibe') && !liveSec43.includes('Punto de entrega marcado en el mapa'));
+  check('v1.4.43: la ruta azul ya va al destino cuando el servicio empezó (recogido/en_viaje) y no de vuelta a la recogida', html.includes('function liveHeadingToDest(r){') && html.includes("return ['recogido','en_viaje','entregado'].includes(r.trip_stage||'');") && html.includes('const inTrip = liveHeadingToDest(r);'));
+  check('v1.4.43: la ruta pasa por las paradas de "Varios lados" y se encuadra COMPLETA en la franja libre', html.includes('function liveRouteWaypoints(r, toDest){') && html.includes('stops.slice(1)') && html.includes('osrmRoute(from, target, liveRouteWaypoints(r, inTrip))') && html.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())'));
+  check('v1.4.43: el pasajero ve los estados del flujo nuevo (va en camino / ya está afuera / va a entregarte / entregado)', html.includes("en_camino:'Tu mototaxi va en camino'") && html.includes("en_viaje:'Viaje en curso · vas rumbo a tu destino'") && html.includes("en_viaje:'Tu encargo va en camino a su destino'") && html.includes("entregado:'Tu encargo fue entregado'") && html.includes("r.trip_stage==='en_viaje' && prev.indexOf('en_viaje')<0"));
+  check('v1.4.43: advanceLive tiene guardia contra doble toque (seis toques mandan un solo avance)', html.includes('liveAdvancing = false') && html.includes('if(liveAdvancing) return;') && html.includes('finally { liveAdvancing = false; }'));
+  // En vivo: viaje con el flujo nuevo.
+  const req43 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo' });
+  // Seis toques seguidos en Aceptar: UN solo viaje aceptado, UNA sola oferta.
+  const taps43 = await Promise.all(Array.from({ length: 6 }, () => api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req43.request.id, kind: 'acepta', price: 20 })));
+  const one43 = await api('/api/requests?id=' + req43.request.id);
+  const row43 = one43.requests[0];
+  check('v1.4.43: seis toques en Aceptar producen UN solo viaje aceptado y UNA sola oferta (sin duplicar ni romper)', req43.ok && taps43.filter(t=>t.ok).length === 1 && row43 && row43.status === 'aceptado' && row43.trip_stage === 'en_camino' && (row43.offers||[]).filter(o=>o.driver_id===drv.driver.id).length === 1, JSON.stringify({ ok: taps43.filter(t=>t.ok).length, st: row43 && row43.status, stage: row43 && row43.trip_stage, offers: row43 && (row43.offers||[]).length }));
+  // Seis toques seguidos en "Ya estoy afuera": todos éxito, UN solo avance.
+  const tapsAdv = await Promise.all(Array.from({ length: 6 }, () => api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'en_viaje' })));
+  const row43b = (await api('/api/requests?id=' + req43.request.id)).requests[0];
+  check('v1.4.43: seis toques en "Ya estoy afuera" dan éxito en los seis, un solo avance y el recorrido marcado como iniciado', tapsAdv.every(t=>t.ok) && row43b.trip_stage === 'en_viaje' && !!row43b.trip_started_at, JSON.stringify({ ok: tapsAdv.filter(t=>t.ok).length, stage: row43b.trip_stage, started: row43b.trip_started_at }));
+  const fin43 = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'finalizado' });
+  check('v1.4.43: "Llegué a destino" finaliza el viaje', fin43.ok && fin43.request.trip_stage === 'finalizado' && fin43.request.status === 'finalizado' && !!fin43.request.finished_at, JSON.stringify(fin43.request && { st: fin43.request.trip_stage, fin: fin43.request.finished_at }));
+  // En vivo: mandado con el flujo nuevo (el pasajero ve cada etapa igual).
+  const man43 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const macc43 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: man43.request.id, kind: 'acepta', price: 20 });
+  check('v1.4.43: al aceptar el mandado ya va en camino a recoger (sin botón)', man43.ok && macc43.ok && macc43.request.status === 'aceptado' && macc43.request.trip_stage === 'en_camino', JSON.stringify(macc43.request && macc43.request.trip_stage));
+  const mLlego = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man43.request.id, stage: 'llego' });
+  const paxLlego = (await api('/api/requests?passenger_id=' + pax.passenger.id)).requests.find(r=>r.id===man43.request.id);
+  check('v1.4.43: "Ya estoy afuera para recoger el paquete" y el pasajero lo ve en esa misma etapa', mLlego.ok && mLlego.request.trip_stage === 'llego' && paxLlego && paxLlego.trip_stage === 'llego', JSON.stringify({ drv: mLlego.request && mLlego.request.trip_stage, pax: paxLlego && paxLlego.trip_stage }));
+  const mViaje = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man43.request.id, stage: 'en_viaje' });
+  const paxViaje = (await api('/api/requests?passenger_id=' + pax.passenger.id)).requests.find(r=>r.id===man43.request.id);
+  check('v1.4.43: "Ya voy en camino" (salta recogido) y el pasajero lo ve en camino a entregarle', mViaje.ok && mViaje.request.trip_stage === 'en_viaje' && paxViaje && paxViaje.trip_stage === 'en_viaje', JSON.stringify({ drv: mViaje.request && mViaje.request.trip_stage, pax: paxViaje && paxViaje.trip_stage }));
+  const mEnt = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man43.request.id, stage: 'entregado' });
+  check('v1.4.43: "Entregado" cierra el mandado (estado finalizado)', mEnt.ok && mEnt.request.trip_stage === 'entregado' && mEnt.request.status === 'finalizado' && !!mEnt.request.finished_at, JSON.stringify(mEnt.request && { st: mEnt.request.trip_stage, fin: mEnt.request.finished_at }));
+  // En vivo: compatibilidad con servicios en curso (etapas viejas).
+  const legV = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: legV.request.id, kind: 'acepta', price: 20 });
+  const legVl = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legV.request.id, stage: 'llego' });
+  const legVv = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legV.request.id, stage: 'en_viaje' });
+  const legVf = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legV.request.id, stage: 'finalizado' });
+  check('v1.4.43: un viaje en curso con la etapa vieja "llego" sigue avanzando (llego → en_viaje → finalizado)', legV.ok && legVl.ok && legVl.request.trip_stage === 'llego' && legVv.ok && legVf.ok && legVf.request.trip_stage === 'finalizado', JSON.stringify({ llego: legVl.ok, viaje: legVv.ok, fin: legVf.ok }));
+  const legM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete viejo' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: legM.request.id, kind: 'acepta', price: 20 });
+  const legMl = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'llego' });
+  const legMr = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'recogido' });
+  const legMv = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'en_viaje' });
+  const legMe = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'entregado' });
+  check('v1.4.43: un mandado en curso con la etapa vieja "recogido" sigue avanzando (llego → recogido → en_viaje → entregado)', legM.ok && legMl.ok && legMr.ok && legMr.request.trip_stage === 'recogido' && legMv.ok && legMe.ok && legMe.request.trip_stage === 'entregado', JSON.stringify({ llego: legMl.ok, rec: legMr.ok, viaje: legMv.ok, ent: legMe.ok }));
+  // En vivo: mandado "Varios lados" guarda sus paradas (la ruta completa
+  // pasa por todas antes de la entrega; la última es el destino).
+  const multi43 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.2, price: 40, payment_method: 'efectivo', description: '', recipient_phone: '9612222222', items: ['2 kg de tortillas', '1 refresco'], stops: [{ zone: 'Mercado', lat: 16.8675, lng: -93.2105 }, { zone: 'Centro', lat: 16.8709, lng: -93.2063 }], extra_stops: 1 });
+  const multiRow = (await api('/api/requests?id=' + multi43.request.id)).requests[0];
+  check('v1.4.43: mandado "Varios lados" guarda las paradas en orden (la ruta las recorre y la última parada es la entrega)', multi43.ok && multiRow && JSON.parse(multiRow.stops_json||'[]').length === 2 && multiRow.extra_stops === 1 && JSON.parse(multiRow.stops_json)[1].zone === 'Centro', JSON.stringify(multiRow && { stops: multiRow.stops_json, extra: multiRow.extra_stops }));
+  const multiAcc = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: multi43.request.id, kind: 'acepta', price: 40 });
+  const multiFin = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: multi43.request.id, stage: 'llego' });
+  check('v1.4.43: el mandado de varios lados usa el mismo ciclo simplificado (acepta → afuera → en camino → entregado)', multiAcc.ok && multiAcc.request.trip_stage === 'en_camino' && multiFin.ok && multiFin.request.trip_stage === 'llego', JSON.stringify({ acc: multiAcc.request && multiAcc.request.trip_stage, llego: multiFin.request && multiFin.request.trip_stage }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

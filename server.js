@@ -507,6 +507,17 @@ const BIZ_TYPES = ['entrega', 'catalogo', 'citas'];
 const AD_ENTRIES = ['viajes', 'negocios', 'mandados'];
 const TRIP_STAGES = ['confirmado', 'en_camino', 'llego', 'en_viaje', 'finalizado'];
 const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'en_viaje', 'entregado']; // como la app real (v1.4.0): sin 'a_recoger'
+// v1.4.43 — flujo simplificado del chofer: al aceptar el servicio ya va
+// automáticamente "en camino" (sin botón "Voy en camino"); "Ya estoy
+// afuera" confirma la recogida y en viajes inicia el recorrido;
+// "Ya voy en camino" sale hacia el destino; "Entregado"/"Llegué a destino"
+// cierra. Las transiciones viejas (llego en viajes, recogido en mandados)
+// se siguen aceptando: los servicios que ya iban en curso cuando llegó
+// esta versión no se quedan atorados.
+const STAGE_NEXT = {
+  viaje: { confirmado: ['en_camino'], en_camino: ['llego', 'en_viaje'], llego: ['en_viaje'], en_viaje: ['finalizado'] },
+  mandado: { confirmado: ['en_camino'], en_camino: ['llego'], llego: ['recogido', 'en_viaje'], recogido: ['en_viaje', 'entregado'], en_viaje: ['entregado'] },
+};
 
 function haversineKm(a, b, c, d) {
   const R = 6371, rad = x => x * Math.PI / 180;
@@ -611,8 +622,10 @@ function confirmRequest(requestId, d, finalPrice, acceptedOfferId) {
     db.prepare(`UPDATE offers SET status='superada' WHERE request_id=?`).run(requestId);
   }
   db.prepare(`UPDATE requests SET status='aceptado', final_price=?, driver_id=?, driver_name=?, driver_phone=?,
-    driver_photo=?, driver_unit=?, driver_vehicle=?, vehicle_photo=?, trip_stage='confirmado', trip_stage_at=datetime('now')
+    driver_photo=?, driver_unit=?, driver_vehicle=?, vehicle_photo=?, trip_stage='en_camino', trip_stage_at=datetime('now')
     WHERE id=?`).run(finalPrice, d.id, d.name, d.phone, d.selfie, d.unit, d.vehicle, d.vehicle_photo, requestId);
+  // v1.4.43: al aceptar ya va automáticamente en camino al punto de
+  // recogida (sin botón "Voy en camino").
   return db.prepare('SELECT * FROM requests WHERE id=?').get(requestId);
 }
 
@@ -690,7 +703,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.42' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.43' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1987,8 +2000,13 @@ async function api(req, res, pathname) {
     // curso no se tocan.
     const allowed = r.kind === 'viaje' ? TRIP_STAGES : MANDADO_STAGES;
     if (!allowed.includes(stage)) return send(res, 400, { ok: false, error: 'Etapa no válida.' });
-    const cur = allowed.indexOf(r.trip_stage), next = allowed.indexOf(stage);
-    if (next !== cur + 1 && !(r.trip_stage === 'confirmado' && stage === allowed[1])) {
+    // v1.4.43: avanzar a la etapa en la que ya está es éxito (doble toque
+    // no es error) y las transiciones se leen del mapa STAGE_NEXT: el flujo
+    // nuevo salta 'llego' en viajes y 'recogido' en mandados, pero las
+    // etapas viejas siguen siendo válidas para los servicios en curso.
+    if (stage === r.trip_stage) return send(res, 200, { ok: true, request: r });
+    const nexts = (STAGE_NEXT[r.kind] || {})[r.trip_stage] || [];
+    if (!nexts.includes(stage)) {
       return send(res, 400, { ok: false, error: 'No se puede saltar etapas.' });
     }
     const isFinal = stage === 'finalizado' || stage === 'entregado';
