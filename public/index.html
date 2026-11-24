@@ -477,7 +477,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.36'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.37'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3987,12 +3987,20 @@ function mandadoDriverSummaryHtml(r){
 }
 // Estado de la bandeja del chofer (v1.4.36): la lista que ya se pintó no se
 // borra nunca en un refresco; solo se repinta si los datos cambiaron.
-let inboxLoaded = false, inboxSig = '', inboxLoading = false;
+let inboxLoaded = false, inboxSig = '', inboxLoading = false, inboxExpandedId = null;
 async function renderDriverInbox(){
   // Toques del usuario (entrar a la pestaña, aceptar, contraofertar,
   // cambiar de pestaña): repintado forzado. El sondeo cada 5 s llama
   // loadDriverInbox(false) y no toca la pantalla si nada cambió.
   await loadDriverInbox(true);
+}
+function inboxToggle(rid){
+  // Tocar una solicitud compacta la abre (resumen completo + aceptar) o
+  // la cierra si ya estaba abierta; tocar otra cambia la abierta. El id
+  // abierto entra en la firma de datos, así el refresco silencioso no
+  // colapsa el detalle (v1.4.37).
+  inboxExpandedId = inboxExpandedId===rid ? null : rid;
+  renderDriverInbox();
 }
 async function loadDriverInbox(force){
   if(inboxLoading) return;
@@ -4022,11 +4030,14 @@ async function loadDriverInbox(force){
       if(r.kind==='viaje' && myDriver.vehicle!=='mototaxi') return false;
       return true;
     });
+    // Si la solicitud abierta ya no está en la lista (se aceptó, se
+    // canceló o expiró), se cierra sola para no dejar un detalle huérfano.
+    if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;
     updateDriverBadge(list.length);
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -4057,14 +4068,24 @@ async function loadDriverInbox(force){
     // Lista apilada (v1.4.36): todas las solicitudes una debajo de otra en
     // la misma pantalla, sin paginador. El contador vive en la pestaña
     // 'Solicitudes (N)' y en la insignia del botón Recibir Viajes.
+    // Fila compacta (v1.4.37): cada solicitud muestra solo tipo, de → a
+    // y precio; al tocarla se abre el detalle con el resumen y aceptar.
     html += list.map(r=>{
       const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
       const counter = mine && mine.passenger_counter_price;
       const highFare = r.price >= 80;
+      const expanded = inboxExpandedId===r.id;
+      // Fila compacta (v1.4.37): solo tipo, de → a y precio. Al tocarla se
+      // abre el detalle completo con el resumen y aceptar/contraofertar.
       let card = '<div class="card white">'
-      + '<div class="flex">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
-      + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div>'
-      + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span></div>'
+      + '<div class="flex" style="align-items:center;cursor:pointer" onclick="inboxToggle('+r.id+')">'
+      + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
+      + '<div class="flex1"><b>'+esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
+      + '<b class="price">'+fmt$(r.price)+'</b>'
+      + '<span class="muted">'+(expanded?'▴':'▾')+'</span></div>';
+      if(!expanded) return card + '</div>';
+      card += '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
+      + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
       + '<div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
       + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
       + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
