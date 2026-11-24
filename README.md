@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.38)
+# SanFerGo — versión pública (v1.4.39)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.39 (2026-11-23) — Nombres de lugar en la fila compacta + botón para cerrar el detalle
+
+- En **Recibir Viajes** la fila compacta ya no dice lo genérico (\"Mi ubicación → Punto de WhatsApp\"): ahora muestra el nombre del lugar de verdad, por ejemplo **\"Madero → Centro\"**. Las zonas guardadas genéricas (origen por GPS o destino por WhatsApp: \"Mi ubicación\", \"Punto de WhatsApp\", \"Punto de entrega\"…) se resuelven en pantalla a la zona conocida más cercana por coordenadas (nueva `displayZoneName` + `nearestZoneWithin`, radio 1.5 km, sobre el mismo registro de 21 zonas del buscador); la zona guardada específica se respeta y si no hay coordenadas o el punto queda lejos de toda zona conocida, se queda la etiqueta genérica. Como se resuelve al mostrar, también se arreglan las solicitudes viejas. Los mismos nombres resueltos salen en las filas De/A del detalle expandido, y entran en la firma de datos para que un cambio de nombre repinte la lista sin parpadeo.
+- El detalle expandido ahora trae un botón visible **\"‹ Ver todas las solicitudes\"** arriba del resumen, que lo cierra y vuelve a la lista completa (antes solo se podía tocar otra vez la fila, y el chofer no lo encontraba). El toque en la fila sigue funcionando igual.
+- Sin tocar: el flujo de publicar, las tarifas, los viajes, Quiero, ni el aviso ámbar de contraoferta (v1.4.38).
+- Pruebas: suite completa contra BD limpia: 532 OK, 0 FAIL (528 de antes + 4 nuevas: 3 estáticas — resolución por coordenadas con radio 1.5 km, fila y detalle con el nombre resuelto en la firma, botón para cerrar el detalle — y 1 en vivo de que `/api/requests?open=1` devuelve las coordenadas de una solicitud con zonas genéricas: origen en Madero, destino en Centro).
 
 ## v1.4.38 (2026-11-23) — Aviso de contraoferta en la fila colapsada de Recibir Viajes
 
