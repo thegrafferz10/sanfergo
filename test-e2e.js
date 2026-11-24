@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.61 en /api/health', h.ok && h.version === '1.4.61', JSON.stringify(h));
+  check('versión 1.4.62 en /api/health', h.ok && h.version === '1.4.62', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.61', h134.ok && h134.version === '1.4.61', JSON.stringify(h134));
+  check('versión 1.4.62', h134.ok && h134.version === '1.4.62', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.61)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.61';") && h.version === '1.4.61', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.62)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.62';") && h.version === '1.4.62', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.61 en /api/health (sección)', h27.ok && h27.version === '1.4.61', JSON.stringify(h27));
+  check('versión 1.4.62 en /api/health (sección)', h27.ok && h27.version === '1.4.62', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.61 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.61', JSON.stringify(h28));
+  check('versión 1.4.62 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.62', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.61 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.61', JSON.stringify(h29));
+  check('versión 1.4.62 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.62', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.61 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.61', JSON.stringify(h30));
+  check('versión 1.4.62 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.62', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -3387,8 +3387,9 @@ async function api(path, body) {
   const sumSec61 = html.slice(html.indexOf('function showTripSummary(r, asDriver){'), html.indexOf('function startLivePolling(){'));
   const paxStart61 = html.indexOf("if(!asDriver && r.kind==='viaje'){", html.indexOf('function showTripSummary(r, asDriver){'));
   const paxBranch61 = html.slice(paxStart61, html.indexOf("\n  }\n  ov.innerHTML = '<div class=\"sumwrap\">", paxStart61));
-  check('v1.4.61: el recibo del PASAJERO (viaje) es solo título + gracias + precio enorme centrado + recordatorio: sin tabla de detalles ni "Generar recibo"', paxBranch61.includes('sumfloat orange') && paxBranch61.includes('¡Viaje terminado!') && paxBranch61.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && paxBranch61.includes('sumprice-big') && paxBranch61.includes('sumremind') && paxBranch61.includes('class="adx"') && paxBranch61.includes('return;') && !paxBranch61.includes('>Generar recibo</button>') && !paxBranch61.includes('downloadReceipt') && !paxBranch61.includes('class="kv"') && !paxBranch61.includes('Cerrar</button>'));
-  check('v1.4.61: el recibo del CHOFER y el del MANDADO siguen intactos (mini mapa + tabla + Generar recibo + Cerrar)', sumSec61.includes('Gracias por concluir el viaje') && sumSec61.includes('id="sum-minimap"') && sumSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && sumSec61.includes("'Cerrar y volver a recibir viajes'") && sumSec61.includes('<span>Pasajero</span>') && sumSec61.includes('<span>Precio final</span>'));
+  check('v1.4.62: el recibo del PASAJERO (viaje) es solo título + gracias + precio enorme centrado + recordatorio de cambio + línea de pertenencias (SIEMPRE): sin tabla de detalles ni "Generar recibo", con la clase orange-receipt', paxBranch61.includes('sumfloat orange') && paxBranch61.includes('¡Viaje terminado!') && paxBranch61.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && paxBranch61.includes('sumprice-big') && paxBranch61.includes('sumremind') && paxBranch61.includes('sumbelong') && paxBranch61.includes('Recuerda revisar todas tus pertenencias') && paxBranch61.includes("classList.add('orange-receipt')") && paxBranch61.includes('class="adx"') && paxBranch61.includes('return;') && !paxBranch61.includes('>Generar recibo</button>') && !paxBranch61.includes('downloadReceipt') && !paxBranch61.includes('class="kv"') && !paxBranch61.includes('Cerrar</button>'));
+  check('v1.4.62: el recibo del CHOFER (viaje) es la misma tarjeta naranja que el del pasajero (Resumen del viaje + gracias + precio enorme + pertenencias; sin mapa, sin tabla, sin Generar recibo, sin línea de cambio)', (()=>{ const d0 = html.indexOf("if(asDriver && r.kind==='viaje'){", html.indexOf('function showTripSummary(r, asDriver){')); const d1 = html.indexOf("if(!asDriver && r.kind==='viaje'){", d0); const b = html.slice(d0, d1); return b.includes('sumfloat orange') && b.includes('Resumen del viaje') && b.includes('Gracias por concluir el viaje') && b.includes('sumprice-big') && b.includes('sumbelong') && b.includes('Recuerda revisar todas tus pertenencias') && b.includes("classList.add('orange-receipt')") && b.includes('class="adx"') && b.includes('return;') && !b.includes('sumremind') && !b.includes('Recuerda pagar con cambio') && !b.includes('downloadReceipt') && !b.includes('class="kv"') && !b.includes('>Generar recibo</button>') && !b.includes('sum-minimap') && !b.includes('Cerrar</button>'); })());
+  check('v1.4.62: el recibo del MANDADO sigue intacto (mini mapa + tabla + Generar recibo + Cerrar) y la clase orange-receipt solo la llevan las dos ramas naranjas de viaje', sumSec61.includes('id="sum-minimap"') && sumSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && sumSec61.includes("'Cerrar y volver a recibir viajes'") && sumSec61.includes('<span>Pasajero</span>') && sumSec61.includes('<span>Precio final</span>') && (html.split("classList.add('orange-receipt')").length - 1) === 2);
   // --- Evaluado: el recibo real (función showTripSummary) en sus 4 casos. ---
   let receipt61 = null;
   try {
@@ -3399,14 +3400,14 @@ async function api(path, body) {
       let captured = null;
       const doc = {
         getElementById: () => null,
-        createElement: () => ({ innerHTML: '', addEventListener() {}, appendChild() {} }),
+        createElement: () => ({ innerHTML: '', classList: { list: [], add(c){ this.list.push(c); } }, addEventListener() {}, appendChild() {} }),
         body: { appendChild(el) { captured = el; } }
       };
       let miniCalled = 0;
       const f = new Function('document', 'window', 'fmtDateTime', 'esc', 'paxText', 'fmt$', 'summaryCashNote', 'drawSummaryMiniMap', sumSrc61 + '\nreturn showTripSummary;');
       const show = f(doc, {}, () => '24 nov 2026, 08:52', s => String(s == null ? '' : s), p => { const n = Math.max(1, Math.min(3, Number(p) || 1)); return n + (n === 1 ? ' persona' : ' personas'); }, n => '$' + Math.round(Number(n) || 0), cashFn61, () => { miniCalled++; });
       show(r, asDriver);
-      return { html: captured ? captured.innerHTML : '', miniCalled };
+      return { html: captured ? captured.innerHTML : '', classes: captured ? captured.classList.list : [], miniCalled };
     };
     const tripEf61 = { id: 201, kind: 'viaje', origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, created_at: '2026-11-24 08:47:00', finished_at: '2026-11-24 08:52:00', trip_started_at: '2026-11-24 08:47:00', distance_km: 1.6, price: 25, final_price: 25, passenger_count: 1, driver_name: 'Josué Eduardo', driver_unit: 'Hahaha', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo' };
     const tripTr61 = { ...tripEf61, payment_method: 'transferencia' };
@@ -3418,9 +3419,9 @@ async function api(path, body) {
       mandEf: runReceipt61(mandEf61, false)
     };
   } catch(e){ receipt61 = null; }
-  check('v1.4.61: evaluado — el recibo del PASAJERO (viaje, efectivo) es la tarjeta naranja: título, gracias, precio $25 enorme centrado y recordatorio grande; sin tabla ni "Generar recibo"', !!receipt61 && receipt61.paxEf.html.includes('sumfloat orange') && receipt61.paxEf.html.includes('¡Viaje terminado!') && receipt61.paxEf.html.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && receipt61.paxEf.html.includes('sumprice-big') && receipt61.paxEf.html.includes('$25') && receipt61.paxEf.html.includes('sumremind') && receipt61.paxEf.html.includes('Recuerda pagar con cambio al conductor') && receipt61.paxEf.html.includes('class="adx"') && !receipt61.paxEf.html.includes('Generar recibo') && !receipt61.paxEf.html.includes('class="kv"') && !receipt61.paxEf.html.includes('downloadReceipt') && !receipt61.paxEf.html.includes('Cerrar</button>') && receipt61.paxEf.miniCalled === 0, JSON.stringify(receipt61 && { paxEf: receipt61.paxEf.html.slice(0, 220), mini: receipt61.paxEf.miniCalled }));
-  check('v1.4.61: evaluado — el recibo del PASAJERO con pago por transferencia NO lleva recordatorio (solo efectivo) pero sí el precio naranja', !!receipt61 && receipt61.paxTr.html.includes('sumfloat orange') && receipt61.paxTr.html.includes('$25') && !receipt61.paxTr.html.includes('sumremind') && !receipt61.paxTr.html.includes('Recuerda pagar con cambio'), JSON.stringify(receipt61 && receipt61.paxTr.html.slice(0, 200)));
-  check('v1.4.61: evaluado — el recibo del CHOFER sigue igual (mini mapa + tabla + Generar recibo + Cerrar y volver a recibir viajes), sin naranja', !!receipt61 && receipt61.drvEf.html.includes('Gracias por concluir el viaje') && receipt61.drvEf.html.includes('sum-minimap') && receipt61.drvEf.html.includes('Generar recibo') && receipt61.drvEf.html.includes('Precio final') && receipt61.drvEf.html.includes('Pasajero') && receipt61.drvEf.html.includes('Cerrar y volver a recibir viajes') && !receipt61.drvEf.html.includes('sumfloat orange') && !receipt61.drvEf.html.includes('sumprice-big') && receipt61.drvEf.miniCalled === 1, JSON.stringify(receipt61 && { drv: receipt61.drvEf.html.slice(0, 200), mini: receipt61.drvEf.miniCalled }));
+  check('v1.4.62: evaluado — el recibo del PASAJERO (viaje, efectivo) es la tarjeta naranja: título, gracias, precio $25 enorme centrado, recordatorio de cambio grande y línea de pertenencias; tarjeta centrada (clase orange-receipt); sin tabla ni "Generar recibo"', !!receipt61 && receipt61.paxEf.html.includes('sumfloat orange') && receipt61.paxEf.html.includes('¡Viaje terminado!') && receipt61.paxEf.html.includes('Tu viaje ha concluido. Gracias por usar SanFerGo.') && receipt61.paxEf.html.includes('sumprice-big') && receipt61.paxEf.html.includes('$25') && receipt61.paxEf.html.includes('sumremind') && receipt61.paxEf.html.includes('Recuerda pagar con cambio al conductor') && receipt61.paxEf.html.includes('sumbelong') && receipt61.paxEf.html.includes('Recuerda revisar todas tus pertenencias') && receipt61.paxEf.classes.includes('orange-receipt') && receipt61.paxEf.html.includes('class="adx"') && !receipt61.paxEf.html.includes('Generar recibo') && !receipt61.paxEf.html.includes('class="kv"') && !receipt61.paxEf.html.includes('downloadReceipt') && !receipt61.paxEf.html.includes('Cerrar</button>') && receipt61.paxEf.miniCalled === 0, JSON.stringify(receipt61 && { paxEf: receipt61.paxEf.html.slice(0, 220), classes: receipt61.paxEf.classes, mini: receipt61.paxEf.miniCalled }));
+  check('v1.4.62: evaluado — el recibo del PASAJERO con pago por transferencia NO lleva recordatorio de cambio (solo efectivo) pero SÍ la línea de pertenencias y el precio naranja', !!receipt61 && receipt61.paxTr.html.includes('sumfloat orange') && receipt61.paxTr.html.includes('$25') && receipt61.paxTr.html.includes('sumbelong') && receipt61.paxTr.html.includes('Recuerda revisar todas tus pertenencias') && receipt61.paxTr.classes.includes('orange-receipt') && !receipt61.paxTr.html.includes('sumremind') && !receipt61.paxTr.html.includes('Recuerda pagar con cambio'), JSON.stringify(receipt61 && receipt61.paxTr.html.slice(0, 200)));
+  check('v1.4.62: evaluado — el recibo del CHOFER ahora es la misma tarjeta naranja que el del pasajero (Resumen del viaje + gracias + precio $25 enorme + pertenencias; sin mapa, sin tabla, sin Generar recibo, sin línea de cambio)', !!receipt61 && receipt61.drvEf.html.includes('sumfloat orange') && receipt61.drvEf.html.includes('Resumen del viaje') && receipt61.drvEf.html.includes('Gracias por concluir el viaje') && receipt61.drvEf.html.includes('sumprice-big') && receipt61.drvEf.html.includes('$25') && receipt61.drvEf.html.includes('sumbelong') && receipt61.drvEf.html.includes('Recuerda revisar todas tus pertenencias') && receipt61.drvEf.classes.includes('orange-receipt') && receipt61.drvEf.html.includes('class="adx"') && !receipt61.drvEf.html.includes('Generar recibo') && !receipt61.drvEf.html.includes('class="kv"') && !receipt61.drvEf.html.includes('downloadReceipt') && !receipt61.drvEf.html.includes('Cerrar</button>') && !receipt61.drvEf.html.includes('sum-minimap') && !receipt61.drvEf.html.includes('Recuerda pagar con cambio') && !receipt61.drvEf.html.includes('sumremind') && receipt61.drvEf.miniCalled === 0, JSON.stringify(receipt61 && { drv: receipt61.drvEf.html.slice(0, 200), classes: receipt61.drvEf.classes, mini: receipt61.drvEf.miniCalled }));
   check('v1.4.61: evaluado — el recibo del MANDADO del pasajero sigue igual (tabla + Generar recibo + Cerrar), sin naranja', !!receipt61 && receipt61.mandEf.html.includes('Generar recibo') && receipt61.mandEf.html.includes('class="kv"') && receipt61.mandEf.html.includes('Cerrar</button>') && !receipt61.mandEf.html.includes('sumfloat orange') && !receipt61.mandEf.html.includes('sumprice-big'), JSON.stringify(receipt61 && receipt61.mandEf.html.slice(0, 200)));
   // --- v1.4.61 (hueco): "Ver recibo" del historial del PASAJERO (viaje)
   // abría showReceipt, un diálogo APARTE con su propia tabla + "Generar
@@ -3436,8 +3437,8 @@ async function api(path, body) {
   // el historial: closeTripSummary ya no llama exitLive() en ese caso
   // (la página sigue debajo del flotante).
   const receiptSec61 = html.slice(html.indexOf('async function showReceipt(requestId, asDriver){'), html.indexOf('/* ===== VIAJE EN CURSO'));
-  check('v1.4.61: showReceipt enruta el VIAJE del pasajero a la tarjeta naranja (showTripSummary) en vez del diálogo viejo', receiptSec61.includes("if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }") && receiptSec61.includes('const r = j.requests.find(x=>x.id===requestId);'));
-  check('v1.4.61: el diálogo VIEJO de showReceipt sigue intacto para el chofer y el mandado (tabla + Generar recibo + Cerrar)', receiptSec61.includes("openDialog('<h2>Recibo del '") && receiptSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && receiptSec61.includes('onclick="closeDialog()">Cerrar</button>') && receiptSec61.includes("<div class=\"kv\"><span>De</span><b>"));
+  check('v1.4.62: showReceipt enruta el VIAJE del pasajero Y el del chofer a su tarjeta naranja (showTripSummary) en vez del diálogo viejo', receiptSec61.includes("if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }") && receiptSec61.includes("if(asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, true); return; }") && receiptSec61.includes('const r = j.requests.find(x=>x.id===requestId);'));
+  check('v1.4.62: el diálogo VIEJO de showReceipt queda SOLO para el MANDADO (tabla + Generar recibo + Cerrar)', receiptSec61.includes("openDialog('<h2>Recibo del '") && receiptSec61.includes('onclick="downloadReceipt()">Generar recibo</button>') && receiptSec61.includes('onclick="closeDialog()">Cerrar</button>') && receiptSec61.includes("<div class=\"kv\"><span>De</span><b>"));
   check('v1.4.61: el historial del CHOFER pasa asDriver=true y el del PASAJERO no pasa el lado (sus botones siguen como antes)', html.includes("showReceipt('+r.id+', true)") && html.includes("onclick=\"event.stopPropagation();showReceipt('+r.id+')\"") && html.includes("onclick=\"showReceipt('+r.id+')\""));
   const closeSec61 = html.slice(html.indexOf('function closeTripSummary(){'), html.indexOf('function drawSummaryMiniMap(r){'));
   check('v1.4.61: closeTripSummary se queda en el historial cuando el recibo se abrió desde ahí (sin exitLive) y sigue volviendo a donde toca en el flujo en vivo', closeSec61.includes('if(receiptFromHist){ receiptFromHist = false; return; }') && closeSec61.includes('exitLive();') && html.includes('let receiptFromHist = false;'));
@@ -3475,9 +3476,25 @@ async function api(path, body) {
     histReceipt61 = { afterPax61, afterDrv61, afterMand61, closeHist61: mkClose61(true), closeLive61: mkClose61(false) };
   } catch(e){ histReceipt61 = null; }
   check('v1.4.61: evaluado — "Ver recibo" del PASAJERO (viaje, aunque el chofer sea él mismo) abre la tarjeta naranja, no el diálogo viejo', !!histReceipt61 && histReceipt61.afterPax61.sum.length === 1 && histReceipt61.afterPax61.sum[0].id === 201 && histReceipt61.afterPax61.sum[0].asDriver === false && histReceipt61.afterPax61.dlg.length === 0 && histReceipt61.afterPax61.flag === true, JSON.stringify(histReceipt61 && histReceipt61.afterPax61));
-  check('v1.4.61: evaluado — "Ver recibo" del CHOFER (viaje) sigue con el diálogo viejo (tabla + Generar recibo), no la naranja', !!histReceipt61 && histReceipt61.afterDrv61.sum.length === 1 && histReceipt61.afterDrv61.dlg.length === 1 && histReceipt61.afterDrv61.dlg[0].includes('Generar recibo') && histReceipt61.afterDrv61.dlg[0].includes('class="kv"') && histReceipt61.afterDrv61.dlg[0].includes('Recibo del viaje'), JSON.stringify(histReceipt61 && { dlg: histReceipt61.afterDrv61.dlg[0] && histReceipt61.afterDrv61.dlg[0].slice(0, 150) }));
-  check('v1.4.61: evaluado — "Ver recibo" del MANDADO del pasajero sigue con el diálogo viejo (tabla + Generar recibo)', !!histReceipt61 && histReceipt61.afterMand61.sum.length === 1 && histReceipt61.afterMand61.dlg.length === 2 && histReceipt61.afterMand61.dlg[1].includes('Generar recibo') && histReceipt61.afterMand61.dlg[1].includes('Recibo del mandado'), JSON.stringify(histReceipt61 && { dlg: histReceipt61.afterMand61.dlg[1] && histReceipt61.afterMand61.dlg[1].slice(0, 150) }));
+  check('v1.4.62: evaluado — "Ver recibo" del CHOFER (viaje) ahora abre su tarjeta naranja (showTripSummary asDriver=true), no el diálogo viejo', !!histReceipt61 && histReceipt61.afterDrv61.sum.length === 2 && histReceipt61.afterDrv61.sum[1].id === 201 && histReceipt61.afterDrv61.sum[1].asDriver === true && histReceipt61.afterDrv61.dlg.length === 0, JSON.stringify(histReceipt61 && histReceipt61.afterDrv61));
+  check('v1.4.62: evaluado — "Ver recibo" del MANDADO del pasajero sigue con el diálogo viejo (tabla + Generar recibo)', !!histReceipt61 && histReceipt61.afterMand61.sum.length === 2 && histReceipt61.afterMand61.dlg.length === 1 && histReceipt61.afterMand61.dlg[0].includes('Generar recibo') && histReceipt61.afterMand61.dlg[0].includes('Recibo del mandado'), JSON.stringify(histReceipt61 && { dlg: histReceipt61.afterMand61.dlg[0] && histReceipt61.afterMand61.dlg[0].slice(0, 150) }));
   check('v1.4.61: evaluado — cerrar el recibo abierto desde el historial se queda en el historial (NO llama exitLive) y en el flujo en vivo sí vuelve a donde toca', !!histReceipt61 && histReceipt61.closeHist61.exitCalls === 0 && histReceipt61.closeHist61.ovRemoved === true && histReceipt61.closeLive61.exitCalls === 1 && histReceipt61.closeLive61.ovRemoved === true, JSON.stringify(histReceipt61 && { hist: histReceipt61.closeHist61, live: histReceipt61.closeLive61 }));
+  // ===== v1.4.62 (2026-11-24): recibo naranja — línea de pertenencias + X arriba + tarjeta centrada + recibo del CHOFER igual de bonito =====
+  // El usuario probó la v1.4.61 en vivo ("Quedó genial") y pidió tres
+  // cosas del recibo del pasajero: (1) otra línea "Recuerda revisar
+  // todas tus pertenencias" (SIEMPRE, no solo en efectivo); (2) la X
+  // estaba muy abajo y tapaba la palabra "usar" de la línea de gracias:
+  // ahora va arriba, a caballo del borde superior de la tarjeta, con
+  // aire arriba para que no tape ningún texto; (3) la tarjeta flotante
+  // se veía corrida hacia arriba, con mucho mapa vacío abajo: ahora va
+  // centrada verticalmente en la pantalla. Y el recibo del CHOFER
+  // ("Resumen del viaje") ahora es IGUAL de bonito que el del pasajero
+  // — misma tarjeta naranja, precio enorme y línea de pertenencias; sin
+  // mini mapa, sin tabla y sin "Generar recibo"; sin línea de cambio (el
+  // chofer RECIBE el efectivo, no paga). El recibo de MANDADOS no se toca.
+  check('v1.4.62: la tarjeta naranja del recibo va CENTRADA verticalmente en la pantalla (clase orange-receipt: align-items:center, sin padding-top) y solo esa tarjeta', html.includes('#trip-summary-overlay.orange-receipt{align-items:center;padding-top:0}') && html.includes('#trip-summary-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}'));
+  check('v1.4.62: la X del recibo naranja va MÁS ARRIBA, a caballo del borde superior de la tarjeta (top:-22px), y la tarjeta lleva aire arriba (padding-top:26px) para que la X no tape el texto', html.includes('#trip-summary-overlay.orange-receipt .adx{top:-22px;right:8px}') && html.includes('#trip-summary-overlay.orange-receipt .sumfloat.orange{padding-top:26px}'));
+  check('v1.4.62: la línea de pertenencias existe con estilo propio legible sobre el naranja (banda crema con texto oscuro)', html.includes('#trip-summary-overlay .sumfloat.orange .sumbelong{background:#fff7ed;color:#7c2d12'));
   // --- Evaluado: el mapa en vivo del PASAJERO (funciones reales) — una sola mototaxi, encuadre como el chofer, zoom de proximidad. ---
   let live61 = null;
   try {

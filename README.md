@@ -1,9 +1,18 @@
-# SanFerGo — versión pública (v1.4.61)
+# SanFerGo — versión pública (v1.4.62)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.62 (2026-11-24) — Recibo naranja: pertenencias + X arriba + tarjeta centrada + recibo del CHOFER igual de bonito
+
+- Recibo del pasajero (viaje): segunda línea nueva "Recuerda revisar todas tus pertenencias", debajo de la banda de cambio — se muestra SIEMPRE (en efectivo y en transferencia). La línea "Recuerda pagar con cambio al conductor" sigue siendo solo en efectivo, como antes.
+- La X de cerrar sube arriba, a caballo del borde superior de la tarjeta (como la del anuncio de entrada), y la tarjeta lleva más aire arriba: en su teléfono la X tapaba la palabra "usar" de la línea de gracias.
+- La tarjeta flotante naranja ahora va centrada verticalmente en la pantalla, no solo horizontalmente: en su teléfono se veía corrida hacia arriba, con mucho mapa vacío abajo.
+- REEMPLAZA lo de la v1.4.61: el recibo del CHOFER ya NO queda intacto — el usuario pidió que fuera "igual de bonito que el pasajero": misma tarjeta flotante toda naranja (degradado ámbar, texto oscuro legible), título "Resumen del viaje", línea "Gracias por concluir el viaje", precio final en grande al centro y abajo la línea "Recuerda revisar todas tus pertenencias". Se QUITAN el mini mapa, la tabla de detalles y el botón "Generar recibo". NO lleva la línea de cambio (el chofer recibe el efectivo, no paga). La X va arriba en el borde y la tarjeta va centrada, igual que la del pasajero. El "Ver recibo" del historial del chofer también abre esta tarjeta nueva. La ruta del viaje se sigue viendo en el mini mapa del detalle del Historial, así que no se pierde.
+- El recibo de MANDADOS no se toca. Nada más cambia: la tarifa y el resto de la app siguen igual.
+- Pruebas: suite completa contra BD limpia: **993 OK, 0 FAIL** (989 de antes + 4 nuevas: 3 estáticas del CSS de la tarjeta centrada/X/pertenencias y 1 estática de la rama naranja del chofer; 9 checks actualizados al rediseño del recibo del chofer y a la línea de pertenencias).
 
 ## v1.4.61 (2026-11-24) — Mapa en vivo del PASAJERO como el del chofer + recibo naranja flotante
 
