@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.47)
+# SanFerGo — versión pública (v1.4.48)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.48 (2026-11-23) — "Tarjeta · Próximamente" en vez de Transferencia + cuántas personas van
+
+- **Pago con tarjeta, deshabilitado (corrección del usuario 21:37, captura 9:37 PM del paso de precio):** el botón decía "Transferencia" y el usuario aclaró que era ese el que había que cambiar a pagar con tarjeta y deshabilitarlo (o ponerle "Próximamente") — Stripe no está listo todavía (no hay cuenta de Stripe). Ahora en los TRES lugares donde el pasajero elige cómo pagar — la hoja de precio del viaje, la del mandado y el pedido del negocio ("¿Cómo pagas?") — el segundo botón dice **"Tarjeta · Próximamente"**, gris y deshabilitado (no se puede tocar); Efectivo queda como la única forma seleccionable. El enlace "Cambiar" de pago del viaje en curso se fue (con solo efectivo disponible, ya no hay nada que cambiar). El servidor sigue aceptando el valor guardado "transferencia" para los viajes que ya están en curso, para no romperlos. **Sin tocar:** las suscripciones de chofer ($50/$150/$500) y el Premium ($100/mes) siguen pagándose SOLO por transferencia con "Ya hice la transferencia · Activar".
+- **Cuántas personas van (pedido del usuario 21:34, modelo B confirmado 21:36: "Solo sube el mínimo: 1=$20, 2=$25, 3=$30"):** el paso de precio del viaje trae un selector "¿Cuántas personas?" (1 / 2 / 3) y el sugerido se recalcula al cambiarlo. REGLA: **solo el MÍNIMO sube con las personas — 1 persona $20, 2 personas $25, 3 personas $30; la tarifa NO cambia** ($10 base + $2.50 cada 300 m + $1.25/min de espera). Sugerido = redondeo a $5 de max(tarifa, mínimo por personas). El ejemplo del usuario queda así: un viaje de $22, $25 o $27 con 3 personas sube a $30 automáticamente; si la tarifa pasa de $30 (por ejemplo $40 a 3.59 km) se cobra normal. El conteo se guarda en la solicitud (`passenger_count`, 1 por defecto) y el servidor rechaza publicar, contraofertar (chofer o pasajero) o subir el precio por debajo del mínimo de ese viaje, con el error nombrando el mínimo ("El mínimo para 3 personas es $30."). El conteo viaja con el viaje: se ve en el detalle del chofer ("Personas"), en la tarjeta del viaje en curso (chofer y pasajero) y en el resumen/recibo. Solo viajes — los mandados no tienen personas (su `passenger_count` se guarda como 1 y su mínimo sigue $20). Repetir un viaje repite con las mismas personas de ese viaje; y si el viaje viejo era por transferencia, queda en efectivo.
+- Pruebas: suite completa contra BD limpia: **642 OK, 0 FAIL** (621 de antes + 21 nuevas en la sección v1.4.48 — 6 estáticas, 2 evaluadas y 13 en vivo. Los 7 checks de versión que decían 1.4.47 se actualizaron a 1.4.48).
 
 ## v1.4.47 (2026-11-23) — Fila compacta del chofer reacomodada
 

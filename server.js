@@ -267,6 +267,7 @@ addCol('requests', 'items_json', 'TEXT');
 addCol('requests', 'stops_json', 'TEXT');
 addCol('requests', 'extra_stops', 'INTEGER DEFAULT 0');
 addCol('requests', 'vehicle', 'TEXT');
+addCol('requests', 'passenger_count', 'INTEGER DEFAULT 1'); // v1.4.48: cuántas personas van en el viaje (1/2/3; mandados siempre 1)
 addCol('requests', 'trip_started_at', 'TEXT');
 addCol('requests', 'finished_at', 'TEXT');
 // Duración de la cita en minutos (copia de la duración del servicio al
@@ -533,6 +534,26 @@ function fareFor(km) { return Math.round((BASE_FARE + (km / 0.3) * PER_300M) * 1
 // del taxímetro (fareFor) NO cambia: su cobro final sigue exacto.
 function roundUp5(x) { return Math.max(MIN_TRIP, Math.ceil(x / 5) * 5); }
 function validNegotiatedPrice(p) { return Number.isFinite(p) && p >= MIN_TRIP && p <= 1000 && p % 5 === 0; }
+// Mínimo por número de personas (v1.4.48, modelo B confirmado por el
+// usuario): 1 persona $20, 2 personas $25, 3 personas $30. SOLO sube el
+// mínimo; la tarifa NO cambia ($10 base + $2.50 cada 300 m + $1.25/min
+// de espera). Sugerido = redondeo a $5 de max(tarifa, mínimo por
+// personas): un viaje de $22/$25/$27 con 3 personas sube a $30
+// automáticamente; si pasa de $30 se cobra normal.
+function minForPax(pax) { const n = Math.min(3, Math.max(1, Number(pax) || 1)); return MIN_TRIP + 5 * (n - 1); }
+function roundUp5For(x, pax) { return Math.max(minForPax(pax), Math.ceil(x / 5) * 5); }
+function validNegotiatedPriceFor(p, pax) { return Number.isFinite(p) && p >= minForPax(pax) && p <= 1000 && p % 5 === 0; }
+// Error de precio según el mínimo por personas del viaje: si el precio
+// está por debajo del mínimo se dice el mínimo; si no, el error de la
+// rejilla de $5 de siempre. Los mandados usan el mínimo de $20 de siempre.
+function negotiatedPriceError(p, r) {
+  if (r && r.kind === 'viaje') {
+    const pax = Math.min(3, Math.max(1, Number(r.passenger_count) || 1));
+    const min = minForPax(pax);
+    if (!Number.isFinite(p) || p < min) return `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${min}.`;
+  }
+  return validNegotiatedPrice(p) ? null : GRID_ERROR;
+}
 const GRID_ERROR = 'El precio debe ir de cinco en cinco: $20, $25, $30, $35…';
 // Precio sugerido: la tarifa redondeada hacia arriba a múltiplo de $5.
 function suggestedPrice(km) { return roundUp5(fareFor(km)); }
@@ -703,7 +724,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.47' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.48' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1773,7 +1794,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/create-request') {
     const { passenger_id, passenger_name, passenger_phone, kind, origin_zone, origin_detail, origin_lat, origin_lng,
       dest_zone, dest_detail, dest_lat, dest_lng, distance_km, eta_minutes, price, payment_method, description,
-      recipient_phone, recipient_name, order_payment, order_amount, items, stops, extra_stops, vehicle } = body;
+      recipient_phone, recipient_name, order_payment, order_amount, items, stops, extra_stops, vehicle, passenger_count } = body;
     if (kind !== 'viaje' && kind !== 'mandado') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
     if (!dest_zone && !dest_detail) return send(res, 400, { ok: false, error: 'Falta el destino.' });
     // No se publica sin número de teléfono del pasajero: el conductor
@@ -1787,11 +1808,17 @@ async function api(req, res, pathname) {
     // mandado": mototaxi predeterminado, moto como opción). En viajes
     // siempre es mototaxi; si no viene, no se restringe.
     const reqVehicle = (vehicle === 'moto' || vehicle === 'mototaxi') ? vehicle : null;
+    // Cuántas personas van en el viaje (v1.4.48, solo viajes): 1/2/3.
+    // El mínimo sube con las personas (1=$20, 2=$25, 3=$30).
+    const pax = kind === 'viaje' ? Math.min(3, Math.max(1, Number(passenger_count) || 1)) : 1;
     // Precio sugerido de mandado: tarifa + $10 por parada extra (solo en
     // la rama sugerida; si el pasajero pone su precio, se respeta tal cual).
     const stopsFee = kind === 'mandado' ? MANDADO_EXTRA_STOP * (extra_stops || 0) : 0;
-    const finalPrice = price ?? (suggestedPrice(km) + stopsFee);
-    if (price != null && !validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+    const finalPrice = price ?? (kind === 'viaje' ? roundUp5For(fareFor(km), pax) : suggestedPrice(km) + stopsFee);
+    if (price != null) {
+      if (kind === 'viaje' && !validNegotiatedPriceFor(finalPrice, pax)) return send(res, 400, { ok: false, error: finalPrice < minForPax(pax) ? `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${minForPax(pax)}.` : GRID_ERROR });
+      if (kind === 'mandado' && !validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+    }
     // Sin mínimo de distancia: solo hay mínimo de precio ($20). Un viaje
     // corto a $20 se puede publicar.
     if (km > 30) return send(res, 400, { ok: false, error: 'Distancia fuera de rango para SanFerGo.' });
@@ -1811,14 +1838,14 @@ async function api(req, res, pathname) {
     const stopsJson = stops ? JSON.stringify(stops) : null;
     const r = db.prepare(`INSERT INTO requests (kind, passenger_id, passenger_name, passenger_phone, passenger_photo,
       origin_zone, origin_detail, origin_lat, origin_lng, dest_zone, dest_detail, dest_lat, dest_lng,
-      distance_km, eta_minutes, price, payment_method, description, recipient_phone, recipient_name, order_payment, order_amount, items_json, stops_json, extra_stops,
+      distance_km, eta_minutes, price, payment_method, passenger_count, description, recipient_phone, recipient_name, order_payment, order_amount, items_json, stops_json, extra_stops,
       vehicle, status, trip_stage)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
       kind, passenger_id || null, pName || null, pPhone, p ? p.face_photo : null,
       origin_zone || null, origin_detail || null, origin_lat ?? null, origin_lng ?? null,
       dest_zone || null, dest_detail || null, dest_lat ?? null, dest_lng ?? null,
       Math.round(km * 10) / 10, eta_minutes ?? Math.max(3, Math.round(km * 3.5)), finalPrice,
-      payment_method, description || '',
+      payment_method, pax, description || '',
       recipient_phone ? String(recipient_phone).trim() : null,
       recipient_name ? String(recipient_name).trim() : null,
       order_payment === 'pagado' || order_payment === 'por_pagar' ? order_payment : null,
@@ -1893,7 +1920,8 @@ async function api(req, res, pathname) {
         if (driverServicesToday(driver_id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
         if (existing.passenger_counter_price >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
       }
-      if (!validNegotiatedPrice(existing.passenger_counter_price)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const peC = negotiatedPriceError(existing.passenger_counter_price, r);
+      if (peC) return send(res, 400, { ok: false, error: peC });
       const req2 = confirmRequest(request_id, d, existing.passenger_counter_price, existing.id);
       return send(res, 200, { ok: true, request: req2, offer: db.prepare('SELECT * FROM offers WHERE id=?').get(existing.id) });
     }
@@ -1902,7 +1930,8 @@ async function api(req, res, pathname) {
     // pago es la elegida al publicar y queda guardada en la solicitud.
     if (kind === 'aceptar_precio') {
       if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
-      if (!validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const peA = negotiatedPriceError(offeredPrice, r);
+      if (peA) return send(res, 400, { ok: false, error: peA });
       const offer = insertOffer('acepta', offeredPrice);
       const req2 = confirmRequest(request_id, d, offeredPrice, offer.id);
       return send(res, 200, { ok: true, request: req2, offer });
@@ -1911,7 +1940,8 @@ async function api(req, res, pathname) {
     // pasajero y el servicio se confirma EN ESE INSTANTE, sin segundo paso.
     if (kind === 'acepta') {
       if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
-      if (!validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const peB = negotiatedPriceError(offeredPrice, r);
+      if (peB) return send(res, 400, { ok: false, error: peB });
       const offer = insertOffer('acepta', offeredPrice);
       const req2 = confirmRequest(request_id, d, offeredPrice, offer.id);
       return send(res, 200, { ok: true, request: req2, offer });
@@ -1919,7 +1949,10 @@ async function api(req, res, pathname) {
     // 'contraoferta': la oferta queda pendiente de la decisión del pasajero
     // en /api/respond-offer. La contraoferta también va de cinco en cinco (v1.3.1).
     if (existing) return send(res, 400, { ok: false, error: 'Ya respondiste esta solicitud.' });
-    if (kind === 'contraoferta' && !validNegotiatedPrice(offeredPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+    if (kind === 'contraoferta') {
+      const peD = negotiatedPriceError(offeredPrice, r);
+      if (peD) return send(res, 400, { ok: false, error: peD });
+    }
     const offer = insertOffer(kind === 'contraoferta' ? 'contraoferta' : 'acepta', offeredPrice);
     return send(res, 200, { ok: true, offer });
   }
@@ -1948,7 +1981,8 @@ async function api(req, res, pathname) {
         if (driverServicesToday(d.id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
         if (finalPrice >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
       }
-      if (!validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const peF = negotiatedPriceError(finalPrice, r);
+      if (peF) return send(res, 400, { ok: false, error: peF });
       // Al aceptar una contraoferta el viaje se confirma DE UNA VEZ con la
       // forma de pago elegida al publicar (sin paso de pago, v1.3.0).
       const req2 = confirmRequest(request_id, d, finalPrice, offer_id);
@@ -1959,7 +1993,8 @@ async function api(req, res, pathname) {
       return send(res, 200, { ok: true });
     }
     if (action === 'contraoferta') {
-      if (!validNegotiatedPrice(price)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      const peP = negotiatedPriceError(price, r);
+      if (peP) return send(res, 400, { ok: false, error: peP });
       db.prepare(`UPDATE offers SET passenger_counter_price=? WHERE id=?`).run(price, offer_id);
       return send(res, 200, { ok: true });
     }
@@ -1970,7 +2005,8 @@ async function api(req, res, pathname) {
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.status !== 'buscando') return send(res, 400, { ok: false, error: 'Ya no está buscando conductor.' });
-    if (!validNegotiatedPrice(price)) return send(res, 400, { ok: false, error: GRID_ERROR });
+    const peR = negotiatedPriceError(price, r);
+    if (peR) return send(res, 400, { ok: false, error: peR });
     db.prepare('UPDATE requests SET price=? WHERE id=?').run(price, request_id);
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(request_id) });
   }

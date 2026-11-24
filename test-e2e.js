@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.47 en /api/health', h.ok && h.version === '1.4.47', JSON.stringify(h));
+  check('versión 1.4.47 en /api/health', h.ok && h.version === '1.4.48', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.47', h134.ok && h134.version === '1.4.47', JSON.stringify(h134));
+  check('versión 1.4.47', h134.ok && h134.version === '1.4.48', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.47)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.47';") && h.version === '1.4.47', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.47)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.48';") && h.version === '1.4.48', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección)', h27.ok && h27.version === '1.4.47', JSON.stringify(h27));
+  check('versión 1.4.47 en /api/health (sección)', h27.ok && h27.version === '1.4.48', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.47', JSON.stringify(h28));
+  check('versión 1.4.47 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.48', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.47', JSON.stringify(h29));
+  check('versión 1.4.47 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.48', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.47 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.47', JSON.stringify(h30));
+  check('versión 1.4.47 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.48', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1954,6 +1954,67 @@ async function api(path, body) {
   const bkVRow = (bkList.requests||[]).find(r=>r.id===bkV.request.id);
   const bkMRow = (bkList.requests||[]).find(r=>r.id===bkM.request.id);
   check('v1.4.47: en vivo, el viaje y el mandado publicados siguen "buscando" en el mismo endpoint que usa myActiveRequest (al volver a entrar se muestra la pantalla de Buscando, no un formulario nuevo)', bkV.ok && bkM.ok && bkVRow && bkVRow.status==='buscando' && bkMRow && bkMRow.status==='buscando', JSON.stringify({ v: bkVRow && bkVRow.status, m: bkMRow && bkMRow.status }));
+
+  // --- v1.4.48: (a) "Transferencia" ahora es "Tarjeta · Próximamente"
+  //     deshabilitada en los tres lugares donde el pasajero elige cómo
+  //     pagar (captura del usuario 21:37: el paso de precio solo tenía
+  //     Efectivo/Transferencia; Stripe no está listo); (b) cuántas
+  //     personas van en el viaje: SOLO sube el mínimo (modelo B
+  //     confirmado por el usuario 21:36) — 1=$20, 2=$25, 3=$30; la tarifa
+  //     no cambia. Un viaje de $22/$25/$27 con 3 personas sube a $30
+  //     automáticamente; si pasa de $30 se cobra normal. Suscripciones y
+  //     Premium NO se tocan (siguen por transferencia con "Ya hice la
+  //     transferencia").
+  const priceSec48 = html.slice(html.indexOf('function priceSheetHtml(kind){'), html.indexOf('function priceStep(kind, d){'));
+  check('v1.4.48: la hoja de precio del viaje/mandado muestra Efectivo + "Tarjeta · Próximamente" deshabilitada y ya no ofrece Transferencia', priceSec48.includes('>Tarjeta · Próximamente</button>') && priceSec48.includes('class="pay-opt" disabled') && !priceSec48.includes('Transferencia') && priceSec48.includes('>Efectivo</button>'));
+  check('v1.4.48: la hoja de precio del viaje trae el selector "¿Cuántas personas?" (1/2/3) con el mínimo por personas', priceSec48.includes('¿Cuántas personas?') && priceSec48.includes('priceSetPax') && priceSec48.includes('Mínimo para ') && priceSec48.includes('minForPax(wiz.pax)'));
+  const bizPaySec48 = html.slice(html.indexOf('function bizOrderFormHtml(b, sub, fee, total){'), html.indexOf('let bizOrderPay'));
+  check('v1.4.48: el pedido del negocio también muestra "Tarjeta · Próximamente" deshabilitada y ya no ofrece Transferencia', bizPaySec48.includes('>Tarjeta · Próximamente</button>') && bizPaySec48.includes('class="pay-opt" disabled') && !bizPaySec48.includes('Transferencia'));
+  check('v1.4.48: el viaje en curso ya no tiene el enlace "Cambiar" de pago (el pago es efectivo desde que se publica) y muestra cuántas personas van', !liveSec43.includes('changePayLive') && liveSec43.includes('Pagas con ') && liveSec43.includes("paxText(r.passenger_count)") && !liveSec43.includes('Cambiar</a>'));
+  check('v1.4.48: el detalle del chofer, el resumen y el recibo muestran cuántas personas van', inboxSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && sumSec.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'") && html.slice(html.indexOf('async function showReceipt(requestId){'), html.indexOf('/* ===== VIAJE EN CURSO')).includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'"));
+  check('v1.4.48: suscripciones y Premium siguen por transferencia ("Ya hice la transferencia · Activar" en los dos flujos, sin tocar)', (html.match(/Ya hice la transferencia · Activar/g)||[]).length === 2);
+  // Evaluando las funciones reales del cliente: el ejemplo del usuario
+  // ($22/$25/$27 con 3 personas → $30; si pasa de $30, normal).
+  const fareFactory48 = new Function(html.slice(html.indexOf('const BASE = 10'), html.indexOf('function havKm')) + '\nreturn { fare, roundUp5, suggestedPrice, minForPax, roundUp5For, suggestedPriceFor, paxText };');
+  const fareFns = fareFactory48();
+  check('v1.4.48: en vivo, el mínimo por personas es 1=$20, 2=$25, 3=$30 y la tarifa no cambia ($10 + $2.50 cada 300 m)', fareFns.minForPax(1)===20 && fareFns.minForPax(2)===25 && fareFns.minForPax(3)===30 && fareFns.fare(1.44)===22 && fareFns.fare(1.8)===25 && fareFns.fare(2.04)===27 && fareFns.paxText(3)==='3 personas' && fareFns.paxText(1)==='1 persona', JSON.stringify({ f144: fareFns.fare(1.44), f18: fareFns.fare(1.8), f204: fareFns.fare(2.04) }));
+  check('v1.4.48: en vivo, el sugerido con 3 personas sube $22/$25/$27 a $30, y si pasa de $30 se cobra normal ($40 a 3.59 km); con 2 personas el piso es $25 y con 1 sigue $20', fareFns.suggestedPriceFor(1.44,3)===30 && fareFns.suggestedPriceFor(1.8,3)===30 && fareFns.suggestedPriceFor(2.04,3)===30 && fareFns.suggestedPriceFor(3.59,3)===40 && fareFns.suggestedPriceFor(1.0,2)===25 && fareFns.suggestedPriceFor(1.0,1)===20 && fareFns.suggestedPrice(1.44)===25);
+  // En vivo, en el servidor: publicar por debajo del mínimo por personas
+  // se rechaza; el precio y el conteo se guardan; las contraofertas por
+  // debajo del mínimo también se rechazan (chofer y pasajero).
+  const pax3Low = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.48: en vivo, publicar un viaje de 3 personas a $25 se rechaza (el mínimo para 3 es $30)', !pax3Low.ok && String(pax3Low.error||'').includes('$30'), JSON.stringify(pax3Low));
+  const pax3 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 3 });
+  const pax3Row = pax3.ok && (await api('/api/requests?id=' + pax3.request.id)).requests[0];
+  check('v1.4.48: en vivo, el viaje de 3 personas a $30 se publica y guarda passenger_count=3', pax3.ok && pax3Row && pax3Row.passenger_count === 3, JSON.stringify(pax3Row && { p: pax3Row.passenger_count, precio: pax3Row.price }));
+  const pax3NoPrice = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.44, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.48: en vivo, el sugerido del servidor con 3 personas a 1.44 km (tarifa $22) es $30', pax3NoPrice.ok && pax3NoPrice.request.price === 30, JSON.stringify(pax3NoPrice.request && pax3NoPrice.request.price));
+  const pax3Far = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 3.59, eta_minutes: 12, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.48: en vivo, el sugerido del servidor con 3 personas a 3.59 km (tarifa ~$40) es $40, no $30', pax3Far.ok && pax3Far.request.price === 40, JSON.stringify(pax3Far.request && pax3Far.request.price));
+  const pax2NoPrice = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2 });
+  check('v1.4.48: en vivo, el sugerido del servidor con 2 personas a 1.0 km es $25 (piso de 2)', pax2NoPrice.ok && pax2NoPrice.request.price === 25, JSON.stringify(pax2NoPrice.request && pax2NoPrice.request.price));
+  const off3Low = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pax3.request.id, kind: 'contraoferta', price: 25 });
+  check('v1.4.48: en vivo, la contraoferta del chofer a $25 en un viaje de 3 personas se rechaza (mínimo $30)', !off3Low.ok && String(off3Low.error||'').includes('$30'), JSON.stringify(off3Low));
+  const off3 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pax3.request.id, kind: 'contraoferta', price: 35 });
+  check('v1.4.48: en vivo, la contraoferta del chofer a $35 en ese viaje sí se acepta', off3.ok && off3.offer.kind === 'contraoferta', JSON.stringify(off3));
+  const counter3Low = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: pax3.request.id, offer_id: off3.offer.id, action: 'contraoferta', price: 25 });
+  check('v1.4.48: en vivo, la contraoferta del pasajero a $25 en un viaje de 3 personas se rechaza (mínimo $30)', !counter3Low.ok && String(counter3Low.error||'').includes('$30'), JSON.stringify(counter3Low));
+  const raise3Low = await api('/api/raise-price', { passenger_id: pax.passenger.id, request_id: pax3.request.id, price: 25 });
+  check('v1.4.48: en vivo, subir el precio a $25 en un viaje de 3 personas se rechaza (mínimo $30)', !raise3Low.ok && String(raise3Low.error||'').includes('$30'), JSON.stringify(raise3Low));
+  const raise3 = await api('/api/raise-price', { passenger_id: pax.passenger.id, request_id: pax3.request.id, price: 35 });
+  check('v1.4.48: en vivo, subir el precio a $35 en ese viaje sí se acepta', raise3.ok && raise3.request.price === 35, JSON.stringify(raise3));
+  // Los mandados no tienen personas: passenger_count se guarda como 1 y
+  // su mínimo sigue siendo $20.
+  const man3 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete', passenger_count: 3 });
+  const man3Row = man3.ok && (await api('/api/requests?id=' + man3.request.id)).requests[0];
+  check('v1.4.48: en vivo, el mandado con passenger_count=3 se guarda como 1 (los mandados no tienen personas)', man3.ok && man3Row && man3Row.passenger_count === 1, JSON.stringify(man3Row && { p: man3Row.passenger_count }));
+  const manLow = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 15, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  check('v1.4.48: en vivo, el mandado a $15 sigue rechazado (su mínimo sigue $20)', !manLow.ok, JSON.stringify(manLow));
+  // Compatibilidad: un viaje viejo por transferencia sigue publicándose
+  // (el servidor lo acepta para los viajes en curso), aunque el cliente
+  // ya no ofrece ese botón.
+  const oldPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'transferencia' });
+  check('v1.4.48: en vivo, el servidor sigue aceptando "transferencia" en viajes en curso (compatibilidad con clientes viejos)', oldPay.ok && oldPay.request.payment_method === 'transferencia', JSON.stringify(oldPay));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
