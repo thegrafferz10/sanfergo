@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.39)
+# SanFerGo — versión pública (v1.4.40)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.40 (2026-11-23) — La fila compacta trae km · ETA · pago y lo de llevar para recoger (igual que la app real)
+
+- En **Recibir Viajes** la fila compacta ahora trae, debajo de tipo + de → a + precio, una línea tenue con **\"<distancia> km · ~<ETA> min · Pago: <forma de pago>\"** (por ejemplo \"0.9 km · ~5 min · Pago: efectivo\"), con los mismos datos que ya muestra el detalle expandido. Si una solicitud vieja no trae esos datos, la línea no sale y la fila se ve como en v1.4.39.
+- En los mandados cuyo pedido se paga al recogerlo (`order_payment` = 'por_pagar'), la fila cerrada muestra una línea ámbar **\"Lleva $X para recogerlo\"** (mismo estilo del aviso de contraoferta de v1.4.38), para que el chofer sepa de un vistazo cuánto efectivo debe llevar. Con pedido ya pagado no sale.
+- Los nuevos campos entran en la firma de datos, así un cambio repinta la lista sin parpadeo. Sin tocar: el aviso ámbar de contraoferta (v1.4.38), los nombres resueltos (v1.4.39), el botón para cerrar el detalle, el detalle expandido, el flujo de publicar, las tarifas, los viajes y Quiero.
+- Pruebas: suite completa contra BD limpia: 536 OK, 0 FAIL (532 de antes + 4 nuevas: 3 estáticas — la línea tenue con km · ETA · pago en la fila colapsada, y la línea ámbar \"Lleva $X para recogerlo\" solo con pedido por pagar, y los nuevos campos en la firma — y 1 en vivo de que `/api/requests?open=1` devuelve distancia, ETA, pago y pedido por pagar en un mandado Enviar y nada de eso en uno ya pagado).
 
 ## v1.4.39 (2026-11-23) — Nombres de lugar en la fila compacta + botón para cerrar el detalle
 

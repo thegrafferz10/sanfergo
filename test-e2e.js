@@ -339,7 +339,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.39', JSON.stringify(h));
+  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.40', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -440,7 +440,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.39', JSON.stringify(h134));
+  check('versión 1.4.36', h134.ok && h134.version === '1.4.40', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -602,7 +602,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.39';") && h.version === '1.4.39', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.40';") && h.version === '1.4.40', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1396,7 +1396,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.39', JSON.stringify(h27));
+  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.40', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1441,7 +1441,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.39', JSON.stringify(h28));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.40', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1455,7 +1455,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.39', JSON.stringify(h29));
+  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.40', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1464,7 +1464,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.39', JSON.stringify(h30));
+  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.40', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1621,6 +1621,10 @@ async function api(path, body) {
   check('v1.4.39: la zona genérica se resuelve a la zona conocida más cercana por coordenadas (displayZoneName, radio 1.5 km)', html.includes('function displayZoneName(stored, lat, lng){') && html.includes('GENERIC_ZONES') && html.includes("'Mi ubicación'") && html.includes("'Punto de WhatsApp'") && html.includes('function nearestZoneWithin(pos, maxKm){') && html.includes('nearestZoneWithin({ lat, lng }, 1.5)'));
   check('v1.4.39: la fila compacta y el detalle usan el nombre resuelto (no la etiqueta genérica) y el nombre entra en la firma', inboxSec.includes('displayZoneName(r.origin_zone, r.origin_lat, r.origin_lng)') && inboxSec.includes('displayZoneName(r.dest_zone, r.dest_lat, r.dest_lng)') && inboxSec.includes('esc(r._dispO)') && inboxSec.includes('esc(r._dispD)') && inboxSec.includes("r._dispO+'>'+r._dispD") && !inboxSec.includes("esc(r.origin_zone||r.origin_detail||'')+' → '+esc(r.dest_zone||r.dest_detail||'')"));
   check('v1.4.39: el detalle expandido trae un botón visible "‹ Ver todas las solicitudes" que lo cierra', inboxSec.includes('Ver todas las solicitudes') && inboxSec.indexOf('Ver todas las solicitudes') > inboxSec.indexOf("if(!expanded) return card + '</div>';"));
+  // --- v1.4.40: la fila compacta trae km · ETA · pago y lo de llevar para recoger ---
+  check('v1.4.40: la fila colapsada trae la línea tenue con km · ETA · pago (igual que la app real)', compactSec.includes("r.distance_km+' km · ~'+r.eta_minutes+' min'") && compactSec.includes("'Pago: '+esc(r.payment_method)") && compactSec.includes("rowMeta.join(' · ')") && compactSec.includes('rowMeta.length'));
+  check('v1.4.40: la línea ámbar "Lleva $X para recogerlo" solo sale con pedido por pagar', compactSec.includes("r.order_payment==='por_pagar'") && compactSec.includes("Lleva '+fmt$(r.order_amount||0)+' para recogerlo") && compactSec.includes('#fef3c7'));
+  check('v1.4.40: los nuevos campos de la fila entran en la firma (un cambio repinta sin parpadeo)', inboxSec.includes("(r.distance_km||'')") && inboxSec.includes("(r.eta_minutes||'')") && inboxSec.includes("(r.payment_method||'')") && inboxSec.includes("(r.order_payment||'')") && inboxSec.includes("(r.order_amount||0)"));
   const open36a = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   const open36b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Copalar', dest_detail: 'Copalar', dest_lat: 16.855, dest_lng: -93.198, distance_km: 2.5, eta_minutes: 9, price: 35, payment_method: 'efectivo' });
   const open36 = await api('/api/requests?open=1');
@@ -1638,6 +1642,13 @@ async function api(path, body) {
   const open39 = await api('/api/requests?open=1');
   const row39 = open39.requests.find(r=>r.id===req39.request.id);
   check('v1.4.39: en vivo, la solicitud con zonas genéricas trae las coordenadas (origen en Madero, destino en Centro) que la fila usa para resolver el nombre', req39.ok && open39.ok && row39 && row39.origin_zone==='Mi ubicación' && row39.dest_zone==='Punto de entrega' && row39.origin_lat===16.87291 && row39.origin_lng===-93.21374 && row39.dest_lat===16.87137 && row39.dest_lng===-93.20652, JSON.stringify(row39 && {oz: row39.origin_zone, dz: row39.dest_zone, olat: row39.origin_lat, olng: row39.origin_lng, dlat: row39.dest_lat, dlng: row39.dest_lng}));
+  // --- v1.4.40 (en vivo): el mandado Enviar trae en los datos lo que la fila compacta muestra ---
+  const req40 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const req40b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'transferencia', description: 'Otro paquete', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado', order_amount: 0 });
+  const open40 = await api('/api/requests?open=1');
+  const row40 = open40.requests.find(r=>r.id===req40.request.id);
+  const row40b = open40.requests.find(r=>r.id===req40b.request.id);
+  check('v1.4.40: en vivo, el mandado por pagar trae distancia, ETA, pago y "Lleva $200", y el ya pagado trae pedido pagado sin monto por llevar', req40.ok && req40b.ok && open40.ok && row40 && row40.distance_km===0.9 && row40.eta_minutes===5 && row40.payment_method==='efectivo' && row40.order_payment==='por_pagar' && row40.order_amount===200 && row40b && row40b.order_payment==='pagado' && !(row40b.order_amount>0), JSON.stringify({row: row40 && {d: row40.distance_km, e: row40.eta_minutes, p: row40.payment_method, op: row40.order_payment, oa: row40.order_amount}, rowb: row40b && {op: row40b.order_payment, oa: row40b.order_amount}}));
   check('v1.4.34: publicar Enviar manda nombre, pago del pedido y cantidad', html.includes("type:'enviar'") && html.includes('recipient_name: md.recipientName') && html.includes('order_payment: md.orderPay') && html.includes("order_amount: md.orderPay==='por_pagar'"));
   const quieroSec = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
   check('v1.4.34: "Quiero un mandado" sigue en 5 pasos', quieroSec.includes('Paso 1 de 5') && quieroSec.includes('Paso 4 de 5') && quieroSec.includes('md.step===5'));
