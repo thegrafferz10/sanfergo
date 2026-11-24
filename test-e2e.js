@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.50 en /api/health', h.ok && h.version === '1.4.50', JSON.stringify(h));
+  check('versión 1.4.51 en /api/health', h.ok && h.version === '1.4.51', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.50', h134.ok && h134.version === '1.4.50', JSON.stringify(h134));
+  check('versión 1.4.51', h134.ok && h134.version === '1.4.51', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.50)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.50';") && h.version === '1.4.50', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.51)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.51';") && h.version === '1.4.51', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.50 en /api/health (sección)', h27.ok && h27.version === '1.4.50', JSON.stringify(h27));
+  check('versión 1.4.51 en /api/health (sección)', h27.ok && h27.version === '1.4.51', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.50 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.50', JSON.stringify(h28));
+  check('versión 1.4.51 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.51', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.50 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.50', JSON.stringify(h29));
+  check('versión 1.4.51 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.51', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.50 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.50', JSON.stringify(h30));
+  check('versión 1.4.51 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.51', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2140,6 +2140,49 @@ async function api(path, body) {
   check('v1.4.50: en vivo, tras cancelar ya no hay viaje en espera ni activo: el candado se levanta y Mandados abre normal', list50c.ok && !list50c.requests.some(r=>r.kind==='viaje' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(list50c.requests && list50c.requests.map(r=>r.status)));
   const man50 = await api('/api/create-request', { passenger_id: pax50.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', description: 'Recoger un paquete' });
   check('v1.4.50: en vivo, tras cancelar el viaje el mandado sí se publica (el formulario vuelve a estar disponible)', man50.ok && man50.request.status === 'buscando', JSON.stringify(man50.request && man50.request.status));
+
+  // --- v1.4.51: la fila compacta del chofer (Recibir Viajes) muestra
+  //     cuántas personas van en el viaje ('1 persona' / '2 personas' /
+  //     '3 personas') en la misma línea tenue de km · ETA · pago
+  //     (reporte del usuario 22:26, captura 10:25 PM: la fila del viaje
+  //     de $30 — mínimo de 3 personas — decía solo '0.8 km · ~5 min ·
+  //     Pago: efectivo', sin el dato de personas). Solo viajes: los
+  //     mandados son siempre de 1 persona y no llevan el dato. El
+  //     detalle expandido ya lo mostraba desde v1.4.48 y no se toca.
+  const compactSec51 = html.slice(html.indexOf("const rowMeta = [];"), html.indexOf("return '<div class=\"card white\">'"));
+  check('v1.4.51: la fila compacta agrega el conteo de personas solo para viajes (paxText(r.passenger_count), con kind===\'viaje\')', compactSec51.includes("if(r.kind==='viaje') rowMeta.push(paxText(r.passenger_count));"));
+  check('v1.4.51: el conteo va al final de la línea tenue (después de km · ETA y Pago)', compactSec51.indexOf("paxText(r.passenger_count)") > compactSec51.indexOf("Pago: '+esc(r.payment_method)"));
+  check('v1.4.51: la firma de repintado de la bandeja incluye passenger_count (la fila se repinta si cambia el dato)', html.includes("':'+(r.passenger_count||'')"));
+  check('v1.4.51: el detalle expandido sigue mostrando Personas como antes (no se toca)', html.includes("'<div class=\"kv\"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'"));
+  // Evaluando el constructor real de la línea tenue: se extrae el bloque
+  // rowMeta de la fila compacta y se ejecuta con solicitudes de mentira
+  // (viajes de 1, 2 y 3 personas, un viaje viejo sin passenger_count y
+  // un mandado).
+  function rowMeta51(r){
+    const esc51 = (s)=>String(s==null?'':s);
+    const paxText51 = (pax)=>{ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? ' persona' : ' personas'); };
+    return new Function('r','esc','paxText', compactSec51 + '; return rowMeta.join(" · ");')(r, esc51, paxText51);
+  }
+  check('v1.4.51: evaluado — viaje de 1 persona: la fila dice "0.8 km · ~5 min · Pago: efectivo · 1 persona"', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 1 }) === '0.8 km · ~5 min · Pago: efectivo · 1 persona', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 1 }));
+  check('v1.4.51: evaluado — viaje de 2 personas: la fila dice "… · 2 personas"', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2 }) === '0.8 km · ~5 min · Pago: efectivo · 2 personas', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2 }));
+  check('v1.4.51: evaluado — viaje de 3 personas ($30, como la captura del usuario): la fila dice "… · 3 personas"', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 3 }) === '0.8 km · ~5 min · Pago: efectivo · 3 personas', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 3 }));
+  check('v1.4.51: evaluado — viaje viejo sin passenger_count: la fila dice "1 persona" (el conteo por defecto)', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo' }) === '0.8 km · ~5 min · Pago: efectivo · 1 persona', rowMeta51({ kind: 'viaje', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo' }));
+  check('v1.4.51: evaluado — mandado: la fila NO lleva personas ("0.8 km · ~5 min · Pago: efectivo")', rowMeta51({ kind: 'mandado', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 1 }) === '0.8 km · ~5 min · Pago: efectivo', rowMeta51({ kind: 'mandado', distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 1 }));
+  console.log('== v1.4.51: personas en la fila compacta del chofer ==');
+  const pax51 = await api('/api/register-passenger', { name: 'Pax Cincuentauno', phone: '9610000052', face_photo: PHOTO });
+  check('v1.4.51: en vivo, pasajera de prueba registrada', pax51.ok && pax51.passenger.id, JSON.stringify(pax51));
+  const t1 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 20, payment_method: 'efectivo', passenger_count: 1 });
+  check('v1.4.51: en vivo, viaje de 1 persona a $20 se publica con passenger_count=1', t1.ok && t1.request.passenger_count === 1, JSON.stringify(t1.request && { p: t1.request.passenger_count }));
+  const t2 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 2 });
+  check('v1.4.51: en vivo, viaje de 2 personas a $25 se publica con passenger_count=2', t2.ok && t2.request.passenger_count === 2, JSON.stringify(t2.request && { p: t2.request.passenger_count }));
+  const t3 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 3 });
+  check('v1.4.51: en vivo, viaje de 3 personas a $30 se publica con passenger_count=3 (como la captura del usuario)', t3.ok && t3.request.passenger_count === 3, JSON.stringify(t3.request && { p: t3.request.passenger_count, precio: t3.request.price }));
+  const m51 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', description: 'Recoger un paquete', passenger_count: 3 });
+  check('v1.4.51: en vivo, el mandado con passenger_count=3 se guarda como 1 (los mandados no tienen personas)', m51.ok && m51.request.passenger_count === 1, JSON.stringify(m51.request && { p: m51.request.passenger_count }));
+  const open51 = await api('/api/requests?open=1&light=1');
+  const mine51 = open51.ok ? open51.requests.filter(r=>r.passenger_id===pax51.passenger.id) : [];
+  check('v1.4.51: en vivo, la lista ligera del chofer (?open=1&light=1) trae passenger_count en los 3 viajes (es lo que lee la fila compacta)', open51.ok && mine51.filter(r=>r.kind==='viaje').length === 3 && mine51.filter(r=>r.kind==='viaje').every(r=>[1,2,3].includes(r.passenger_count)) && mine51.find(r=>r.kind==='viaje' && r.price===30).passenger_count === 3, JSON.stringify(mine51.map(r=>({ k: r.kind, p: r.passenger_count, pr: r.price }))));
+  check('v1.4.51: en vivo, el mandado en la lista del chofer trae passenger_count=1 (la fila no muestra personas)', open51.ok && mine51.filter(r=>r.kind==='mandado').length === 1 && mine51.find(r=>r.kind==='mandado').passenger_count === 1, JSON.stringify(mine51.map(r=>({ k: r.kind, p: r.passenger_count }))));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

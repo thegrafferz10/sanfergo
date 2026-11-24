@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.50)
+# SanFerGo — versión pública (v1.4.51)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.51 (2026-11-23) — Cuántas personas van, en la fila compacta del chofer
+
+- **Personas en la fila de Recibir Viajes (reporte del usuario 22:26, captura 10:25 PM: la fila del viaje de $30 — mínimo de 3 personas — decía solo "0.8 km · ~5 min · Pago: efectivo", sin el dato):** la línea tenue de la fila compacta ahora termina con el conteo — "0.8 km · ~5 min · Pago: efectivo · 3 personas" ("1 persona" para una). Solo viajes: los mandados son siempre de 1 persona y no llevan el dato, y un viaje viejo sin `passenger_count` muestra "1 persona" por defecto. El detalle expandido ya mostraba "Personas" desde v1.4.48 y no se toca; la firma de repintado de la bandeja incluye el conteo para que la fila se actualice si cambia. El acomodo de la fila (v1.4.47) no cambia.
+- Pruebas: suite completa contra BD limpia: **692 OK, 0 FAIL** (676 de antes + 16 nuevas en la sección v1.4.51 — 4 estáticas, 5 evaluadas con el constructor real de la línea tenue y 7 en vivo. Los 7 checks de versión que decían 1.4.50 se actualizaron a 1.4.51).
 
 ## v1.4.50 (2026-11-23) — Con un viaje en espera o en curso ya no se puede entrar a Mandados
 
