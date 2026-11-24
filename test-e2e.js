@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.64 en /api/health', h.ok && h.version === '1.4.64', JSON.stringify(h));
+  check('versión 1.4.65 en /api/health', h.ok && h.version === '1.4.65', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.64', h134.ok && h134.version === '1.4.64', JSON.stringify(h134));
+  check('versión 1.4.65', h134.ok && h134.version === '1.4.65', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.64)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.64';") && h.version === '1.4.64', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.65)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.65';") && h.version === '1.4.65', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.64 en /api/health (sección)', h27.ok && h27.version === '1.4.64', JSON.stringify(h27));
+  check('versión 1.4.65 en /api/health (sección)', h27.ok && h27.version === '1.4.65', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.64 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.64', JSON.stringify(h28));
+  check('versión 1.4.65 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.65', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.64 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.64', JSON.stringify(h29));
+  check('versión 1.4.65 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.65', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.64 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.64', JSON.stringify(h30));
+  check('versión 1.4.65 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.65', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1809,7 +1809,7 @@ async function api(path, body) {
   check('v1.4.44: en vivo, la línea recta une chofer → parada → objetivo en orden y en [lng, lat]', Array.isArray(srcPts) && srcPts.length === 3 && srcPts[0][0] === -93.21 && srcPts[0][1] === 16.87 && srcPts[1][0] === -93.208 && srcPts[2][0] === -93.2105 && srcPts[2][1] === 16.8675, JSON.stringify(srcPts));
   // El sondeo reintenta la ruta real cuando la línea es recta.
   const pollSec = html.slice(html.indexOf('function startLivePolling(){'), html.indexOf('/* GPS del chofer'));
-  check('v1.4.44: el sondeo reintenta la ruta OSRM cada ~15 s mientras la línea sea recta y la cambia al responder', pollSec.includes('liveRouteFallback') && pollSec.includes('liveOsrmRetryTick >= 3') && pollSec.includes('osrmRoute(frm, tgt, liveRouteWaypoints(rr, inT))') && pollSec.includes('liveRouteCoords = rt2.coords; liveRouteFallback = false;'));
+  check('v1.4.44: el sondeo reintenta la ruta OSRM cada ~15 s mientras la línea sea recta y la cambia al responder (v1.4.65: el sondeo es de 2 s, así que el umbral es cada 8º tick ≈ 16 s, no cada 3er tick)', pollSec.includes('liveRouteFallback') && pollSec.includes('liveOsrmRetryTick >= 8') && pollSec.includes('osrmRoute(frm, tgt, liveRouteWaypoints(rr, inT))') && pollSec.includes('liveRouteCoords = rt2.coords; liveRouteFallback = false;'));
   // En vivo (evaluando la función real): el zoom objetivo sube cuando la
   // distancia baja, y lejos no toca el encuadre de la ruta completa.
   const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function closestOnRoute'));
@@ -1848,8 +1848,8 @@ async function api(path, body) {
   // Diagnóstico (reporte del usuario 20:46): el GPS solo mandaba la
   // posición al servidor y al fallar se tiraba; el sondeo tragaba el
   // error en silencio y nada se movía. Ahora el GPS dibuja en local.
-  const watchSec = html.slice(html.indexOf('function startDriverGpsWatch(){'), html.indexOf('/* ===== TAXÍMETRO'));
-  check('v1.4.45: el GPS del chofer mueve el mapa EN LOCAL con cada lectura y encola el reporte si no hay internet', watchSec.includes('liveGpsPos = { lat, lng, t: now };') && watchSec.includes('liveApplyDriverPos(lat, lng);') && watchSec.includes('liveLocQueue.push({ lat, lng });') && watchSec.includes('if(liveLocQueue.length > 20) liveLocQueue.shift();'));
+  const watchSec = html.slice(html.indexOf('function startDriverGpsWatch(reqId){'), html.indexOf('/* ===== TAXÍMETRO'));
+  check('v1.4.45: el GPS del chofer mueve el mapa EN LOCAL con cada lectura y encola el reporte si no hay internet (v1.4.65: el dibujo local es solo con el mapa en vivo del chofer abierto — en la vista del pasajero el GPS no dibuja, solo reporta)', watchSec.includes('liveGpsPos = { lat, lng, t: now };') && watchSec.includes("if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);") && watchSec.includes('liveLocQueue.push({ lat, lng });') && watchSec.includes('if(liveLocQueue.length > 20) liveLocQueue.shift();'));
   check('v1.4.45: el sondeo ya no se congela sin internet (guardia anti-solape, aviso chico, cola y avance pendiente al recuperar)', pollSec.includes('if(livePollBusy) return; livePollBusy = true;') && pollSec.includes('liveSetOffline(false);') && pollSec.includes('liveSetOffline(true);') && pollSec.includes('finally { livePollBusy = false; }') && pollSec.includes('liveFlushLocQueue();') && pollSec.includes('if(livePendingAdvance){ const st = livePendingAdvance; livePendingAdvance = null; advanceLive(st); }'));
   check('v1.4.45: el avance que falla por red se guarda pendiente y se reintenta solo (un rechazo del servidor no se reintenta)', html.includes('livePendingAdvance = stage;') && html.includes("toast('Sin internet — el avance se enviará cuando vuelva la conexión.');") && html.includes("window.addEventListener('online'") && html.includes('id="live-offline">📶 Sin internet'));
   // En vivo (evaluando la función real): solo los errores de red se reintentan.
@@ -3714,6 +3714,92 @@ async function api(path, body) {
   const tog64Lock = await api('/api/admin/set-negocios-locked', { token: admLogin.token, locked: true });
   const list64Relock = await api('/api/businesses?token=' + acc64.token);
   check('v1.4.64: en vivo — el admin vuelve a bloquear y el pasajero normal queda fuera otra vez (el candado queda puesto)', tog64Lock.ok && tog64Lock.negocios_locked === true && !list64Relock.ok && list64Relock.locked === true, JSON.stringify(tog64Lock));
+
+  // ===== v1.4.65 (2026-11-24): el mapa del PASAJERO ya se mueve en vivo, igual que el del chofer =====
+  // Reporte del usuario 11:11 CST (viaje $20, 0.8 km, 1 persona, EN VIAJE): "en el mapa del pasajero
+  // siguen sin actualizarse en tiempo real el trayecto del viaje" + "Haz lo que quede igual como el
+  // del chofer que se vea asi". La v1.4.61 había diagnosticado que el sondeo SÍ mueve el marcador y
+  // que lo congelado era la mototaxi huérfana + el mapa ancho — eso era verdad solo cuando el
+  // servidor TENÍA posiciones frescas. La causa raíz real, leyendo el código: el GPS del chofer
+  // (startDriverGpsWatch) solo vivía mientras el mapa en vivo DEL CHOFER estaba abierto (guardia
+  // !liveAsDriver + stopDriverGpsWatch() en exitLive). El chofer se veía perfecto porque su mapa se
+  // dibuja del GPS local a ~1 Hz y nunca necesita el servidor; pero el pasajero solo recibe la
+  // posición por el sondeo al servidor, alimentado por ese watch. En cuanto el chofer salía de su
+  // mapa en vivo — o el usuario cambiaba a la vista del pasajero en el mismo teléfono, que es como
+  // él prueba (es chofer y pasajero a la vez) — el servidor dejaba de recibir posiciones y el
+  // marcador y la línea del pasajero se quedaban quietos (las tiras leen la misma posición
+  // congelada, así que tampoco bajaban). El arreglo: el watch sigue al VIAJE ACTIVO, no a la
+  // pantalla (syncDriverGpsWatch + drvActiveReqId); el dibujo local sigue siendo solo del mapa del
+  // chofer; el sondeo del mapa en vivo pasa de 5 s a 2 s y el chofer reporta cada ~3 s (antes 8 s).
+  const pollSec65 = html.slice(html.indexOf('function startLivePolling(){'), html.indexOf('/* GPS del chofer a nivel de app'));
+  const watchSec65 = html.slice(html.indexOf('/* GPS del chofer desacoplado de la vista (v1.4.65)'), html.indexOf('/* ===== TAXÍMETRO'));
+  check('v1.4.65: el GPS del chofer ya no exige la vista del chofer — el watch sigue al viaje activo (drvActiveReqId + syncDriverGpsWatch + drvActiveReq)', watchSec65.includes('function drvActiveReq(){') && watchSec65.includes('function syncDriverGpsWatch(){') && watchSec65.includes('drvActiveReqId') && watchSec65.includes('function startDriverGpsWatch(reqId){') && !watchSec65.includes("if(!myDriver || !liveReq || !liveAsDriver) return;"));
+  check('v1.4.65: el watch dibuja en local SOLO cuando el mapa en vivo del chofer está abierto; en la vista del pasajero no dibuja (su marcador sale del sondeo)', watchSec65.includes("if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);"));
+  check('v1.4.65: el watch reporta al servidor con drvActiveReqId (no con liveReq.id) y cada ~3 s en vez de cada 8 s', watchSec65.includes("if(now - drvLastSent.t < 3000 && d < 10) return;") && watchSec65.includes("const rid = drvActiveReqId || (liveReq && liveReq.id);") && watchSec65.includes("request_id: rid, lat, lng"));
+  check('v1.4.65: openLiveTrip y exitLive usan syncDriverGpsWatch (salir del mapa ya no apaga el GPS) y doLogout sí lo apaga', html.includes('startLivePolling();\n  syncDriverGpsWatch();') && html.includes('syncDriverGpsWatch();\n  livePendingAdvance = null;') && html.includes('stopDriverGpsWatch(); // v1.4.65: sin sesión ya no hay servicio activo que reportar'));
+  check('v1.4.65: el sondeo global del chofer sincroniza el watch tras leer sus servicios activos', html.includes('setDriverActiveFromList(mine.requests);') && html.slice(html.indexOf('setDriverActiveFromList(mine.requests);'), html.indexOf('setDriverActiveFromList(mine.requests);') + 400).includes('syncDriverGpsWatch();'));
+  check('v1.4.65: el sondeo del mapa en vivo pasa de 5 s a 2 s y el reintento OSRM se ajusta a cada 8º tick (~16 s)', pollSec65.includes('}, 2000);') && pollSec65.includes('if(liveOsrmRetryTick >= 8){') && !pollSec65.includes('}, 5000);'));
+  check('v1.4.65: si el marcador se perdió, el sondeo lo vuelve a crear en la posición fresca (sin esperar al cambio de etapa)', pollSec65.includes("if(r.driver_lat && !liveDriverMarker && liveMap){") && pollSec65.includes("liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);"));
+  check('v1.4.65: al finalizar el viaje el watch se apaga directo (sondeo y advanceLive), no con sync (driverActiveTrip queda viejo 5 s)', pollSec65.includes("stopDriverGpsWatch(); // v1.4.65: el viaje terminó") && html.includes("if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); stopDriverGpsWatch(); showTripSummary(liveReq, true); return; }"));
+  // Evaluado: el ciclo de vida del watch con GPS simulado.
+  let watch65 = null;
+  try {
+    const havKm65 = (a, b, c, d) => { const R = 6371, r = x => x * Math.PI / 180; const x = r(c - a), y = r(d - b); return 2 * R * Math.asin(Math.sqrt(Math.sin(x / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(y / 2) ** 2)); };
+    const nav65 = { geolocation: { cb: null, cleared: null, watchPosition(cb) { this.cb = cb; return 42; }, clearWatch(id) { this.cleared = id; } } };
+    const apiCalls65 = [];
+    const api65 = async (p, b) => { apiCalls65.push({ p, b }); return { ok: true }; };
+    const drawCalls65 = [];
+    const prelude65 = 'let liveReq = null, liveAsDriver = false, currentView = \'home\', myDriver = null, driverActiveTrip = null, liveGpsPos = null, liveLocQueue = [];\n';
+    const ret65 = '\nreturn { sync: syncDriverGpsWatch, start: startDriverGpsWatch, stop: stopDriverGpsWatch, getWatch(){ return drvWatchId; }, getReqId(){ return drvActiveReqId; }, setLiveReq(r){ liveReq = r; }, setAsDriver(b){ liveAsDriver = b; }, setView(v){ currentView = v; }, setDriver(d){ myDriver = d; }, setActiveTrip(t){ driverActiveTrip = t; } };';
+    const w65 = new Function('navigator', 'api', 'liveApplyDriverPos', 'liveSetOffline', 'havKm', prelude65 + watchSec65 + ret65)(nav65, api65, (...a) => drawCalls65.push(a), () => {}, havKm65);
+    const trip65 = { id: 99, status: 'aceptado', driver_id: 5 };
+    w65.setDriver({ id: 5 });
+    w65.setLiveReq(trip65); w65.setAsDriver(true); w65.setView('live');
+    w65.sync();
+    const started65 = w65.getWatch() === 42 && w65.getReqId() === 99;
+    nav65.geolocation.cb({ coords: { latitude: 16.8710, longitude: -93.2060 } });
+    const drawDriver65 = drawCalls65.length;
+    const apiDriver65 = apiCalls65.filter(c => c.p === '/api/update-driver-location' && c.b.request_id === 99).length;
+    // El usuario cambia a la vista del PASAJERO en el mismo teléfono (es chofer y pasajero a la vez):
+    // el watch NO se apaga, el GPS local ya NO dibuja, pero el reporte al servidor SIGUE.
+    w65.setAsDriver(false);
+    w65.sync();
+    const kept65 = w65.getWatch() === 42 && nav65.geolocation.cleared === null;
+    nav65.geolocation.cb({ coords: { latitude: 16.8720, longitude: -93.2050 } });
+    const drawPax65 = drawCalls65.length;
+    const apiPax65 = apiCalls65.filter(c => c.p === '/api/update-driver-location' && c.b.request_id === 99).length;
+    // Sin viaje activo no arranca; al terminar el viaje se apaga.
+    const w65b = new Function('navigator', 'api', 'liveApplyDriverPos', 'liveSetOffline', 'havKm', prelude65 + watchSec65 + ret65)(nav65, api65, () => {}, () => {}, havKm65);
+    w65b.setDriver({ id: 5 }); w65b.setLiveReq(null); w65b.setActiveTrip(null);
+    w65b.sync();
+    const noStart65 = w65b.getWatch() === null;
+    w65.setLiveReq({ ...trip65, status: 'finalizado' }); w65.setActiveTrip(null);
+    w65.sync();
+    const stopped65 = w65.getWatch() === null && nav65.geolocation.cleared === 42;
+    watch65 = { started65, drawDriver65, apiDriver65, kept65, drawPax65, apiPax65, noStart65, stopped65 };
+  } catch (e) { watch65 = { err: String(e && e.message || e) }; }
+  check('v1.4.65: evaluado — con viaje activo el watch arranca, dibuja en local en la vista del chofer y reporta al servidor', !!watch65 && watch65.started65 === true && watch65.drawDriver65 === 1 && watch65.apiDriver65 === 1, JSON.stringify(watch65));
+  check('v1.4.65: evaluado — al pasar a la vista del pasajero el watch SIGUE (no se apaga), ya no dibuja en local, pero el reporte al servidor SIGUE (la causa raíz)', !!watch65 && watch65.kept65 === true && watch65.drawPax65 === 1 && watch65.apiPax65 === 2, JSON.stringify(watch65));
+  check('v1.4.65: evaluado — sin viaje activo el watch no arranca, y al terminar el viaje se apaga', !!watch65 && watch65.noStart65 === true && watch65.stopped65 === true, JSON.stringify(watch65));
+  // En vivo: la posición del chofer que lee el sondeo del pasajero avanza con cada reporte.
+  const pax65 = await api('/api/register-passenger', { name: 'Pax Sesenta y Cinco', phone: '961650' + RUN.slice(0, 4), face_photo: PHOTO });
+  check('v1.4.65: en vivo, pasajera de prueba registrada', pax65.ok && pax65.passenger.id, JSON.stringify(pax65));
+  const drv65 = await api('/api/register-driver', { name: 'Chofer Sesenta y Cinco', phone: '961651' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'V65', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.65: en vivo, chofer de prueba registrado', drv65.ok && drv65.driver.id, JSON.stringify(drv65));
+  await approveDriver(drv65.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv65.driver.id, online: true });
+  const trip65 = await api('/api/create-request', { passenger_id: pax65.passenger.id, kind: 'viaje', origin_zone: 'Madero', origin_detail: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 20, payment_method: 'efectivo', passenger_count: 1 });
+  check('v1.4.65: en vivo, el viaje queda BUSCANDO ($20, 1 persona)', trip65.ok && trip65.request.status === 'buscando', JSON.stringify(trip65.request && { st: trip65.request.status }));
+  await api('/api/driver-respond', { driver_id: drv65.driver.id, request_id: trip65.request.id, kind: 'acepta', price: 20 });
+  await api('/api/advance-stage', { driver_id: drv65.driver.id, request_id: trip65.request.id, stage: 'llego' });
+  await api('/api/advance-stage', { driver_id: drv65.driver.id, request_id: trip65.request.id, stage: 'en_viaje' });
+  const locA65 = await api('/api/update-driver-location', { driver_id: drv65.driver.id, request_id: trip65.request.id, lat: 16.8700, lng: -93.2070 });
+  const seenA65 = await api('/api/requests?id=' + trip65.request.id);
+  check('v1.4.65: en vivo — el sondeo del pasajero (/api/requests?id=) ve la 1ª posición del chofer en el recorrido', locA65.ok && seenA65.ok && seenA65.requests[0].driver_lat === 16.87 && seenA65.requests[0].driver_lng === -93.207, JSON.stringify(seenA65.requests && seenA65.requests[0] && { lat: seenA65.requests[0].driver_lat, lng: seenA65.requests[0].driver_lng }));
+  const locB65 = await api('/api/update-driver-location', { driver_id: drv65.driver.id, request_id: trip65.request.id, lat: 16.8685, lng: -93.2090 });
+  const seenB65 = await api('/api/requests?id=' + trip65.request.id);
+  check('v1.4.65: en vivo — el sondeo del pasajero ve la 2ª posición (el feed del mapa avanza con cada reporte)', locB65.ok && seenB65.ok && seenB65.requests[0].driver_lat === 16.8685 && seenB65.requests[0].driver_lng === -93.209, JSON.stringify(seenB65.requests && seenB65.requests[0] && { lat: seenB65.requests[0].driver_lat, lng: seenB65.requests[0].driver_lng }));
+  await api('/api/advance-stage', { driver_id: drv65.driver.id, request_id: trip65.request.id, stage: 'finalizado' });
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

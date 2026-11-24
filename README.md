@@ -1,9 +1,19 @@
-# SanFerGo — versión pública (v1.4.64)
+# SanFerGo — versión pública (v1.4.65)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.65 (2026-11-24) — El mapa del pasajero ya se mueve en vivo, igual que el del chofer
+
+- CAUSA RAÍZ: el mapa del pasajero solo se movía desde el sondeo al servidor (cada 5 s), alimentado por el GPS del chofer — pero ese GPS solo vivía mientras el mapa en vivo DEL CHOFER estaba abierto (guardia !liveAsDriver + stop al salir). El chofer se veía perfecto porque su mapa se dibuja del GPS local a ~1 Hz y nunca necesita el servidor; en cuanto salía de su mapa (o el usuario cambiaba a la vista del pasajero en el mismo teléfono, que es como él prueba), el servidor dejaba de recibir posiciones y la mototaxi y la línea del pasajero se quedaban quietas.
+- El GPS del chofer ahora sigue al VIAJE ACTIVO, no a la pantalla: syncDriverGpsWatch() arranca el watch cuando miDriver tiene un servicio aceptado (driverActiveTrip del sondeo global, o liveReq si es su viaje) y lo apaga solo cuando ya no hay servicio activo. Salir del mapa en vivo ya no lo apaga; al cerrar sesión sí; al terminar/cancelar el viaje también.
+- El dibujo local sigue siendo SOLO del mapa del chofer: en la vista del pasajero (o en otra pantalla) el GPS local NO dibuja el marcador — en "en camino" el teléfono del pasajero está en su casa, no con la mototaxi; su marcador sale del sondeo al servidor, como debe ser.
+- Cadencia como la del chofer: el sondeo del mapa en vivo pasa de 5 s a 2 s, y el chofer reporta su posición cada ~3 s en vez de cada 8 s. El reintento de la ruta OSRM se ajusta a cada 8º tick (~16 s, igual que antes).
+- Respaldo en el sondeo: si el marcador se perdió (un render lo quitó y otro lo dejó sin crear), se vuelve a crear en la posición fresca sin esperar al próximo cambio de etapa.
+- El mapa del chofer NO se toca: mismo dibujo local a ~1 Hz, misma ruta, mismo encuadre. Tarifas, recibos, candado de Negocios y todo lo demás tampoco.
+- Pruebas: suite completa contra BD limpia: **1039 OK, 0 FAIL** (1023 de antes + 16 nuevas: 8 estáticas del watch desacoplado/cadencia/respaldo del marcador, 3 evaluadas del ciclo de vida del watch con GPS simulado y 5 en vivo del feed del pasajero; checks actualizados: 7 de versión a 1.4.65 y 2 viejos — v1.4.44 reintento OSRM cada 8º tick y v1.4.45 dibujo local con la puerta nueva).
 
 ## v1.4.64 (2026-11-24) — Candado de Negocios: solo entra el perfil del dueño
 
