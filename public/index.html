@@ -523,7 +523,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.46'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.47'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1839,7 +1839,7 @@ async function renderViajes(){
       if(active.status==='aceptado'){ goLive(active.id, false); return; }
       wiz.requestId = active.id; wiz.step = 5;
       setPageNoScroll('viajes-page', true);
-      page.innerHTML = '<div id="searching"></div>';
+      page.innerHTML = backPill('Volver al inicio', "go('home')") + '<div id="searching"></div>';
       renderSearching();
       return;
     }
@@ -1908,8 +1908,12 @@ async function renderViajes(){
   }
   // paso 5: buscando / ofertas (el cancelar es texto rojo al pie de la
   // tarjeta, dentro de renderSearching; sin botón rojo de ancho completo)
+  // (v1.4.47) Botón "‹ Volver al inicio": vuelve al inicio SIN cancelar —
+  // la solicitud sigue pendiente. Al volver a entrar a Viajes, el paso 0
+  // (o este paso 5, si el asistente sigue en 5) vuelve a mostrar esta
+  // misma pantalla de Buscando, no un formulario nuevo.
   setPageNoScroll('viajes-page', true);
-  page.innerHTML = '<div id="searching"></div>';
+  page.innerHTML = backPill('Volver al inicio', "go('home')") + '<div id="searching"></div>';
   renderSearching();
 }
 let wizMap = null;
@@ -4593,10 +4597,15 @@ async function loadDriverInbox(force){
       + '<div class="flex" style="align-items:center;gap:8px">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
       + '<span class="rowavatar" id="rowav-'+r.id+'">'+esc((r.passenger_name||'P').trim().slice(0,1).toUpperCase())+'</span>'
-      + '<div class="flex1" style="min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.passenger_name||'Pasajero')+'</div>'
-      + '<div><b>'+esc(r._refO)+' → '+esc(r._refD)+'</b></div></div>'
+      + '<div class="flex1" style="min-width:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.passenger_name||'Pasajero')+'</div>'
       + '<b class="price">'+fmt$(r.price)+'</b>'
       + '<span class="muted">▾</span></div>'
+      // (v1.4.47) La ruta va en su propia línea a todo lo ancho: el precio
+      // ya no aprieta la columna de texto, y cada "cerca de X" va en un
+      // span sin salto de línea, así el corte solo puede caer en la flecha,
+      // nunca dentro de "cerca de Madero" o "cerca de Centro" (captura
+      // del usuario 21:16: "cerca de / Madero → cerca / de Centro").
+      + '<div style="margin-top:6px"><b><span style="white-space:nowrap">'+esc(r._refO)+'</span> → <span style="white-space:nowrap">'+esc(r._refD)+'</span></b></div>'
       + (rowMeta.length?'<div class="muted" style="margin-top:4px;font-size:12px">'+rowMeta.join(' · ')+'</div>':'')
       + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
       + (counter?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
