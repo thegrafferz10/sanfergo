@@ -524,7 +524,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.49'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.50'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2404,7 +2404,7 @@ async function renderSearching(){
     const r = j.requests.find(x=>x.id===wiz.requestId);
     if(!r){ box.innerHTML = '<p class="muted">No se encontró el viaje.</p>'; return; }
     if(r.status==='aceptado'){ goLive(r.id, false); return; }
-    if(r.status==='cancelado' || r.status==='finalizado'){ wiz = newWizard(); renderViajes(); return; }
+    if(r.status==='cancelado' || r.status==='finalizado'){ wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); return; }
     if(await maybeAutoConfirm(r)) return;
     const offers = (r.offers||[]).filter(o=>o.status==='pendiente');
     if(offerIdx >= offers.length) offerIdx = 0;
@@ -2531,6 +2531,9 @@ async function raisePrice(rid, price){
   catch(e){ toast(e.message); }
 }
 function refreshSearching(){
+  // v1.4.50: si en Mandados se está viendo la pantalla de espera del
+  // viaje (no la del mandado), se refresca esa.
+  if(currentView==='mandados' && wiz && wiz.step===5 && wiz.requestId){ renderSearching(); return; }
   if(currentView==='mandados' && md && md.requestId){
     api('/api/requests?passenger_id='+(myPassenger?myPassenger.id:'')+'&light=1').then(j=>{
       const r = j.requests.find(x=>x.id===md.requestId);
@@ -2540,7 +2543,7 @@ function refreshSearching(){
 }
 async function cancelMyRequest(){
   if(!wiz.requestId) return;
-  try { await api('/api/cancel-request', { request_id: wiz.requestId }); wiz = newWizard(); renderViajes(); toast('Viaje cancelado.'); }
+  try { await api('/api/cancel-request', { request_id: wiz.requestId }); wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); toast('Viaje cancelado.'); }
   catch(e){ toast(e.message); }
 }
 
@@ -3874,6 +3877,20 @@ async function renderMandados(){
   if(mdMap){ try { mdMap.remove(); } catch(e){} mdMap = null; }
   if(!md) md = newMandado();
   setPageNoScroll('mandados-page', false);
+  // v1.4.50: con un viaje en espera o en curso, entrar a Mandados NO
+  // muestra el formulario: se ve la misma pantalla de espera / en vivo
+  // del viaje hasta que termine o se cancele (captura del usuario
+  // 22:11: la entrada de Mandados se abría con el viaje BUSCANDO).
+  const trip50 = await myActiveRequest('viaje');
+  if(trip50){
+    if(trip50.status==='aceptado'){ goLive(trip50.id, false); return; }
+    if(!wiz) wiz = newWizard();
+    wiz.requestId = trip50.id; wiz.step = 5;
+    setPageNoScroll('mandados-page', true);
+    page.innerHTML = backPill('Volver al inicio', "go('home')") + '<div id="searching"></div>';
+    renderSearching();
+    return;
+  }
   const active = await myActiveRequest('mandado');
   if(active){
     if(active.status==='aceptado'){ goLive(active.id, false); return; }
@@ -6254,8 +6271,11 @@ function startPolling(){
           }
           lastSnapshot[key] = now;
         }
-        if(currentView==='viajes' && wiz && wiz.step===5) renderSearching();
-        if(currentView==='mandados' && md && md.requestId){
+        // v1.4.50: la pantalla de espera del viaje también se refresca
+        // cuando se ve desde Mandados (viaje en espera); la del mandado
+        // solo cuando no se está viendo la del viaje.
+        if((currentView==='viajes' || currentView==='mandados') && wiz && wiz.step===5) renderSearching();
+        if(currentView==='mandados' && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){
           const act = j.requests.find(x=>x.id===md.requestId);
           if(act) renderMandadoSearching(act);
         }
