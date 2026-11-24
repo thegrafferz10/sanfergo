@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.62'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.63'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2730,35 +2730,15 @@ async function showReceipt(requestId, asDriver){
     // misma tarjeta naranja flotante del final del viaje (la app real ya
     // lo hace así y la web debe ser idéntica). v1.4.62: "Ver recibo" del
     // historial del CHOFER (viaje) también muestra su tarjeta naranja
-    // nueva. Solo el MANDADO sigue con el diálogo viejo, intacto.
+    // nueva. v1.4.63: el MANDADO también — cada lado va a su tarjeta
+    // naranja de mandado; el diálogo viejo ya no lo usa ningún recibo.
     // El lado lo decide el sitio que llama (historial del pasajero /
     // historial del chofer), NO el driver_id: el mismo usuario puede ser
     // chofer y pasajero a la vez y su propio viaje lo conduciría él.
     if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }
     if(asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, true); return; }
-    const dur = (r.trip_started_at && r.finished_at)
-      ? Math.round((new Date(r.finished_at.replace(' ','T')+'Z') - new Date(r.trip_started_at.replace(' ','T')+'Z'))/60000) + ' min'
-      : '—';
-    const txt = 'SANFERGO — RECIBO DE '+(r.kind==='mandado'?'MANDADO':'VIAJE')+'\n'
-      + 'Fecha: '+fmtDateTime(r.created_at)+'\n'
-      + 'De: '+(r.origin_zone||r.origin_detail||'')+'\nA: '+(r.dest_zone||r.dest_detail||'')+'\n'
-      + 'Distancia: '+(r.distance_km||'—')+' km\nDuración real: '+dur+'\n'
-      + (r.kind==='viaje' ? 'Personas: '+paxText(r.passenger_count)+'\n' : '')
-      + 'Chofer: '+(r.driver_name||'—')+' · Unidad '+(r.driver_unit||'—')+'\n'
-      + 'Pago: '+(r.payment_method||'efectivo')+'\nTotal: '+fmt$(r.final_price||r.price)+'\nSan Fernando, Chiapas';
-    window.__receiptTxt = txt; window.__receiptName = 'recibo-sanfergo-'+r.id+'.txt';
-    openDialog('<h2>Recibo del '+(r.kind==='mandado'?'mandado':'viaje')+'</h2>'
-      + '<div class="card white"><div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
-      + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
-      + '<div class="kv"><span>Fecha</span><b>'+fmtDateTime(r.created_at)+'</b></div>'
-      + '<div class="kv"><span>Distancia</span><b>'+(r.distance_km||'—')+' km</b></div>'
-      + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
-      + '<div class="kv"><span>Duración real</span><b>'+dur+'</b></div>'
-      + '<div class="kv"><span>Chofer</span><b>'+esc(r.driver_name||'—')+' · '+esc(r.driver_unit||'—')+'</b></div>'
-      + '<div class="kv"><span>Pago</span><b>'+esc(r.payment_method||'efectivo')+'</b></div>'
-      + '<div class="kv"><span>Total</span><b class="price">'+fmt$(r.final_price||r.price)+'</b></div></div>'
-      + '<button class="btn" onclick="downloadReceipt()">Generar recibo</button>'
-      + '<button class="btn ghost" onclick="closeDialog()">Cerrar</button>');
+    if(!asDriver && r.kind==='mandado'){ receiptFromHist = true; showTripSummary(r, false); return; }
+    if(asDriver && r.kind==='mandado'){ receiptFromHist = true; showTripSummary(r, true); return; }
   } catch(e){ toast(e.message); }
 }
 
@@ -3280,15 +3260,19 @@ function showTripSummary(r, asDriver){
     // (el usuario lo pidió así: "igual de bonito que el pasajero") —
     // misma tarjeta flotante toda naranja, sin mini mapa, sin tabla y sin
     // "Generar recibo": título "Resumen del viaje", gracias, precio
-    // enorme centrado y la línea de pertenencias. NO lleva la línea de
+    // enorme centrado y la línea de recordatorio. NO lleva la línea de
     // cambio (el chofer RECIBE el efectivo, no paga). X arriba en el
     // borde y tarjeta centrada en la pantalla, como la del pasajero.
+    // v1.4.63: la línea NO dice "Recuerda revisar todas tus
+    // pertenencias" (eso es del pasajero) — el usuario la corrigió así:
+    // "Revisa que el pasajero no haya olvidado algo en tu mototaxi",
+    // en la misma banda crema de siempre.
     ov.classList.add('orange-receipt');
     ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
       + '<div class="sumfloat orange"><h2>Resumen del viaje</h2>'
       + '<div class="sumthanks">Gracias por concluir el viaje</div>'
       + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
-      + '<div class="sumbelong">Recuerda revisar todas tus pertenencias</div>'
+      + '<div class="sumbelong">Revisa que el pasajero no haya olvidado algo en tu mototaxi</div>'
       + '</div></div>';
     ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
     document.body.appendChild(ov);
@@ -3313,6 +3297,41 @@ function showTripSummary(r, asDriver){
       + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
       + (cash61 ? '<div class="sumremind">'+cash61+'</div>' : '')
       + '<div class="sumbelong">Recuerda revisar todas tus pertenencias</div>'
+      + '</div></div>';
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
+    document.body.appendChild(ov);
+    return;
+  }
+  if(asDriver && r.kind==='mandado'){
+    // v1.4.63: recibo del CHOFER para MANDADO — misma tarjeta naranja
+    // que la de viajes: título "Resumen del mandado", gracias, precio
+    // enorme centrado. SIN línea de cambio (el chofer recibe el
+    // efectivo) y SIN línea de pertenencias. Sin tabla, sin mini mapa,
+    // sin "Generar recibo". X arriba y tarjeta centrada, igual.
+    ov.classList.add('orange-receipt');
+    ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
+      + '<div class="sumfloat orange"><h2>Resumen del mandado</h2>'
+      + '<div class="sumthanks">Gracias por concluir el mandado</div>'
+      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + '</div></div>';
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
+    document.body.appendChild(ov);
+    return;
+  }
+  if(!asDriver && r.kind==='mandado'){
+    // v1.4.63: recibo del PASAJERO para MANDADO — tarjeta naranja como
+    // la de viajes: título "¡Mandado entregado!", gracias, precio
+    // enorme centrado y la banda de cambio SOLO en efectivo (como
+    // antes, summaryCashNote). SIN línea de pertenencias (no aplica a
+    // un mandado). Sin tabla, sin "Generar recibo". X arriba y tarjeta
+    // centrada, igual.
+    ov.classList.add('orange-receipt');
+    const cashM = summaryCashNote(r);
+    ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
+      + '<div class="sumfloat orange"><h2>¡Mandado entregado!</h2>'
+      + '<div class="sumthanks">Tu mandado ha concluido. Gracias por usar SanFerGo.</div>'
+      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + (cashM ? '<div class="sumremind">'+cashM+'</div>' : '')
       + '</div></div>';
     ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
     document.body.appendChild(ov);
@@ -4587,6 +4606,11 @@ function enterDriverMode(){
   if(!myDriver) return;
   store.mode = 'driver';
   go('chofer');
+  // v1.4.63: al entrar a trabajar como chofer, la pestaña inicial es
+  // Recibir Viajes, no Inicio (la barra sigue con Inicio / Taxímetro /
+  // Recibir Viajes para cambiar cuando quiera). Si hay un viaje activo,
+  // el aviso verde con "Ver mi viaje en curso" sigue ahí como antes.
+  driverTab('recibir');
 }
 function exitDriverMode(){ store.mode='passenger'; go('home'); }
 function driverTab(tab){
