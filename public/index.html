@@ -500,7 +500,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.43'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.44'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -917,11 +917,19 @@ async function osrmRoute(a, b, via){
   // se corte en la primera parada (v1.4.43).
   const pts = [a].concat(via||[]).concat([b]);
   const url = 'https://router.project-osrm.org/route/v1/driving/' + pts.map(p=>p.lng + ',' + p.lat).join(';') + '?overview=full&geometries=geojson';
-  const r = await fetch(url);
-  const j = await r.json();
-  if(!j.routes || !j.routes[0]) return null;
-  const rt = j.routes[0];
-  return { coords: rt.geometry.coordinates, km: rt.distance / 1000, seconds: rt.duration };
+  // v1.4.44: tiempo límite de 8 s y chequeo de respuesta — el servidor
+  // demo de OSRM a veces se cuelga o responde 429 en el móvil; sin esto
+  // la llamada se quedaba colgada y la línea azul no aparecía nunca.
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), 8000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if(!r.ok) return null;
+    const j = await r.json();
+    if(!j.routes || !j.routes[0]) return null;
+    const rt = j.routes[0];
+    return { coords: rt.geometry.coordinates, km: rt.distance / 1000, seconds: rt.duration };
+  } finally { clearTimeout(to); }
 }
 /* Distancia estimada: ruta OSRM si existe; si no, haversine x1.35 (mín. 0.8 km). Sin línea recta en el mapa. */
 async function estimateKm(a, b){
@@ -2478,7 +2486,7 @@ async function showReceipt(requestId){
 
 /* ===== VIAJE EN CURSO — un solo mapa claro a pantalla completa ===== */
 let liveMap = null, liveMarkers = {}, liveReq = null, liveAsDriver = false;
-let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false;
+let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false, liveRouteFallback = false, liveOsrmRetryTick = 0;
 let liveDriverMarker = null, liveTraveledPts = [];
 const STAGE_LABEL = { confirmado:'Confirmado', en_camino:'En camino', llego:'Llegó', en_viaje:'En viaje', finalizado:'Finalizado',
   recogido:'Recogido', entregado:'Entregado' };
@@ -2507,6 +2515,25 @@ function liveRouteWaypoints(r, toDest){
     const stops = JSON.parse(r.stops_json||'[]');
     return stops.slice(1).filter(s=>s && s.lat!=null && s.lng!=null).map(s=>({ lat: s.lat, lng: s.lng }));
   } catch(e){ return []; }
+}
+/* Línea recta chofer → objetivo (respaldo cuando OSRM no responde):
+   de la posición del chofer al objetivo pasando por las paradas, en
+   [lng, lat] como las coordenadas OSRM. Es la misma línea azul, así que
+   el encuadre y el tramo recorrido la usan igual que la ruta real. */
+function straightRouteCoords(from, target, via){
+  const pts = [from].concat(via||[]).concat([target]);
+  return pts.map(p=>[p.lng, p.lat]);
+}
+/* Zoom de proximidad (v1.4.44, como Uber): mientras más cerca del punto
+   final (recogida o destino), más zoom — el mapa se acerca solo de forma
+   suave y gradual para que el punto se vea cada vez más cerca. Lejos
+   (>1 km) no toca nada: manda el encuadre de la ruta completa (v1.4.43).
+   Solo sube el zoom, nunca lo baja. */
+function liveTargetZoom(distM){
+  if(distM==null || distM>1000) return null;
+  if(distM>500) return 16;
+  if(distM>200) return 17;
+  return 18;
 }
 function nextStage(r){
   // Flujo simplificado del chofer (v1.4.43): Aceptar deja el servicio
@@ -2569,7 +2596,7 @@ async function openLiveTrip(requestId, asDriver){
     liveReq = (j.requests||[])[0] || null;
     if(!liveReq){ toast('No se encontró el viaje.'); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } else go('viajes'); return; }
   } catch(e){ toast(e.message); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } return; }
-  liveFollow = true; liveHeading = null; liveRouteCoords = null; liveTraveledPts = [];
+  liveFollow = true; liveHeading = null; liveRouteCoords = null; liveRouteFallback = false; liveOsrmRetryTick = 0; liveTraveledPts = [];
   acquireWakeLock();
   if(!liveMap){
     liveMap = makeMap('live-map', true);
@@ -2594,12 +2621,23 @@ async function renderLiveMap(){
   const inTrip = liveHeadingToDest(r);
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
-  // Si OSRM falla (sin señal en la carretera), el mapa en vivo igual se
-  // abre con los puntos y las tiras; solo falta la línea azul de la ruta.
+  // Si OSRM falla (sin señal en la carretera o el servidor de rutas no
+  // responde), la línea azul NO desaparece: se dibuja recta del chofer al
+  // objetivo y el sondeo reintenta la ruta real cada ~15 s (v1.4.44).
   let rt = null;
   if(from){ try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; } }
-  if(rt){ liveRouteCoords = rt.coords; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
-  else { liveRouteCoords = null; /* sin ruta OSRM: no se dibuja línea recta */ }
+  if(rt){ liveRouteCoords = rt.coords; liveRouteFallback = false; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
+  else if(from){
+    // v1.4.44: respaldo — el 2026-11-23 el chofer yendo a recoger (viaje
+    // en camino, 203 m) no vio ninguna línea: OSRM falló y no había
+    // respaldo (la captura muestra la mototaxi y el pin "Recoge aquí"
+    // sin nada entre ellos). La recta usa el mismo azul y alimenta el
+    // encuadre y el tramo recorrido igual que la ruta real.
+    const fb = straightRouteCoords(from, target, liveRouteWaypoints(r, inTrip));
+    liveRouteCoords = fb; liveRouteFallback = true; liveOsrmRetryTick = 0;
+    setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
+  }
+  else { liveRouteCoords = null; liveRouteFallback = false; }
   if(liveAsDriver){
     // Punto de recogida (usuario, v1.4.15): camino a recoger, un PIN
     // compacto con la etiqueta "Recoge aquí" — la píldora verde enorme
@@ -2911,9 +2949,20 @@ function startLivePolling(){
           const h = (Math.atan2(r.driver_lng-prevLng, r.driver_lat-prevLat) * 180/Math.PI + 360) % 360;
           liveBearing = applyHeading(h);
         }
+        // v1.4.44: zoom de proximidad (como Uber) — solo en el mapa del
+        // chofer: cerca del punto final (recogida o destino) el mapa se
+        // acerca solo, suave y gradual. Solo sube el zoom, nunca lo baja,
+        // y solo con seguimiento activo: un gesto manual apaga el follow
+        // y con él el zoom (liveFollowOff).
+        let proxZoom = null;
+        if(liveAsDriver){
+          const tgt = liveHeadingToDest(r) ? { lat: r.dest_lat, lng: r.dest_lng } : { lat: r.origin_lat, lng: r.origin_lng };
+          proxZoom = liveTargetZoom(havKm(ll.lat, ll.lng, tgt.lat, tgt.lng) * 1000);
+        }
         if(liveFollow){
           const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
           if(liveBearing!=null) opts.bearing = liveBearing;
+          if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }
           liveMap.easeTo(opts);
         } else if(liveBearing!=null){
           liveMap.easeTo({ bearing: liveBearing, duration: 300 });
@@ -2926,6 +2975,25 @@ function startLivePolling(){
         }
       }
       if(r.trip_stage!==prevStage){ await renderLiveMap(); }
+      // v1.4.44: si la línea es recta (OSRM falló), reintentar la ruta
+      // real cada ~15 s (cada 3er tick) y cambiarla en cuanto responda.
+      if(liveRouteFallback && liveMap && liveReq && liveReq.id===r.id){
+        liveOsrmRetryTick = (liveOsrmRetryTick||0) + 1;
+        if(liveOsrmRetryTick >= 3){
+          liveOsrmRetryTick = 0;
+          const rr = liveReq, inT = liveHeadingToDest(rr);
+          const tgt = inT ? { lat: rr.dest_lat, lng: rr.dest_lng } : { lat: rr.origin_lat, lng: rr.origin_lng };
+          const frm = (rr.driver_lat && rr.driver_lng) ? { lat: rr.driver_lat, lng: rr.driver_lng } : null;
+          if(frm){
+            osrmRoute(frm, tgt, liveRouteWaypoints(rr, inT)).then(rt2=>{
+              if(rt2 && rt2.coords && liveReq && liveReq.id===rr.id && liveRouteFallback){
+                liveRouteCoords = rt2.coords; liveRouteFallback = false;
+                setRouteLine(liveMap, 'route', rt2.coords, '#2b7de9', 5);
+              }
+            }).catch(()=>{});
+          }
+        }
+      }
       renderLiveStrips();
     } catch(e){}
   }, 5000);
