@@ -32,6 +32,13 @@ async function api(path, body) {
   const on = await api('/api/set-driver-online', { driver_id: drv.driver.id, online: true });
   check('chofer con fotos en línea', on.ok && on.driver.online === 1);
 
+  // (v1.4.58) El chofer principal de la suite se suscribe: hace decenas de
+  // aceptas a lo largo de las secciones y el límite gratis es 5 servicios
+  // por día — sin suscripción se bloquearía a mitad de la suite (v1.4.38).
+  // El límite gratis se prueba aparte con drvLim/drvFree, choferes gratis.
+  const subDrvMain = await api('/api/subscribe-driver', { driver_id: drv.driver.id, plan: 'yearly' });
+  check('chofer principal suscrito (la suite lo usa para decenas de aceptas; el límite gratis se prueba con drvLim)', subDrvMain.ok && subDrvMain.driver.plan === 'suscripcion', JSON.stringify(subDrvMain));
+
   console.log('== Viaje: publicar, oferta, contraoferta, confirmar ==');
   const req = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('publicar viaje $25', req.ok && req.request.status === 'buscando', JSON.stringify(req));
@@ -352,7 +359,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.57 en /api/health', h.ok && h.version === '1.4.57', JSON.stringify(h));
+  check('versión 1.4.58 en /api/health', h.ok && h.version === '1.4.58', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +460,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.57', h134.ok && h134.version === '1.4.57', JSON.stringify(h134));
+  check('versión 1.4.58', h134.ok && h134.version === '1.4.58', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +622,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.57)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.57';") && h.version === '1.4.57', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.58)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.58';") && h.version === '1.4.58', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1001,7 +1008,7 @@ async function api(path, body) {
   // que saltan al banner, auto-avance cada 5 s que se pausa al tocar, tap
   // (sin arrastre) abre el negocio vinculado y el libre no hace nada.
   // Sin anuncios activos no se muestra nada (sin caja vacía).
-  check('carrusel Negocios: se alimenta de /api/ads filtrando por banner_image, auto-avance 5 s, tap abre el negocio vinculado y el libre no hace nada, sin anuncios no muestra nada (v1.4.16, v1.4.30: el banner es la imagen horizontal)', html.includes("async function renderBizAdsCarousel(){") && html.includes("api('/api/ads')") && html.includes("filter(a=>a.banner_image)") && html.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);") && html.includes("bizCarouselStop()") && html.includes('class="biz-carousel-dots"') && html.includes('data-biz="')); 
+  check('carrusel Negocios: se alimenta de /api/ads filtrando por banner_image, auto-avance 5 s, tap abre el menú del negocio vinculado (v1.4.58) y el libre no hace nada, sin anuncios no muestra nada (v1.4.16, v1.4.30: el banner es la imagen horizontal)', html.includes("async function renderBizAdsCarousel(wrapId){") && html.includes("api('/api/ads')") && html.includes("filter(a=>a.banner_image)") && html.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz, true);") && html.includes("bizCarouselStop()") && html.includes('class="biz-carousel-dots"') && html.includes('data-biz="')); 
   // El pie del anuncio se resuelve en el mismo payload (v1.4.12): el
   // servidor trae business_id/business_name ya resueltos en /api/entry-ad
   // (adWithBusiness), así que no hay carrera entre cargar anuncios y
@@ -1045,7 +1052,7 @@ async function api(path, body) {
   check('chofer gratis NO acepta contraoferta de $90 (tope $80+)', !acc80a.ok && /80/.test(acc80a.error || ''), JSON.stringify(acc80a));
   const acc80b = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rq80.request.id, offer_id: off80.offer.id, action: 'acepta' });
   check('respond-offer tampoco confirma la contraoferta de $90 (tope $80+)', !acc80b.ok && /80/.test(acc80b.error || ''), JSON.stringify(acc80b));
-  // (3b) Límite gratis de 50 servicios también al confirmar por respond-offer.
+  // (3b) Límite gratis de 5 servicios también al confirmar por respond-offer.
   const drvLim = await api('/api/register-driver', { name: 'Gratis Límite', phone: '9610000007', vehicle: 'mototaxi', unit: 'L-7', selfie: PHOTO, vehicle_photo: PHOTO });
   await approveDriver(drvLim.driver.id);
   await api('/api/set-driver-online', { driver_id: drvLim.driver.id, online: true });
@@ -1053,14 +1060,16 @@ async function api(path, body) {
     const rq = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price, payment_method: 'efectivo' });
     return api('/api/driver-respond', { driver_id: driverId, request_id: rq.request.id, kind: 'acepta', price });
   }
-  for (let i = 0; i < 49; i++) { const t = await tripFor(drvLim.driver.id, 25); if (!t.ok) throw new Error('trip límite ' + i + ': ' + JSON.stringify(t)); }
+  for (let i = 0; i < 4; i++) { const t = await tripFor(drvLim.driver.id, 25); if (!t.ok) throw new Error('trip límite ' + i + ': ' + JSON.stringify(t)); }
   const rqL = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
   const offL = await api('/api/driver-respond', { driver_id: drvLim.driver.id, request_id: rqL.request.id, kind: 'contraoferta', price: 35 });
-  check('con 49 servicios, la contraoferta $35 queda pendiente', offL.ok && offL.offer.status === 'pendiente', JSON.stringify(offL));
-  const t50 = await tripFor(drvLim.driver.id, 25);
-  check('servicio 50 gratis del día confirma', t50.ok && t50.request.status === 'aceptado', JSON.stringify(t50));
+  check('con 4 servicios, la contraoferta $35 queda pendiente', offL.ok && offL.offer.status === 'pendiente', JSON.stringify(offL));
+  const t5 = await tripFor(drvLim.driver.id, 25);
+  check('servicio 5 gratis del día confirma', t5.ok && t5.request.status === 'aceptado', JSON.stringify(t5));
   const accL = await api('/api/respond-offer', { passenger_id: pax.passenger.id, request_id: rqL.request.id, offer_id: offL.offer.id, action: 'acepta' });
-  check('con 50 servicios, respond-offer ya no confirma (límite gratis)', !accL.ok && /50 servicios gratis/.test(accL.error || ''), JSON.stringify(accL));
+  check('con 5 servicios, respond-offer ya no confirma (límite gratis)', !accL.ok && /5 servicios gratis/.test(accL.error || ''), JSON.stringify(accL));
+  const t6 = await tripFor(drvLim.driver.id, 25);
+  check('servicio 6 gratis del día rechazado por /api/driver-respond (límite gratis de 5)', !t6.ok && /5 servicios gratis/.test(t6.error || ''), JSON.stringify(t6));
   // (4) Precio sugerido de mandado suma $10 por parada extra.
   async function suggestedMandado(extraStops) {
     const r = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', extra_stops: extraStops });
@@ -1405,7 +1414,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.57 en /api/health (sección)', h27.ok && h27.version === '1.4.57', JSON.stringify(h27));
+  check('versión 1.4.58 en /api/health (sección)', h27.ok && h27.version === '1.4.58', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1450,7 +1459,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.57 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.57', JSON.stringify(h28));
+  check('versión 1.4.58 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.58', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1464,7 +1473,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.57 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.57', JSON.stringify(h29));
+  check('versión 1.4.58 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.58', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1473,7 +1482,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.57 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.57', JSON.stringify(h30));
+  check('versión 1.4.58 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.58', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1569,7 +1578,7 @@ async function api(path, body) {
   check('Subir anuncio: menú Libre y De un negocio (sin toggle de tipo)', adsSec.includes('Subir anuncio Libre') && adsSec.includes('Subir anuncio de un negocio') && !adsSec.includes('Anuncio libre</button>') && !adsSec.includes('De un negocio</button>'));
   check('Ver anuncios: activos y ocultos separados, con rótulo Flotante/Panel/Ambos y las dos imágenes', adsSec.includes('Anuncios activos') && adsSec.includes('Anuncios ocultos') && adsSec.includes("'Ambos'") && adsSec.includes("'Panel'") && adsSec.includes("'Flotante'") && adsSec.includes('Vertical · flotante') && adsSec.includes('Horizontal · panel'));
   check('formulario: ubicación flotante (vertical) o panel (horizontal)', adsSec.includes('¿Dónde se muestra?') && adsSec.includes('Anuncio flotante') && adsSec.includes('Anuncio en el panel') && adsSec.includes('Imagen vertical del anuncio') && adsSec.includes('Imagen horizontal del anuncio'));
-  const carSec = html.slice(html.indexOf('async function renderBizAdsCarousel(){'), html.indexOf('async function renderBizDetail(){'));
+  const carSec = html.slice(html.indexOf('async function renderBizAdsCarousel(wrapId){'), html.indexOf('async function renderBizDetail(){'));
   check('carrusel Negocios: solo anuncios con banner_image, y la foto es el banner', carSec.includes("filter(a=>a.banner_image)") && carSec.includes("<img src=\"'+a.banner_image+'\""));
   const paxSec = html.slice(html.indexOf('function renderPaxList(){'), html.indexOf('async function renderAdminPassengers(){'));
   check('pasajeros: buscador, seleccionar todos y barra Suspender/Bloquear/Eliminar/Reactivar', html.includes('Buscar por nombre') && paxSec.includes('Seleccionar todos') && paxSec.includes('Suspender') && paxSec.includes('Bloquear') && paxSec.includes('Eliminar') && paxSec.includes('Reactivar'));
@@ -2669,7 +2678,7 @@ async function api(path, body) {
       minForPax: (p)=>20 + 5*(Math.max(1,Math.min(3,Number(p)||1))-1),
       MIN_TRIP: 20,
       MANDADO_EXTRA_STOP: 10,
-      FREE_DAILY_LIMIT: 50,
+      FREE_DAILY_LIMIT: 5,
       mandadoDriverSummaryHtml: ()=> '',
       myDriver: { id: 777 },
       driverCounter: driverCounter || null,
@@ -2773,7 +2782,7 @@ async function api(path, body) {
   const rbm57 = html.slice(html.indexOf('async function renderBizMain(){'), html.indexOf('/* Carrusel de anuncios', html.indexOf('async function renderBizMain(){')));
   check('v1.4.57: buscador arriba (lupa + botón Buscar, filtra en el cliente al escribir)', rbm57.includes('id="biz-search-input"') && rbm57.includes('placeholder="Buscar negocios y productos') && rbm57.includes('>Buscar</button>') && rbm57.includes('oninput="bizSearch=this.value;renderBizFeed()"'));
   check('v1.4.57: atajos con icono con las 3 acciones (Crear/Administrar, Ver mi cita, Ver mi pedido)', rbm57.includes('class="biz-shortcut"') && rbm57.includes("mine.length?'Administrar':'Crear'") && rbm57.includes('>Ver mi cita</span>') && rbm57.includes('>Ver mi pedido</span>') && rbm57.includes("bizScreen=\\'my-appts\\';renderNegocios()") && rbm57.includes("bizScreen=\\'my-orders\\';renderNegocios()"));
-  check('v1.4.57: el carrusel de anuncios NO se tocó (misma función, banners 210px, auto-avance 5 s, tap vinculado abre el negocio)', html.includes('async function renderBizAdsCarousel(){') && html.includes("ads = (j.ads||[]).filter(a=>a.banner_image)") && html.includes('height:210px') && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz);"));
+  check('v1.4.57: el carrusel de anuncios NO se tocó salvo el tap (misma función, banners 210px, auto-avance 5 s; el tap vinculado abre el menú desde v1.4.58)', html.includes('async function renderBizAdsCarousel(wrapId){') && html.includes("ads = (j.ads||[]).filter(a=>a.banner_image)") && html.includes('height:210px') && html.includes('}, 5000);') && html.includes("if(slide && slide.dataset.biz) openBusiness(+slide.dataset.biz, true);"));
   check('v1.4.57: el feed mezclado existe (bizFeedItems + renderBizFeed + tarjetas chicas en cuadrícula de 2 columnas)', html.includes('function bizFeedItems(list, cat, q){') && html.includes('function renderBizFeed(){') && html.includes('function bizMiniBizCard(b){') && html.includes('function bizMiniItemCard(b, it){') && html.includes('class="biz-feed-grid"') && html.includes('grid-template-columns:1fr 1fr'));
   const miniBizSec57 = html.slice(html.indexOf('function bizMiniBizCard(b){'), html.indexOf('function bizMiniItemCard(b, it){'));
   check('v1.4.57: la tarjeta chica de negocio trae foto, nombre, categoría y ABIERTO/CERRADO (sin descripción ni botón grande)', miniBizSec57.includes("'<span class=\"chip\">'+esc(b.category)+'</span>'") && miniBizSec57.includes('ABIERTO') && !miniBizSec57.includes('bizTypeAction') && !miniBizSec57.includes('Ver productos'));
@@ -2892,6 +2901,155 @@ async function api(path, body) {
   const ads57 = await api('/api/ads');
   const ad57Live = (ads57.ads||[]).find(a=>a.id===(ad57.ad && ad57.ad.id));
   check('v1.4.57: en vivo, /api/ads devuelve el anuncio con la imagen grande intacta (lo que se sube es lo que se sirve)', !!ad57Live && ad57Live.image === bigImg57, JSON.stringify(ad57Live && { id: ad57Live.id, len: (ad57Live.image||'').length }));
+
+  // ===== v1.4.58 (2026-11-24): límites gratis 5/5; activación de
+  // suscripción de choferes y Premium de negocios por el admin; pago del
+  // plan por WhatsApp; inicio del chofer más bonito; carrusel de anuncios
+  // en el inicio del chofer; el anuncio vinculado abre el menú del
+  // negocio; suspender/eliminar negocios antiguos. =====
+  // (1) Límites gratis 5/5: el límite vivo de 5 servicios ya se comprobó
+  // en la sección (3b) (4 servicios + 5º confirma + 6º bloqueado con el
+  // mensaje '5 servicios gratis'); aquí lo estático, el taxímetro y el
+  // chofer suscrito.
+  check('v1.4.58: límite gratis de servicios = 5 en servidor y cliente', /FREE_DAILY_LIMIT = 5[,;]/.test(srv) && /FREE_DAILY_LIMIT = 5[,;]/.test(html));
+  check('v1.4.58: ningún texto visible del plan gratis dice todavía 50', !html.includes('50 servicios gratis') && !html.includes('de 50 servicios') && !html.includes('50 recorridos') && !srv.includes('50 servicios gratis') && !srv.includes('tus 50 servicios'));
+  check('v1.4.58: el taxímetro se bloquea con el mismo límite (taxiRunsToday() >= FREE_DAILY_LIMIT)', html.includes('taxiRunsToday() >= FREE_DAILY_LIMIT') && html.includes('taxiLimitHtml') && html.includes("Plan gratis · '+n+' de '+FREE_DAILY_LIMIT+' recorridos del taxímetro hoy"));
+  // Evaluado: la lógica real del taxímetro con localStorage falso (día
+  // America/Mexico_City): 0 → '0 de 5', 4 → sigue libre, 5 → '5 de 5' y
+  // bloqueado; un recorrido de ayer no cuenta.
+  let taxi58 = null, taxi58Ok = false;
+  try {
+    const taxiSec = html.slice(html.indexOf('const TAXI_HIST_KEY'), html.indexOf('let taxiLimitShown'));
+    const taxiFlM = html.match(/FREE_DAILY_LIMIT = (\d+)/); const taxiFl = taxiFlM ? 'const FREE_DAILY_LIMIT = ' + taxiFlM[1] + ';' : '';
+    const taxiStore = {};
+    const taxiLS = { getItem: k => (k in taxiStore ? taxiStore[k] : null), setItem: (k, v) => { taxiStore[k] = String(v); }, removeItem: k => { delete taxiStore[k]; } };
+    const taxiFn = new Function('localStorage', taxiFl + '\nlet myDriver = null;\n' + taxiSec + '\nreturn { runs: taxiRunsToday, html: taxiLimitHtml, blocked: ()=>taxiRunsToday() >= FREE_DAILY_LIMIT, save: taxiSaveHist };');
+    taxi58 = taxiFn(taxiLS);
+    const now58 = new Date();
+    const mkRun58 = msAgo => ({ endAt: new Date(now58.getTime() - msAgo).toISOString() });
+    const min = 1000 * 60;
+    taxi58.save([mkRun58(10 * min)]);
+    const r1 = taxi58.runs() === 1 && taxi58.html().includes('1 de 5 recorridos') && taxi58.blocked() === false;
+    taxi58.save([mkRun58(10 * min), mkRun58(20 * min), mkRun58(30 * min), mkRun58(40 * min)]);
+    const r4 = taxi58.runs() === 4 && taxi58.html().includes('4 de 5 recorridos') && taxi58.blocked() === false;
+    taxi58.save([mkRun58(10 * min), mkRun58(20 * min), mkRun58(30 * min), mkRun58(40 * min), mkRun58(50 * min)]);
+    const r5 = taxi58.runs() === 5 && taxi58.html().includes('5 de 5 recorridos') && taxi58.blocked() === true;
+    taxi58.save([mkRun58(10 * min), mkRun58(20 * min), mkRun58(30 * min), mkRun58(40 * min), mkRun58(50 * min), mkRun58(26 * 60 * min)]);
+    const rY = taxi58.runs() === 5; // el de ayer (26 h) no cuenta para hoy
+    taxi58Ok = r1 && r4 && r5 && rY;
+  } catch(e){ taxi58Ok = false; }
+  check('v1.4.58: evaluado — el taxímetro permite 5 recorridos y bloquea el 6º; el de ayer no cuenta', taxi58Ok);
+  // (2) Activación de suscripción por el admin (estático + en vivo).
+  const subSec = srv.slice(srv.indexOf("'/api/admin/set-subscription'"), srv.indexOf('// ---- Cuentas e inicio de sesión ----'));
+  check('v1.4.58: /api/admin/set-subscription existe, solo admin, y usa los planes con inicio y fin', subSec.includes("a.role !== 'admin'") && subSec.includes('SUB_PLANS[key]') && subSec.includes("plan='suscripcion'") && subSec.includes('subscription_start') && subSec.includes('subscription_until') && subSec.includes('Solo el administrador'));
+  const detSec = html.slice(html.indexOf('function renderAdminDetail'), html.indexOf('async function adminBlock'));
+  check('v1.4.58: el detalle del chofer en el panel tiene ACTIVAR SUSCRIPCIÓN con Semanal $50 / Mensual $150 / Anual $500', detSec.includes('ACTIVAR SUSCRIPCIÓN') && detSec.includes("adminSetSubscription('+d.id+', \\'weekly\\')") && detSec.includes("adminSetSubscription('+d.id+', \\'monthly\\')") && detSec.includes("adminSetSubscription('+d.id+', \\'yearly\\')") && detSec.includes('Semanal · $50 · 7 días') && detSec.includes('Mensual · $150 · 30 días') && detSec.includes('Anual · $500 · 365 días') && detSec.includes('subscription_start'));
+  const drv58 = await api('/api/register-driver', { name: 'Chofer 58 Sus', phone: '961580' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'S-58', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.58: en vivo, chofer de prueba registrado', drv58.ok && drv58.driver.id, JSON.stringify(drv58));
+  await approveDriver(drv58.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv58.driver.id, online: true });
+  const sub58w = await api('/api/admin/set-subscription', { token: admLogin.token, driver_id: drv58.driver.id, plan: 'weekly' });
+  check('v1.4.58: en vivo, el admin activa la suscripción semanal: plan suscripcion, inicio hoy y fin ~7 días', sub58w.ok && sub58w.driver.plan === 'suscripcion' && !!sub58w.driver.subscription_start && Math.abs((new Date(sub58w.driver.subscription_until) - Date.now()) / 864e5 - 7) < 0.5, JSON.stringify(sub58w));
+  const sub58No = await api('/api/admin/set-subscription', { token: acc57a.token, driver_id: drv58.driver.id, plan: 'monthly' });
+  check('v1.4.58: en vivo, una cuenta que no es admin NO puede activar suscripciones (403)', !sub58No.ok && /Solo el administrador/.test(sub58No.error || ''), JSON.stringify(sub58No));
+  const sub58m = await api('/api/admin/set-subscription', { token: admLogin.token, driver_id: drv58.driver.id, plan: 'monthly' });
+  check('v1.4.58: en vivo, activar de nuevo RENUEVA: mensual suma 30 días a la vigencia (fin ~37 días)', sub58m.ok && Math.abs((new Date(sub58m.driver.subscription_until) - Date.now()) / 864e5 - 37) < 0.5, JSON.stringify(sub58m));
+  const sub58y = await api('/api/admin/set-subscription', { token: admLogin.token, driver_id: drv58.driver.id, plan: 'yearly' });
+  check('v1.4.58: en vivo, anual suma 365 días (fin ~402 días)', sub58y.ok && Math.abs((new Date(sub58y.driver.subscription_until) - Date.now()) / 864e5 - 402) < 0.5, JSON.stringify(sub58y));
+  const sub58Bad = await api('/api/admin/set-subscription', { token: admLogin.token, driver_id: drv58.driver.id, plan: 'diario' });
+  check('v1.4.58: en vivo, plan inválido se rechaza (400)', !sub58Bad.ok && /Elige el plan/.test(sub58Bad.error || ''), JSON.stringify(sub58Bad));
+  let sub58Trips = true;
+  for (let i = 0; i < 6; i++) { const t = await tripFor(drv58.driver.id, 25); if (!t.ok) sub58Trips = false; }
+  check('v1.4.58: en vivo, el chofer suscrito confirma 6 servicios seguidos: el límite gratis de 5 NO le aplica', sub58Trips);
+  // (3) Premium de negocios desde el panel (estático + en vivo).
+  const bizReqSec = html.slice(html.indexOf('async function renderAdminBusinessRequests'), html.indexOf('async function adminApproveBusiness'));
+  check('v1.4.58: la lista de negocios activos del panel tiene Activar/Renovar Premium · $100/mes con fecha de vencimiento', bizReqSec.includes('adminActivateBizPremium') && bizReqSec.includes('Activar Premium · $100/mes') && bizReqSec.includes('Renovar Premium · $100/mes') && bizReqSec.includes("Premium · vence el '+new Date(b.premium_until)") && html.includes("'/api/subscribe-business'"));
+  const acc58b = await api('/api/register-account', { name: 'Biz 58P', username: 'biz58p_' + RUN, phone: '961581' + RUN.slice(0, 4), password: 'secreta123' });
+  const biz58p = await api('/api/request-business', { token: acc58b.token, name: 'Tienda 58P ' + RUN, type: 'entrega', whatsapp: '9610000058', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Premium 58' });
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz58p.business.id });
+  const pr58p = await api('/api/add-product', { token: acc58b.token, business_id: biz58p.business.id, name: 'Pizza 58P', price: 120 });
+  check('v1.4.58: en vivo, negocio de prueba (entrega) aprobado con 1 producto', biz58p.ok && pr58p.ok && pr58p.product.id, JSON.stringify([biz58p, pr58p]));
+  const prem58No = await api('/api/subscribe-business', { token: acc57a.token, business_id: biz58p.business.id });
+  check('v1.4.58: en vivo, una cuenta ajena NO puede activar el Premium (403)', !prem58No.ok && /Solo la dueña/.test(prem58No.error || ''), JSON.stringify(prem58No));
+  const prem58 = await api('/api/subscribe-business', { token: admLogin.token, business_id: biz58p.business.id });
+  check('v1.4.58: en vivo, el admin activa el Premium: is_premium y fin ~30 días', prem58.ok && prem58.business.is_premium && Math.abs((new Date(prem58.business.premium_until) - Date.now()) / 864e5 - 30) < 0.5, JSON.stringify(prem58));
+  const prem58b = await api('/api/subscribe-business', { token: admLogin.token, business_id: biz58p.business.id });
+  check('v1.4.58: en vivo, reactivar el Premium suma 30 días más (fin ~60 días)', prem58b.ok && Math.abs((new Date(prem58b.business.premium_until) - Date.now()) / 864e5 - 60) < 0.5, JSON.stringify(prem58b));
+  // (4) Pago del plan por WhatsApp (estático).
+  const planSec = html.slice(html.indexOf('function renderPlan'), html.indexOf('function subscribeMe'));
+  check('v1.4.58: el plan del chofer muestra los 3 planes con precios', planSec.includes('SUB_PLANS') && html.includes("desc:'$50 por semana · 7 días'") && html.includes("desc:'$150 por mes · 30 días'") && html.includes("desc:'$500 por año · 365 días'"));
+  check('v1.4.58: el enlace Pagar por transferencia abre WhatsApp al admin (wa.me/529614868605) con el mensaje que pide el número y lista planes y precios', html.includes('wa.me/529614868605') && html.includes('Hola, quiero pagar mi suscripción de SanFerGo. ¿Me pasas el número para transferir? Planes: Semanal $50, Mensual $150, Anual $500.') && (html.match(/driverPayWaLink\(\)/g) || []).length >= 2);
+  check('v1.4.58: ningún número de cuenta inventado en la pantalla del plan (sin dígitos largos; el mensaje solo PIDE el número)', !/\d{16,}/.test(planSec) && !planSec.includes('CLABE'));
+  // (5) Inicio del chofer más bonito + (6) carrusel de anuncios debajo del perfil (estático).
+  const dhSec = html.slice(html.indexOf('function renderDriverHome'), html.indexOf('function driverHomeExpand'));
+  check('v1.4.58: el inicio del chofer sigue con su aviso de viaje activo, su tarjeta de plan y sus 3 pestañas', dhSec.includes('driver-active-banner') && dhSec.includes('de-plan-sub') && dhSec.includes('de-trips-title') && dhSec.includes("driverHomeExpand(\\'plan\\')") && dhSec.includes("driverHomeExpand(\\'trips\\')") && dhSec.includes("driverHomeExpand(\\'hist\\')") && dhSec.includes("go(\\'taxihist\\')"));
+  check('v1.4.58: los botones del inicio del chofer son más grandes y con icono (chip .ic con 💳 🛺 🕘 🧾)', dhSec.includes('<span class="ic">💳</span>') && dhSec.includes('<span class="ic">🛺</span>') && dhSec.includes('<span class="ic">🕘</span>') && dhSec.includes('<span class="ic">🧾</span>') && html.includes('.driver-entry .ic{') && html.includes('border:2px solid var(--green)') && html.includes('border-radius:18px'));
+  check('v1.4.58: el carrusel de anuncios está en el inicio del chofer, DEBAJO del perfil (después de Editar mi perfil, antes de Mi plan y suscripción)', dhSec.indexOf('Editar mi perfil') > 0 && dhSec.indexOf('driver-ads-carousel') > dhSec.indexOf('Editar mi perfil') && dhSec.indexOf('driver-ads-carousel') < dhSec.indexOf("driverHomeExpand(\\'plan\\')") && dhSec.includes("renderBizAdsCarousel('driver-ads-carousel')"));
+  const car58Sec = html.slice(html.indexOf('async function renderBizAdsCarousel'), html.indexOf('async function renderBizDetail'));
+  check('v1.4.58: el carrusel es el mismo de Negocios (solo anuncios activos con banner_image, nada si no hay, 5 s, puntos, pausa al tocar)', car58Sec.includes('function renderBizAdsCarousel(wrapId)') && car58Sec.includes('.filter(a=>a.banner_image)') && car58Sec.includes("if(!ads.length){ wrap.innerHTML = ''; return; }") && car58Sec.includes('5000') && car58Sec.includes('biz-carousel-dots'));
+  // (7) El anuncio vinculado abre el menú del negocio (estático + evaluado).
+  check('v1.4.58: openBusiness(id, toMenu) y los 3 menús (entrega/catálogo/citas) tienen ancla #biz-menu', html.includes('function openBusiness(id, toMenu)') && html.includes('bizDetailMenu = !!toMenu') && (html.match(/id="biz-menu"/g) || []).length === 3 && html.includes('scrollBizMenu()'));
+  check('v1.4.58: el tap del anuncio vinculado (carrusel y flotante) abre el menú; el libre no hace nada', html.includes('openBusiness(+slide.dataset.biz, true)') && html.includes('openBusiness(businessId, true)') && html.includes('if(businessId) openBusiness(businessId, true)') && html.includes('if(slide && slide.dataset.biz)'));
+  let menu58Ok = false, menu58NoOk = false;
+  try {
+    const menuSec = html.slice(html.indexOf('let bizDetailMenu'), html.indexOf('async function renderBizAdsCarousel'));
+    const menuRun = new Function('document', menuSec + '\nbizDetailMenu=true; scrollBizMenu(); return bizDetailMenu;');
+    const holder58 = { scrolled: false };
+    const flag58 = menuRun({ getElementById: () => ({ scrollIntoView: () => { holder58.scrolled = true; } }) });
+    menu58Ok = flag58 === false && holder58.scrolled === true;
+    const menuRun2 = new Function('document', menuSec + '\nbizDetailMenu=false; scrollBizMenu(); return bizDetailMenu;');
+    const holder58b = { scrolled: false };
+    const flag58b = menuRun2({ getElementById: () => ({ scrollIntoView: () => { holder58b.scrolled = true; } }) });
+    menu58NoOk = flag58b === false && holder58b.scrolled === false;
+  } catch(e){ menu58Ok = false; menu58NoOk = false; }
+  check('v1.4.58: evaluado — abrir desde un anuncio baja al menú (#biz-menu) y resetea el flag', menu58Ok);
+  check('v1.4.58: evaluado — sin flag de anuncio no se hace scroll al menú', menu58NoOk);
+  // En vivo: el anuncio vinculado lleva a un negocio con menú (ficha con productos).
+  const ad58p = await api('/api/create-ad', { token: admLogin.token, kind: 'negocio', business_id: biz58p.business.id, label: 'Ad 58P ' + RUN, image: 'data:image/jpeg;base64,' + 'E'.repeat(100), entries: ['negocios'], slot: 'flotante' });
+  const ad58p2 = await api('/api/create-ad', { token: admLogin.token, kind: 'negocio', business_id: biz58p.business.id, label: 'Ad 58P ' + RUN, image: 'data:image/jpeg;base64,' + 'F'.repeat(100), entries: ['negocios'], slot: 'panel' });
+  const ads58p = await api('/api/ads');
+  const ad58pLive = (ads58p.ads || []).find(a => a.id === (ad58p.ad && ad58p.ad.id));
+  const biz58pMenu = await api('/api/business?id=' + biz58p.business.id);
+  check('v1.4.58: en vivo, el anuncio vinculado existe con banner y su negocio trae el menú (1 producto)', ad58p.ok && ad58p2.ok && ad58p2.ad.id === ad58p.ad.id && !!ad58pLive && ad58pLive.business_id === biz58p.business.id && !!ad58pLive.banner_image && biz58pMenu.ok && (biz58pMenu.business.products || []).length === 1, JSON.stringify({ ad: ad58pLive && { id: ad58pLive.id, biz: ad58pLive.business_id, banner: !!(ad58pLive.banner_image) }, menu: biz58pMenu.business && (biz58pMenu.business.products || []).length }));
+  // (8) Suspender / eliminar negocios antiguos (estático + en vivo).
+  const suspSec = srv.slice(srv.indexOf("'/api/admin/suspend-business'"), srv.indexOf("'/api/admin/delete-business'"));
+  const delSec = srv.slice(srv.indexOf("'/api/admin/delete-business'"), srv.indexOf('// Ficha del negocio'));
+  check('v1.4.58: /api/admin/suspend-business existe, solo admin, y alterna activo <-> suspendido', suspSec.includes("a.role !== 'admin'") && suspSec.includes("'suspendido'") && suspSec.includes("'activo'") && suspSec.includes('Solo el administrador'));
+  check('v1.4.58: /api/admin/delete-business existe, solo admin, y borra negocio + productos/servicios/pedidos/citas, dejando sus anuncios como libres', delSec.includes("a.role !== 'admin'") && delSec.includes('DELETE FROM business_products') && delSec.includes('DELETE FROM business_services') && delSec.includes('DELETE FROM business_appointments') && delSec.includes('DELETE FROM business_orders') && delSec.includes('UPDATE ads SET business_id=NULL') && delSec.includes('DELETE FROM businesses'));
+  check('v1.4.58: el panel tiene Suspender / Eliminar por negocio, sección de suspendidos con Reactivar y confirmación al eliminar', bizReqSec.includes('Suspender') && bizReqSec.includes('Eliminar') && bizReqSec.includes('Negocios suspendidos') && bizReqSec.includes('Reactivar') && bizReqSec.includes('adminDeleteBusiness') && html.includes("confirm('¿Eliminar"));
+  const sus58No = await api('/api/admin/suspend-business', { token: acc57a.token, business_id: biz58p.business.id });
+  check('v1.4.58: en vivo, una cuenta que no es admin NO puede suspender (403)', !sus58No.ok && /Solo el administrador/.test(sus58No.error || ''), JSON.stringify(sus58No));
+  const sus58 = await api('/api/admin/suspend-business', { token: admLogin.token, business_id: biz58p.business.id });
+  check('v1.4.58: en vivo, el admin suspende el negocio: status suspendido', sus58.ok && sus58.business.status === 'suspendido', JSON.stringify(sus58));
+  const list58s = await api('/api/businesses');
+  check('v1.4.58: en vivo, el negocio suspendido ya NO se ve en Negocios', !(list58s.businesses || []).some(b => b.id === biz58p.business.id), JSON.stringify((list58s.businesses || []).map(b => b.id)));
+  const one58s = await api('/api/business?id=' + biz58p.business.id);
+  check('v1.4.58: en vivo, la ficha del negocio suspendido da 404', !one58s.ok, JSON.stringify(one58s));
+  const adm58s = await api('/api/admin-businesses?token=' + admLogin.token);
+  const susRow58 = (adm58s.businesses || []).find(b => b.id === biz58p.business.id);
+  check('v1.4.58: en vivo, el negocio suspendido conserva sus datos (1 producto) y se puede reactivar', !!susRow58 && susRow58.status === 'suspendido' && (susRow58.products || []).length === 1, JSON.stringify(susRow58 && { status: susRow58.status, p: (susRow58.products || []).length }));
+  const rea58 = await api('/api/admin/suspend-business', { token: admLogin.token, business_id: biz58p.business.id });
+  const list58r = await api('/api/businesses');
+  check('v1.4.58: en vivo, reactivado vuelve a verse en Negocios', rea58.ok && rea58.business.status === 'activo' && (list58r.businesses || []).some(b => b.id === biz58p.business.id), JSON.stringify(rea58));
+  const acc58d = await api('/api/register-account', { name: 'Biz 58D', username: 'biz58d_' + RUN, phone: '961582' + RUN.slice(0, 4), password: 'secreta123' });
+  const biz58d = await api('/api/request-business', { token: acc58d.token, name: 'Tienda 58D ' + RUN, type: 'entrega', whatsapp: '9610000059', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Borrar 58' });
+  await api('/api/approve-business', { token: admLogin.token, business_id: biz58d.business.id });
+  await api('/api/add-product', { token: acc58d.token, business_id: biz58d.business.id, name: 'Pan 58D', price: 5 });
+  const ad58d = await api('/api/create-ad', { token: admLogin.token, kind: 'negocio', business_id: biz58d.business.id, label: 'Ad 58D ' + RUN, image: 'data:image/jpeg;base64,' + 'C'.repeat(100), banner_image: 'data:image/jpeg;base64,' + 'D'.repeat(100), entries: ['negocios'], slot: 'flotante' });
+  check('v1.4.58: en vivo, negocio a eliminar creado con 1 producto y 1 anuncio vinculado', biz58d.ok && ad58d.ok && ad58d.ad.id, JSON.stringify([biz58d, ad58d]));
+  const del58No = await api('/api/admin/delete-business', { token: acc57a.token, business_id: biz58d.business.id });
+  check('v1.4.58: en vivo, una cuenta que no es admin NO puede eliminar negocios (403)', !del58No.ok && /Solo el administrador/.test(del58No.error || ''), JSON.stringify(del58No));
+  const del58 = await api('/api/admin/delete-business', { token: admLogin.token, business_id: biz58d.business.id });
+  const list58d = await api('/api/businesses');
+  const adm58d = await api('/api/admin-businesses?token=' + admLogin.token);
+  const one58d = await api('/api/business?id=' + biz58d.business.id);
+  check('v1.4.58: en vivo, el admin elimina el negocio: ya no está en Negocios, ni en el panel, ni su ficha existe', del58.ok && !(list58d.businesses || []).some(b => b.id === biz58d.business.id) && !(adm58d.businesses || []).some(b => b.id === biz58d.business.id) && !one58d.ok, JSON.stringify(del58));
+  const ads58d = await api('/api/ads');
+  const ad58dLive = (ads58d.ads || []).find(a => a.id === (ad58d.ad && ad58d.ad.id));
+  check('v1.4.58: en vivo, el anuncio del negocio eliminado queda como libre (business_id en NULL), no se borra', !!ad58dLive && !ad58dLive.business_id, JSON.stringify(ad58dLive && { id: ad58dLive.id, biz: ad58dLive.business_id }));
+  const biz58r = await api('/api/request-business', { token: acc58d.token, name: 'Tienda 58R ' + RUN, type: 'catalogo', whatsapp: '9610000060', category: 'Comida', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Flujo intacto 58' });
+  const ap58r = await api('/api/approve-business', { token: admLogin.token, business_id: biz58r.business.id });
+  check('v1.4.58: en vivo, el flujo de solicitudes/aprobaciones sigue igual (pendiente → activo)', biz58r.ok && ap58r.ok && ap58r.business.status === 'activo', JSON.stringify([biz58r, ap58r]));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

@@ -1,9 +1,21 @@
-# SanFerGo — versión pública (v1.4.57)
+# SanFerGo — versión pública (v1.4.58)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.58 (2026-11-24) — Límites gratis 5/5; el admin activa suscripciones y Premium; pago del plan por WhatsApp; inicio del chofer más bonito con anuncios; el anuncio abre el menú; suspender/eliminar negocios
+
+- Límites gratis FINALES (decisión del usuario, 2026-11-24): 5 viajes gratis y 5 recorridos del taxímetro por día para los choferes gratis (antes 50, valor de pruebas). El chofer suscrito no tiene límite. El taxímetro cuenta por día en America/Mexico_City desde el localStorage del teléfono.
+- El admin activa suscripciones desde Administrar choferes: Semanal $50 (7 días), Mensual $150 (30 días), Anual $500 (365 días). Endpoint nuevo POST /api/admin/set-subscription (solo admin); guarda inicio y fin; activar de nuevo suma los días a la vigencia.
+- El admin activa el Premium de un negocio directo desde su tarjeta en Solicitudes de negocio ($100/mes, 30 días, reusa /api/subscribe-business): la tarjeta muestra ★ Premium · Verificado y la fecha de vencimiento; renovar suma 30 días.
+- Pago del plan por WhatsApp: en la pantalla del plan del chofer, botón "Pagar por transferencia" que abre wa.me/529614868605 con el mensaje listo pidiendo el número para transferir y listando los planes y precios. La CLABE, el banco y el titular siguen sin estar: el mensaje PIDE el número, no se inventa ninguno.
+- Inicio del chofer más bonito: botones más grandes y con icono (💳 plan, 🛺 viajes, 🕘 historial, 🧾 taxímetro), mismo estilo claro con verde. Sin cambios de comportamiento ni de navegación.
+- Anuncios en horizontal debajo del perfil del chofer: el mismo carrusel de Negocios (banners 210px, puntos, auto-avance 5 s con pausa al tocar, nada si no hay anuncios activos con banner).
+- El anuncio vinculado abre DIRECTO el menú del negocio (sus productos/servicios), en el carrusel de Negocios, en el anuncio flotante de entrada y en el nuevo carrusel del chofer. El libre sigue sin hacer nada al tocarlo.
+- Suspender/eliminar negocios antiguos (panel de administrador): Suspender oculta el negocio de Negocios pero conserva todos sus datos y se puede reactivar; Eliminar (con confirmación) borra negocio, productos, servicios, pedidos y citas, y sus anuncios quedan como libres. Endpoints nuevos POST /api/admin/suspend-business y POST /api/admin/delete-business (solo admin).
+- Pruebas: suite completa contra BD limpia: **927 OK, 0 FAIL** (881 de antes + 46 nuevas: 44 en la sección v1.4.58 — 18 estáticas, 3 evaluadas con el código real (taxímetro 5/5 y el scroll al menú) y 23 en vivo — y 2 de soporte del cambio de límite: la suscripción del chofer principal de la suite y el ajuste del límite gratis en (3b)). Tres checks viejos del carrusel se actualizaron al nuevo tap (abre el menú) y a la firma renderBizAdsCarousel(wrapId); el chofer principal de la suite ahora se suscribe al inicio para no toparse con el límite de 5 en las secciones viejas.
 
 ## v1.4.57 (2026-11-24) — Negocios como la tienda de TikTok Shop: una sola cuadrícula mezclada (negocio chico + sus productos)
 

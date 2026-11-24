@@ -48,7 +48,7 @@
 // las tarjetas, con padding medido desde el DOM; lo mismo en el viaje en
 // vivo. Antes v1.4.3: botón para borrar el historial del taxímetro — el
 // conteo diario se reinicia al borrarlo, solo local en el teléfono, y
-// límites gratis a 50/día PARA PRUEBAS: taxímetro y servicios
+// límites gratis a 5/día (valor final pre-lanzamiento, decisión del usuario 2026-11-24): taxímetro y servicios
 // (viajes/mandados). Antes v1.4.2: index.html y manifest sin caché —
 // los teléfonos siempre bajan la versión nueva tras cada despliegue.
 // Antes v1.4.1: taxímetro igual que la app real — tarjetas oscuras,
@@ -242,6 +242,7 @@ function addCol(table, col, def) {
   try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`); } catch (e) { /* ya existe */ }
 }
 addCol('drivers', 'is_blocked', 'INTEGER DEFAULT 0');
+addCol('drivers', 'subscription_start', 'TEXT');
 addCol('requests', 'price_improved', 'INTEGER DEFAULT 0');
 addCol('requests', 'previous_price', 'REAL');
 addCol('requests', 'republished_at', 'TEXT');
@@ -490,7 +491,7 @@ const LANDMARKS = [
 // recoge un poco más arriba. NO cambiar la tarifa sin su orden.
 const BASE_FARE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
 const MANDADO_EXTRA_STOP = 10;
-const FREE_DAILY_LIMIT = 50, PREMIUM_MIN_PRICE = 80;
+const FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 // Suscripción en tres planes (v1.3.0):
 // semanal $50/7 días, mensual $150/30 días, anual $500/365 días.
 // Los días se SUMAN a una suscripción activa.
@@ -733,7 +734,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.57' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.58' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -830,6 +831,27 @@ async function api(req, res, pathname) {
     const until = base.toISOString();
     db.prepare(`UPDATE drivers SET plan='suscripcion', subscription_until=? WHERE id=?`).run(until, driver_id);
     return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id)), price: p.price, days: p.days, plan: key });
+  }
+
+  // ---- Activar suscripción de un chofer desde el panel de administrador (v1.4.58) ----
+  // El flujo manual por transferencia: el chofer paga, avisa al admin y el
+  // admin activa aquí su plan (semanal $50/7 días, mensual $150/30 días,
+  // anual $500/365 días). Solo el admin. Activar de nuevo RENUEVA: los
+  // días se suman a la vigencia activa (igual que /api/subscribe-driver).
+  // Se guarda también subscription_start (el momento de la activación).
+  if (pathname === '/api/admin/set-subscription') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
+    if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
+    const key = String(body.plan || '');
+    const p = SUB_PLANS[key];
+    if (!p) return send(res, 400, { ok: false, error: 'Elige el plan: semanal ($50), mensual ($150) o anual ($500).' });
+    const base = driverHasSub(d) ? new Date(d.subscription_until) : new Date();
+    base.setDate(base.getDate() + p.days);
+    const start = new Date().toISOString();
+    db.prepare(`UPDATE drivers SET plan='suscripcion', subscription_start=?, subscription_until=? WHERE id=?`).run(start, base.toISOString(), d.id);
+    return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(d.id)), price: p.price, days: p.days, plan: key });
   }
 
   // ---- Cuentas e inicio de sesión ----
@@ -1275,6 +1297,36 @@ async function api(req, res, pathname) {
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (b.status === 'activo') return send(res, 400, { ok: false, error: 'Ese negocio ya está activo.' });
     db.prepare(`UPDATE businesses SET status='rechazado' WHERE id=?`).run(body.business_id);
+    return send(res, 200, { ok: true });
+  }
+  // ---- Suspender / eliminar un negocio existente (v1.4.58, solo admin) ----
+  // Suspender: el negocio deja de verse en Negocios (la lista pública solo
+  // trae status='activo') pero conserva TODOS sus datos y se puede
+  // reactivar con el mismo endpoint (activo <-> suspendido). Eliminar:
+  // borra el negocio con sus productos, servicios, pedidos y citas; sus
+  // anuncios vinculados quedan como libres (business_id en NULL) en vez
+  // de borrarse.
+  if (pathname === '/api/admin/suspend-business') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
+    if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
+    if (b.status !== 'activo' && b.status !== 'suspendido') return send(res, 400, { ok: false, error: 'Solo se puede suspender o reactivar un negocio activo.' });
+    const next = b.status === 'activo' ? 'suspendido' : 'activo';
+    db.prepare(`UPDATE businesses SET status=? WHERE id=?`).run(next, b.id);
+    return send(res, 200, { ok: true, business: publicBusiness(db.prepare('SELECT * FROM businesses WHERE id=?').get(b.id)) });
+  }
+  if (pathname === '/api/admin/delete-business') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
+    if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
+    db.prepare(`DELETE FROM business_products WHERE business_id=?`).run(b.id);
+    db.prepare(`DELETE FROM business_services WHERE business_id=?`).run(b.id);
+    db.prepare(`DELETE FROM business_appointments WHERE business_id=?`).run(b.id);
+    db.prepare(`DELETE FROM business_orders WHERE business_id=?`).run(b.id);
+    db.prepare(`UPDATE ads SET business_id=NULL WHERE business_id=?`).run(b.id);
+    db.prepare(`DELETE FROM businesses WHERE id=?`).run(b.id);
     return send(res, 200, { ok: true });
   }
   // Ficha del negocio (dueña o admin): nombre, qué vende, WhatsApp, foto y
