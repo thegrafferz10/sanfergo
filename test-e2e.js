@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.36 en /api/health', h.ok && h.version === '1.4.43', JSON.stringify(h));
+  check('versión 1.4.44 en /api/health', h.ok && h.version === '1.4.44', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.36', h134.ok && h134.version === '1.4.43', JSON.stringify(h134));
+  check('versión 1.4.44', h134.ok && h134.version === '1.4.44', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.36)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.43';") && h.version === '1.4.43', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.44)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.44';") && h.version === '1.4.44', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección)', h27.ok && h27.version === '1.4.43', JSON.stringify(h27));
+  check('versión 1.4.44 en /api/health (sección)', h27.ok && h27.version === '1.4.44', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.43', JSON.stringify(h28));
+  check('versión 1.4.44 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.44', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.43', JSON.stringify(h29));
+  check('versión 1.4.44 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.44', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.36 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.43', JSON.stringify(h30));
+  check('versión 1.4.44 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.44', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1764,6 +1764,52 @@ async function api(path, body) {
   const multiAcc = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: multi43.request.id, kind: 'acepta', price: 40 });
   const multiFin = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: multi43.request.id, stage: 'llego' });
   check('v1.4.43: el mandado de varios lados usa el mismo ciclo simplificado (acepta → afuera → en camino → entregado)', multiAcc.ok && multiAcc.request.trip_stage === 'en_camino' && multiFin.ok && multiFin.request.trip_stage === 'llego', JSON.stringify({ acc: multiAcc.request && multiAcc.request.trip_stage, llego: multiFin.request && multiFin.request.trip_stage }));
+
+  // --- v1.4.44: la línea azul SIEMPRE se ve en la recogida + zoom de proximidad ---
+  // Diagnóstico (captura del usuario 20:31): viaje en camino a recoger
+  // (203 m, "Recoge aquí") sin NINGUNA línea azul entre la mototaxi y el
+  // pin. El mapa en vivo se dibujó bien (mototaxi, pin, tarjetas) pero
+  // OSRM no devolvió ruta y el código decía explícitamente "sin ruta
+  // OSRM: no se dibuja línea recta" — no había respaldo. Además osrmRoute
+  // no tenía tiempo límite: si el servidor demo se colgaba, la llamada
+  // quedaba esperando para siempre.
+  const osrmSec = html.slice(html.indexOf('async function osrmRoute'), html.indexOf('/* Distancia estimada'));
+  check('v1.4.44: osrmRoute ya no se cuelga: tiempo límite de 8 s y chequeo de respuesta', osrmSec.includes('new AbortController()') && osrmSec.includes('setTimeout(()=>ctrl.abort(), 8000)') && osrmSec.includes('signal: ctrl.signal') && osrmSec.includes('if(!r.ok) return null'));
+  check('v1.4.44: sin OSRM hay línea recta de respaldo (chofer → objetivo, mismo azul) y se acabó el "no se dibuja línea recta"', html.includes('function straightRouteCoords(from, target, via){') && html.includes('straightRouteCoords(from, target, liveRouteWaypoints(r, inTrip))') && html.includes('liveRouteCoords = fb; liveRouteFallback = true;') && html.includes("setRouteLine(liveMap, 'route', fb, '#2b7de9', 5)") && !html.includes('sin ruta OSRM: no se dibuja línea recta'));
+  // En vivo (evaluando la función real): el tramo de recogida apunta al
+  // punto de recogida en viaje Y en mandado, y al destino cuando ya empezó.
+  const htdSrc = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+  const htd = eval('(' + htdSrc.replace('function liveHeadingToDest(r)', 'function(r)') + ')');
+  check('v1.4.44: en vivo, el tramo de recogida apunta a la RECOGIDA (viaje y mandado en camino) y al destino cuando ya empezó', htd({ kind: 'viaje', trip_stage: 'en_camino' }) === false && htd({ kind: 'mandado', trip_stage: 'en_camino' }) === false && htd({ kind: 'viaje', trip_stage: 'en_viaje' }) === true && htd({ kind: 'mandado', trip_stage: 'recogido' }) === true && htd({ kind: 'mandado', trip_stage: 'en_viaje' }) === true, JSON.stringify({ vCamino: htd({ kind: 'viaje', trip_stage: 'en_camino' }), mCamino: htd({ kind: 'mandado', trip_stage: 'en_camino' }), vViaje: htd({ kind: 'viaje', trip_stage: 'en_viaje' }) }));
+  check('v1.4.44: el mapa en vivo dibuja la ruta hacia el objetivo (recogida o destino) y la recta alimenta el encuadre completo', html.includes('const target = inTrip ? dest : pick;') && html.includes('osrmRoute(from, target, liveRouteWaypoints(r, inTrip))') && html.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())'));
+  // En vivo (evaluando la función real): la recta une chofer → objetivo
+  // pasando por las paradas, en [lng, lat] como OSRM.
+  const srcSrc = html.slice(html.indexOf('function straightRouteCoords(from, target, via){'), html.indexOf('/* Zoom de proximidad'));
+  const srcFn = eval('(' + srcSrc.replace('function straightRouteCoords(from, target, via)', 'function(from, target, via)') + ')');
+  const srcPts = srcFn({ lat: 16.87, lng: -93.21 }, { lat: 16.8675, lng: -93.2105 }, [{ lat: 16.869, lng: -93.208 }]);
+  check('v1.4.44: en vivo, la línea recta une chofer → parada → objetivo en orden y en [lng, lat]', Array.isArray(srcPts) && srcPts.length === 3 && srcPts[0][0] === -93.21 && srcPts[0][1] === 16.87 && srcPts[1][0] === -93.208 && srcPts[2][0] === -93.2105 && srcPts[2][1] === 16.8675, JSON.stringify(srcPts));
+  // El sondeo reintenta la ruta real cuando la línea es recta.
+  const pollSec = html.slice(html.indexOf('function startLivePolling(){'), html.indexOf('/* GPS del chofer'));
+  check('v1.4.44: el sondeo reintenta la ruta OSRM cada ~15 s mientras la línea sea recta y la cambia al responder', pollSec.includes('liveRouteFallback') && pollSec.includes('liveOsrmRetryTick >= 3') && pollSec.includes('osrmRoute(frm, tgt, liveRouteWaypoints(rr, inT))') && pollSec.includes('liveRouteCoords = rt2.coords; liveRouteFallback = false;'));
+  // En vivo (evaluando la función real): el zoom objetivo sube cuando la
+  // distancia baja, y lejos no toca el encuadre de la ruta completa.
+  const tzSrc = html.slice(html.indexOf('function liveTargetZoom(distM){'), html.indexOf('function nextStage(r){'));
+  const tzFn = eval('(' + tzSrc.replace('function liveTargetZoom(distM)', 'function(distM)') + ')');
+  check('v1.4.44: en vivo, el zoom objetivo aumenta al acercarse (lejos no toca nada, cerca 16 → 17 → 18)', tzFn(1500) === null && tzFn(1001) === null && tzFn(1000) === 16 && tzFn(800) === 16 && tzFn(501) === 16 && tzFn(500) === 17 && tzFn(300) === 17 && tzFn(201) === 17 && tzFn(200) === 18 && tzFn(100) === 18 && tzFn(203) === 17, JSON.stringify({ lejos: tzFn(1500), mil: tzFn(1000), ocho: tzFn(800), tres: tzFn(300), doscientos3: tzFn(203), cien: tzFn(100) }));
+  check('v1.4.44: el zoom de proximidad solo vive con seguimiento activo y solo en el mapa del chofer (un gesto manual lo apaga con el follow)', pollSec.indexOf('if(liveFollow){') < pollSec.indexOf('opts.zoom = proxZoom') && pollSec.indexOf('opts.zoom = proxZoom') < pollSec.indexOf("} else if(liveBearing!=null){") && pollSec.includes('liveTargetZoom(havKm(ll.lat, ll.lng, tgt.lat, tgt.lng) * 1000)') && pollSec.includes('if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }') && pollSec.includes('if(liveAsDriver){'));
+  // En vivo: el estado del tramo de recogida existe para viaje y mandado
+  // (aceptado en camino + ubicación del chofer compartida: de ahí sale la
+  // línea chofer → recogida).
+  const pkV = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pkV.request.id, kind: 'acepta', price: 20 });
+  await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: pkV.request.id, lat: 16.8727, lng: -93.2081 });
+  const pkVRow = (await api('/api/requests?id=' + pkV.request.id)).requests[0];
+  check('v1.4.44: en vivo, el viaje aceptado está en camino a recoger con la ubicación del chofer (la línea chofer → recogida tiene de dónde salir)', pkV.ok && pkVRow && pkVRow.trip_stage === 'en_camino' && pkVRow.driver_lat === 16.8727 && pkVRow.driver_lng === -93.2081, JSON.stringify(pkVRow && { stage: pkVRow.trip_stage, lat: pkVRow.driver_lat, lng: pkVRow.driver_lng }));
+  const pkM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pkM.request.id, kind: 'acepta', price: 20 });
+  await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: pkM.request.id, lat: 16.8685, lng: -93.2095 });
+  const pkMRow = (await api('/api/requests?id=' + pkM.request.id)).requests[0];
+  check('v1.4.44: en vivo, el mandado aceptado está en camino a recoger con la ubicación del chofer (misma línea chofer → recogida)', pkM.ok && pkMRow && pkMRow.trip_stage === 'en_camino' && pkMRow.driver_lat === 16.8685 && pkMRow.driver_lng === -93.2095, JSON.stringify(pkMRow && { stage: pkMRow.trip_stage, lat: pkMRow.driver_lat, lng: pkMRow.driver_lng }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.4.43)
+# SanFerGo — versión pública (v1.4.44)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.44 (2026-11-23) — La línea azul SIEMPRE se ve en la recogida + zoom de proximidad
+
+- **Diagnóstico de la línea ausente (captura del usuario 20:31):** viaje en camino a recoger (203 m, pin "Recoge aquí") sin NINGUNA línea azul entre la mototaxi y el pin. El mapa en vivo se dibujó bien (mototaxi, pin, tarjetas) pero `osrmRoute` no devolvió ruta y el código decía explícitamente "sin ruta OSRM: no se dibuja línea recta" — no había respaldo. Además `osrmRoute` no tenía tiempo límite: si el servidor demo de OSRM se colgaba o respondía 429 en el móvil, la llamada quedaba esperando para siempre. El tramo de recogida en sí estaba bien dirigido (`liveHeadingToDest` devuelve falso en `en_camino` en viaje y mandado, así que el objetivo ya era el punto de recogida): lo que faltaba era el respaldo cuando OSRM falla.
+- **La línea azul ya nunca falta:** `osrmRoute` ahora tiene tiempo límite de 8 s (AbortController) y chequeo de respuesta (`!r.ok` → null). Si OSRM no responde, `renderLiveMap` dibuja una línea recta del chofer al objetivo (recogida o destino, pasando por las paradas) con el mismo azul `#2b7de9` (`straightRouteCoords()`), que alimenta el encuadre completo y el tramo recorrido igual que la ruta real. El sondeo reintenta la ruta OSRM real cada ~15 s (cada 3er tick) mientras la línea sea recta y la cambia en cuanto responde.
+- **Zoom de proximidad (como Uber):** en el mapa del viaje en curso del chofer, al acercarse al punto final (recogida o destino) el mapa va haciendo zoom solo, suave y gradual: `liveTargetZoom(distM)` devuelve null lejos (>1 km, manda el encuadre de la ruta completa de v1.4.43), 16 entre 500 m y 1 km, 17 entre 200 y 500 m y 18 a menos de 200 m (a 203 m, como en la captura del usuario, el zoom es 17). Solo sube el zoom, nunca lo baja, y solo con seguimiento activo: va en el mismo `easeTo` del seguimiento (centro + giro + zoom en una sola llamada, 800 ms), así que no pelea con la rotación; un gesto manual del usuario (mover o zoom con la mano) apaga el follow y con él el zoom, igual que antes. Aplica en el tramo de recogida y en el de entrega, en viajes y en mandados (el objetivo lo decide `liveHeadingToDest`).
+- Sin tocar: el flujo de publicar, las tarifas, los precios, el flujo simplificado de v1.4.43 ni el encuadre de la ruta completa.
+- Pruebas: suite completa contra BD limpia: **585 OK, 0 FAIL** (575 de antes + 10 nuevas en la sección v1.4.44 — 8 estáticas/evaluadas: tiempo límite de `osrmRoute`, línea recta de respaldo, tramo de recogida apunta a la recogida en viaje y mandado (evaluando la función real), ruta al objetivo + encuadre, recta chofer → parada → objetivo en orden (evaluando la función real), reintento OSRM del sondeo, zoom objetivo que sube al acercarse (evaluando la función real), zoom solo con seguimiento activo y solo en el mapa del chofer — y 2 en vivo: viaje y mandado aceptados en camino a recoger con la ubicación del chofer compartida. Las 7 checks de versión que decían 1.4.36 en el nombre y comparaban con 1.4.43 se actualizaron a 1.4.44).
 
 ## v1.4.43 (2026-11-23) — Flujo del chofer simplificado y pantalla en vivo despejada
 
