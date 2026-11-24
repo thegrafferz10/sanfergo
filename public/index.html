@@ -318,6 +318,16 @@ input[type=file]{padding:8px}
 #inbox-detail-overlay .reqwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}
 #inbox-detail-overlay .reqfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
 #inbox-detail-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
+/* Deslizar a la izquierda en Recibir Viajes (v1.4.54): cada fila de la
+   bandeja del chofer se puede arrastrar a la izquierda y aparece la X
+   roja a la derecha para quitarla de SU bandeja (la solicitud sigue
+   abierta para los demás choferes). El aviso naranja de "Rechazado"
+   se descarta igual. */
+.swipe-wrap{position:relative;overflow:hidden;border-radius:16px;margin-top:12px}
+.swipe-wrap .card{margin-top:0}
+.swipe-x{position:absolute;top:0;right:0;bottom:0;width:76px;border:0;background:#ef4444;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.swipe-inner{position:relative;z-index:1;transition:transform .18s ease;touch-action:pan-y;will-change:transform}
+.swipe-wrap.revealed .swipe-inner{transform:translateX(-76px)}
 /* Resumen del viaje al final como flotante (v1.4.45, petición del
    usuario: el recibo no le gusta como hoja — debe aparecer flotante
    igual que el anuncio, para el chofer y para el pasajero): misma
@@ -407,6 +417,10 @@ input[type=file]{padding:8px}
 .radio-card.sel{border-color:var(--green);background:#e8f5ee}
 .radio-card b{font-size:16px}
 .radio-card .muted{margin-top:4px}
+/* Palomita verde en la tarjeta elegida (v1.4.54): la categoría del negocio
+   se elige con botones bonitos como los del tipo, en rejilla de 2 columnas. */
+.radio-card .cat-check{display:none;float:right;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:14px;font-weight:800;line-height:22px;text-align:center}
+.radio-card.sel .cat-check{display:inline-block}
 .cat-pill{display:inline-block;padding:8px 14px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:14px;font-weight:700;margin:4px 4px 0 0}
 .cat-pill.sel{background:#14532d;color:#fff;border-color:#14532d}
 .map-ctl{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:65;display:flex;flex-direction:column;gap:10px}
@@ -529,7 +543,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.53'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.54'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4560,7 +4574,70 @@ async function renderDriverInbox(){
   // loadDriverInbox(false) y no toca la pantalla si nada cambió.
   await loadDriverInbox(true);
 }
+// Gesto de deslizar a la izquierda en la bandeja del chofer (v1.4.54):
+// arrastrar una fila revela la X roja a la derecha para quitarla de SU
+// bandeja. Un toque normal (sin arrastre) sigue abriendo el detalle
+// como antes; el arrastre no abre nada.
+let swipeDrag = null, swipeDragged = false;
+function swipeDown(e){
+  swipeDragged = false;
+  const el = e.currentTarget;
+  const wrap = el.closest('.swipe-wrap');
+  const base = (wrap && wrap.classList.contains('revealed')) ? -76 : 0;
+  if(base) wrap.classList.remove('revealed');
+  swipeDrag = { x0: e.clientX, base, t: base, el };
+  el.style.transition = 'none';
+  if(base) el.style.transform = 'translateX(-76px)';
+  try { el.setPointerCapture(e.pointerId); } catch(err){}
+}
+function swipeMove(e){
+  if(!swipeDrag) return;
+  const t = Math.min(0, Math.max(-76, swipeDrag.base + (e.clientX - swipeDrag.x0)));
+  swipeDrag.t = t;
+  swipeDrag.el.style.transform = t ? 'translateX(' + t + 'px)' : '';
+  if(Math.abs(e.clientX - swipeDrag.x0) > 10) swipeDragged = true;
+}
+function swipeUp(e){
+  if(!swipeDrag) return;
+  const el = swipeDrag.el, t = swipeDrag.t;
+  el.style.transition = '';
+  el.style.transform = '';
+  const wrap = el.closest('.swipe-wrap');
+  if(wrap) wrap.classList.toggle('revealed', t < -36);
+  swipeDrag = null;
+}
+function swipeCancel(e){
+  if(!swipeDrag) return;
+  const el = swipeDrag.el, base = swipeDrag.base;
+  el.style.transition = '';
+  el.style.transform = '';
+  const wrap = el.closest('.swipe-wrap');
+  if(wrap) wrap.classList.toggle('revealed', base < -36);
+  swipeDrag = null;
+}
+async function dismissInboxRow(rid, ev){
+  // (v1.4.54) La X quita la solicitud de ESTA bandeja y nada más: el
+  // servidor la anota en driver_dismissed y la lista ya no la trae para
+  // este chofer (ni tras refrescar); la solicitud sigue buscando para
+  // los demás choferes. Si el detalle de esa solicitud estaba abierto,
+  // se cierra. Si no hay conexión, la fila se queda (el descarte no se
+  // hizo) y se avisa.
+  if(ev) ev.stopPropagation();
+  try {
+    await api('/api/dismiss-request', { driver_id: myDriver.id, request_id: rid });
+  } catch(e){ toast(e.message); return; }
+  inboxLastList = (inboxLastList||[]).filter(r=>r.id!==rid);
+  if(inboxExpandedId===rid){ inboxExpandedId = null; inboxOvSig = ''; const ov = document.getElementById('inbox-detail-overlay'); if(ov) ov.remove(); }
+  const node = document.querySelector('.swipe-wrap[data-rid="'+rid+'"]');
+  if(node) node.remove();
+  inboxSig = '';
+  updateDriverBadge(inboxLastList.length);
+  loadDriverInbox(false);
+}
 function inboxToggle(rid){
+  // (v1.4.54) Si el toque fue en realidad un arrastre (deslizar la fila
+  // para revelar la X), no se abre el detalle.
+  if(swipeDragged){ swipeDragged = false; return; }
   // Tocar una solicitud compacta abre su detalle como FLOTANTE (v1.4.41,
   // como el anuncio de entrada: tarjeta flotante con X arriba) o lo
   // cierra si ya estaba abierto. La apertura es al instante con los datos
@@ -4604,7 +4681,9 @@ async function loadDriverInbox(force){
     // abrir el detalle (inboxToggle).
     const [mj, j] = await Promise.all([
       api('/api/requests?driver_id='+myDriver.id+'&light=1'),
-      api('/api/requests?open=1&light=1')
+      // (v1.4.54) dismissed_for quita de esta lista las solicitudes que
+      // este chofer descartó con la X (deslizar a la izquierda).
+      api('/api/requests?open=1&light=1&dismissed_for='+myDriver.id)
     ]);
     const myList = mj.requests||[];
     const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
@@ -4678,6 +4757,14 @@ async function loadDriverInbox(force){
     html += list.map(r=>{
       const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
       const counter = mine && mine.passenger_counter_price;
+      // (v1.4.54) Si el pasajero rechazó la oferta de este chofer, la
+      // fila lleva el aviso NARANJA "Rechazado": ya no se puede
+      // responder esa solicitud (el servidor la da por contestada) y el
+      // chofer solo la puede quitar con la X. Si el pasajero
+      // contraofertó y el chofer rechazó ESA contraoferta, el aviso dice
+      // que fue él quien la rechazó.
+      const rejected = mine && mine.status==='rechazada';
+      const rejectedTxt = rejected ? (counter ? 'Rechazaste su contraoferta de '+fmt$(counter) : 'El pasajero rechazó tu oferta de '+fmt$(mine.price)) : '';
       // Fila compacta (v1.4.37): solo tipo, de → a y precio. Al tocarla el
       // detalle ya NO se abre en línea dentro de la lista: se abre como
       // FLOTANTE (v1.4.41), con la X arriba para cerrarlo, como el
@@ -4696,7 +4783,14 @@ async function loadDriverInbox(force){
       if(r.distance_km!=null && r.eta_minutes!=null) rowMeta.push(r.distance_km+' km · ~'+r.eta_minutes+' min');
       if(r.payment_method) rowMeta.push('Pago: '+esc(r.payment_method));
       if(r.kind==='viaje') rowMeta.push(paxText(r.passenger_count));
-      return '<div class="card white">'
+      // (v1.4.54) Deslizar a la izquierda: la fila se arrastra y aparece
+      // la X roja a la derecha para quitarla de ESTA bandeja (la
+      // solicitud sigue abierta para los demás choferes). El gesto no
+      // rediseña la fila: la tarjeta compacta queda igual, solo envuelta
+      // en .swipe-wrap/.swipe-inner.
+      return '<div class="swipe-wrap" data-rid="'+r.id+'">'
+      + '<button class="swipe-x" aria-label="Quitar de mi bandeja" onclick="dismissInboxRow('+r.id+', event)">✕</button>'
+      + '<div class="card white swipe-inner" onpointerdown="swipeDown(event)" onpointermove="swipeMove(event)" onpointerup="swipeUp(event)" onpointercancel="swipeCancel(event)">'
       + '<div style="cursor:pointer" onclick="inboxToggle('+r.id+')">'
       + '<div class="flex" style="align-items:center;gap:8px">'
       + '<span class="chip '+(r.kind==='viaje'?'blue':'amber')+'">'+(r.kind==='viaje'?'Viaje':'Mandado')+'</span>'
@@ -4712,8 +4806,9 @@ async function loadDriverInbox(force){
       + '<div style="margin-top:6px"><b><span style="white-space:nowrap">'+esc(r._refO)+'</span> → <span style="white-space:nowrap">'+esc(r._refD)+'</span></b></div>'
       + (rowMeta.length?'<div class="muted" style="margin-top:4px;font-size:12px">'+rowMeta.join(' · ')+'</div>':'')
       + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
-      + (counter?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
-      + '</div></div>';
+      + (counter && !rejected?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
+      + (rejected?'<div style="margin-top:6px;background:#ffedd5;color:#9a3412;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Rechazado · '+esc(rejectedTxt)+'</div>':'')
+      + '</div></div></div>';
     }).join('');
     p.innerHTML = html;
     loadInboxPhotos(list);
@@ -4776,7 +4871,16 @@ function inboxDetailHtml(r, sub, atLimit){
   + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
   + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
   + mandadoDriverSummaryHtml(r);
-  if(counter){
+  // (v1.4.54) Oferta rechazada: el aviso NARANJA dice qué se rechazó.
+  // Si el pasajero rechazó la oferta del chofer, eso dice; si el chofer
+  // rechazó la contraoferta del pasajero, eso dice. En ambos casos ya
+  // no se puede responder esa solicitud, así que no se muestran los
+  // botones de la contraoferta (estarían muertos: el servidor la da por
+  // contestada).
+  const rejectedD = mine && mine.status==='rechazada';
+  if(rejectedD){
+    h += '<div class="card" style="background:#ffedd5;border:1px solid #f97316"><b>'+(counter ? 'Rechazaste su contraoferta de '+fmt$(counter)+'.' : 'Rechazado: el pasajero rechazó tu oferta de '+fmt$(mine.price)+'.')+'</b><p class="muted mt">Esta solicitud sigue abierta para otros choferes. Puedes quitarla de tu bandeja deslizando la fila a la izquierda.</p></div>';
+  } else if(counter){
     h += '<div class="card" style="background:#fef3c7"><b>El pasajero te contraofertó '+fmt$(counter)+' (tu precio: '+fmt$(mine.price)+').</b>'
       + '<p class="muted mt">Si aceptas su precio, el servicio queda confirmado en el acto y pasa a «En curso». Si lo rechazas, tu oferta anterior sigue como estaba.</p>'
       + '<div class="btnrow"><button class="btn" onclick="driverAcceptCounter('+r.id+', '+mine.id+', '+counter+')">Aceptar '+fmt$(counter)+' y empezar</button>'
@@ -5476,7 +5580,7 @@ async function renderAdminStores(){
    servicios ilimitados, pedidos y citas ilimitados, estadísticas,
    publicidad gratis. Topes gratis: 10 productos, 10 servicios,
    30 pedidos/citas al mes. */
-let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCart = {}, bizPhoto = null, bizFromAdmin = false, bizStep = 0;
+let bizScreen = 'main', bizCurrent = null, bizCreateType = 'entrega', bizCategory = 'Panadería', bizCart = {}, bizPhoto = null, bizFromAdmin = false, bizStep = 0;
 let bizOrderShow = false, bizBookId = null, bizOrderDone = null;
 function bizTypeLabel(t){ return t==='entrega' ? 'Pedir a domicilio' : t==='catalogo' ? 'Catálogo y contacto' : 'Reservar cita'; }
 let bizCatFilter = 'Todas';
@@ -5832,8 +5936,15 @@ function renderBizCreateForm(){
   const page = $('#negocios-page');
   bizPhoto = null;
   bizStep = 0;
+  bizCategory = 'Panadería';
   const typeCard = (t, icon, title, desc) => '<button type="button" id="nb-type-'+t+'" class="radio-card'+(bizCreateType===t?' sel':'')+'" onclick="setBizType(\''+t+'\')">'
     + '<span style="font-size:26px">'+icon+'</span><span><b>'+title+'</b><span class="muted">'+desc+'</span></span></button>';
+  // (v1.4.54) La categoría ya no es un menú desplegable: son botones
+  // bonitos como los del tipo, en rejilla de 2 columnas, con palomita
+  // verde en la elegida. El valor vive en #nb-cat (oculto) para que
+  // submitBusiness lo lea igual que antes.
+  const BIZ_CAT_META = {'Panadería':['🍞','Pan y repostería'],'Comida':['🍽️','Restaurantes y antojitos'],'Tienda / Abarrotes':['🛒','Tienda y abarrotes'],'Uñas':['💅','Manicura y pedicura'],'Pestañas':['👁️','Pestañas y cejas'],'Peluquería / Barbería':['💈','Cortes y barbería'],'Farmacia':['💊','Medicinas y farmacia'],'Otro':['✨','Otro tipo de negocio']};
+  const catCard = (c) => { const m = BIZ_CAT_META[c] || ['✨','']; return '<button type="button" id="nb-cat-'+esc(c)+'" class="radio-card'+(bizCategory===c?' sel':'')+'" style="margin-top:0" onclick="setBizCat(\''+esc(c)+'\')"><span class="cat-check">✓</span><span style="font-size:26px">'+m[0]+'</span><span><b>'+esc(c)+'</b><span class="muted">'+m[1]+'</span></span></button>'; };
   page.innerHTML = backPill('Regresar', "bizScreen='main';renderNegocios()")
     + '<h2>Crear un negocio</h2>'
     + '<p class="muted mt">Primero dinos de qué tipo es tu negocio: de eso depende cómo te ven los clientes y qué vas a administrar en la app.</p>'
@@ -5845,28 +5956,37 @@ function renderBizCreateForm(){
     + typeCard('entrega','🚚','Vendo productos y quiero entrega a domicilio','Tus productos se venden dentro de la app, con foto y precio. El cliente pide aquí y un mototaxi de SanFerGo lo lleva a su casa.')
     + typeCard('catalogo','📖','Solo quiero mostrar mi catálogo','Tus productos y servicios se ven dentro de la app, con foto y precio. El cliente te contacta con el botón de WhatsApp o de llamada.')
     + typeCard('citas','📅','Trabajo con citas','Para uñas, pestañas, peluquería y servicios por hora: tus servicios se ven aquí con precio y duración, y el cliente reserva su cita en la app.')
-    + '<label class="mt">Nombre del negocio</label><input id="nb-name" placeholder="Ej. Tacos El Buen Sabor">'
-    + '<label class="mt">Categoría</label><select id="nb-cat">'+BIZ_CATEGORIES.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select>'
     + '<button class="btn" onclick="nbNext(0)">Siguiente</button>'
     + '</div>'
+    // (v1.4.54) Nombre y categoría viven en su propio paso (antes iban
+    // en el paso 1 con el tipo): el nombre sigue siendo un campo de
+    // texto y la categoría son botones bonitos en rejilla de 2 columnas.
     + '<div id="nb-step1" class="hidden">'
-    + '<label class="mt">¿Qué vende o qué hace tu negocio?</label><input id="nb-desc" placeholder="Ej. Tacos de pastor y de bistec, quesadillas y aguas frescas.">'
-    + '<label class="mt">WhatsApp del negocio</label><input id="nb-wa" placeholder="Ej. 961 000 0000" inputmode="tel">'
+    + '<label class="mt">Nombre del negocio</label><input id="nb-name" placeholder="Ej. Tacos El Buen Sabor">'
+    + '<label class="mt">Categoría</label>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+BIZ_CATEGORIES.map(c=>catCard(c)).join('')+'</div>'
+    + '<input type="hidden" id="nb-cat" value="Panadería">'
     + '<button class="btn" onclick="nbNext(1)">Siguiente</button>'
     + '<button class="btn ghost" onclick="showBizStep(0)">Regresar</button>'
     + '</div>'
     + '<div id="nb-step2" class="hidden">'
-    + '<label class="mt">¿En qué colonia está tu negocio?</label><select id="nb-colony"><option value="">Elige una colonia…</option>'+bizZoneOptions('')+'</select>'
-    + '<label class="mt">Horario</label><input id="nb-schedule" placeholder="Ej. Lunes a sábado, 9 AM a 7 PM">'
-    + '<div id="nb-fee-wrap"'+(bizCreateType==='entrega'?'':' class="hidden"')+'><label class="mt">Costo del envío a domicilio (lo paga el cliente al mototaxista)</label><input id="nb-fee" type="number" min="20" step="5" value="20" inputmode="numeric"><p class="muted mt">De $20 en adelante, de cinco en cinco. El dinero de tus productos es tuyo; el envío es para el mototaxista.</p></div>'
+    + '<label class="mt">¿Qué vende o qué hace tu negocio?</label><input id="nb-desc" placeholder="Ej. Tacos de pastor y de bistec, quesadillas y aguas frescas.">'
+    + '<label class="mt">WhatsApp del negocio</label><input id="nb-wa" placeholder="Ej. 961 000 0000" inputmode="tel">'
     + '<button class="btn" onclick="nbNext(2)">Siguiente</button>'
     + '<button class="btn ghost" onclick="showBizStep(1)">Regresar</button>'
     + '</div>'
-    + '<div id="nb-step3" class="hidden">' 
+    + '<div id="nb-step3" class="hidden">'
+    + '<label class="mt">¿En qué colonia está tu negocio?</label><select id="nb-colony"><option value="">Elige una colonia…</option>'+bizZoneOptions('')+'</select>'
+    + '<label class="mt">Horario</label><input id="nb-schedule" placeholder="Ej. Lunes a sábado, 9 AM a 7 PM">'
+    + '<div id="nb-fee-wrap"'+(bizCreateType==='entrega'?'':' class="hidden"')+'><label class="mt">Costo del envío a domicilio (lo paga el cliente al mototaxista)</label><input id="nb-fee" type="number" min="20" step="5" value="20" inputmode="numeric"><p class="muted mt">De $20 en adelante, de cinco en cinco. El dinero de tus productos es tuyo; el envío es para el mototaxista.</p></div>'
+    + '<button class="btn" onclick="nbNext(3)">Siguiente</button>'
+    + '<button class="btn ghost" onclick="showBizStep(2)">Regresar</button>'
+    + '</div>'
+    + '<div id="nb-step4" class="hidden">' 
     + '<div class="photobox"><b>Foto de tu negocio o de tu producto</b><div id="nb-prev"></div>'
     + '<input type="file" accept="image/*" onchange="fileToPhoto(this, d=>{bizPhoto=d; document.getElementById(\'nb-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
     + '<button class="btn" onclick="submitBusiness()">Enviar la solicitud de mi negocio</button>'
-    + '<button class="btn ghost" onclick="showBizStep(2)">Regresar</button>'
+    + '<button class="btn ghost" onclick="showBizStep(3)">Regresar</button>'
     + '</div>';
   showBizStep(0);
   // Puerta de la versión gratis: con 1 negocio y sin premium/admin, el
@@ -5888,8 +6008,8 @@ function renderBizCreateForm(){
 }
 function showBizStep(n){
   bizStep = n;
-  for(let i=0;i<4;i++){ const el = document.getElementById('nb-step'+i); if(el) el.classList.toggle('hidden', i!==n); }
-  const ind = document.getElementById('nb-steps-ind'); if(ind) ind.innerHTML = wizSteps(n, 4);
+  for(let i=0;i<5;i++){ const el = document.getElementById('nb-step'+i); if(el) el.classList.toggle('hidden', i!==n); }
+  const ind = document.getElementById('nb-steps-ind'); if(ind) ind.innerHTML = wizSteps(n, 5);
 }
 function nbNext(step){
   if(!validateBizStep(step)) return;
@@ -5897,21 +6017,40 @@ function nbNext(step){
 }
 function validateBizStep(step){
   if(step===0){
-    const name = ($('#nb-name').value||'').trim();
-    if(name.length < 2) return toast('Escribe el nombre de tu negocio.'), false;
+    // El tipo siempre tiene uno elegido (por defecto entrega).
+    return true;
   }
   if(step===1){
+    // (v1.4.54) Nombre y categoría viven en su propio paso: los dos son
+    // obligatorios para avanzar.
+    const name = ($('#nb-name').value||'').trim();
+    const cat = ($('#nb-cat').value||'').trim();
+    if(name.length < 2) return toast('Escribe el nombre de tu negocio.'), false;
+    if(!cat) return toast('Elige la categoría de tu negocio.'), false;
+  }
+  if(step===2){
     const sells = ($('#nb-desc').value||'').trim();
     const wa = ($('#nb-wa').value||'').replace(/\D/g,'');
     if(sells.length < 3) return toast('Cuéntanos qué vende o qué hace tu negocio.'), false;
     if(wa.length < 10) return toast('Escribe tu WhatsApp completo a 10 dígitos.'), false;
   }
-  if(step===2 && bizCreateType==='entrega'){
+  if(step===3 && bizCreateType==='entrega'){
     const feeEl = document.getElementById('nb-fee');
     const fee = feeEl ? parseInt(feeEl.value, 10) : 20;
     if(isNaN(fee) || fee < 20 || fee % 5 !== 0) return toast('El costo del envío va de $20 en adelante, de cinco en cinco.'), false;
   }
   return true;
+}
+function setBizCat(c){
+  // (v1.4.54) La categoría se elige con botones bonitos: marca la tarjeta
+  // elegida y guarda el valor en #nb-cat para que submitBusiness lo lea
+  // igual que antes (el envío al servidor no cambia).
+  bizCategory = c;
+  const hid = document.getElementById('nb-cat'); if(hid) hid.value = c;
+  BIZ_CATEGORIES.forEach(x=>{
+    const b = document.getElementById('nb-cat-'+x);
+    if(b) b.classList.toggle('sel', x===c);
+  });
 }
 function setBizType(t){
   bizCreateType = t;
