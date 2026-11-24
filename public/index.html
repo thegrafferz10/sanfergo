@@ -311,6 +311,26 @@ input[type=file]{padding:8px}
 #inbox-detail-overlay .reqwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}
 #inbox-detail-overlay .reqfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
 #inbox-detail-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
+/* Resumen del viaje al final como flotante (v1.4.45, petición del
+   usuario: el recibo no le gusta como hoja — debe aparecer flotante
+   igual que el anuncio, para el chofer y para el pasajero): misma
+   geometría que el anuncio de entrada — fondo oscuro 60%, tarjeta
+   centrada pegada arriba (pt 7dvh), ancho mín. 92vw y máx. 340 px,
+   radio 24 px, X de 48×48 arriba a la derecha. La X vive en el
+   envoltorio (no en la tarjeta con scroll) para que siga visible
+   aunque se baje en el contenido. */
+#trip-summary-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}
+#trip-summary-overlay .sumwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}
+#trip-summary-overlay .sumfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
+#trip-summary-overlay .sumfloat h2{padding-right:56px}
+#trip-summary-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
+#trip-summary-overlay .summinimap{height:180px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
+#trip-summary-overlay .sumthanks{color:var(--green);font-weight:800;font-size:15px;margin-top:4px}
+#trip-summary-overlay .sumcash{color:#92400e;background:#fef3c7;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;margin-top:8px}
+/* Aviso "Sin internet" en el viaje en curso (v1.4.45): el mapa sigue con
+   el GPS local aunque se caiga la red; este aviso chico lo dice en vez
+   de congelar la pantalla. */
+#live-offline{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 118px);z-index:60;background:#b45309;color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 /* Carrusel de anuncios en Negocios (v1.4.16, petición del usuario: como
    el inicio de la app de la captura: banners horizontales arriba y las
    tarjetas de negocios abajo, sin tocarlas). Las imágenes de los anuncios
@@ -479,6 +499,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
     <div class="map" id="live-map"></div>
     <div class="strip top" id="live-top"></div>
     <div class="livepill hidden" id="live-pill"></div>
+    <div class="hidden" id="live-offline">📶 Sin internet — el mapa sigue con tu GPS</div>
     <button class="recenter hidden" id="live-recenter" onclick="liveRecenter()">◎ Centrar en tu mototaxi</button>
     <button class="compassbtn hidden" id="live-compass" onclick="liveResetNorth()">🧭</button>
     <div class="strip bottom" id="live-bottom"></div>
@@ -500,7 +521,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.44'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.45'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2486,6 +2507,10 @@ async function showReceipt(requestId){
 
 /* ===== VIAJE EN CURSO — un solo mapa claro a pantalla completa ===== */
 let liveMap = null, liveMarkers = {}, liveReq = null, liveAsDriver = false;
+/* Estado sin internet (v1.4.45): el mapa del viaje en curso ya no depende
+   de la red — el GPS local lo mueve, la cola guarda las posiciones y el
+   avance pendiente se reintenta al volver la conexión. */
+let liveOffline = false, liveLocQueue = [], livePendingAdvance = null, livePollBusy = false, liveGpsPos = null, liveLastStripAt = 0;
 let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false, liveRouteFallback = false, liveOsrmRetryTick = 0;
 let liveDriverMarker = null, liveTraveledPts = [];
 const STAGE_LABEL = { confirmado:'Confirmado', en_camino:'En camino', llego:'Llegó', en_viaje:'En viaje', finalizado:'Finalizado',
@@ -2584,7 +2609,8 @@ function goLive(requestId, asDriver){
   currentView = 'live';
   openLiveTrip(requestId, asDriver);
 }
-async function openLiveTrip(requestId, asDriver){
+async function openLiveTrip(requestId, asDriver, tries){
+  tries = tries||0;
   liveAsDriver = !!asDriver;
   try {
     // v1.4.42: pedir UNA solicitud por su id, no toda la lista (2.5 MB con
@@ -2595,7 +2621,12 @@ async function openLiveTrip(requestId, asDriver){
     const j = await api('/api/requests?id='+requestId);
     liveReq = (j.requests||[])[0] || null;
     if(!liveReq){ toast('No se encontró el viaje.'); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } else go('viajes'); return; }
-  } catch(e){ toast(e.message); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } return; }
+  } catch(e){
+    // v1.4.45: si se abre el viaje sin internet, reintentar dos veces
+    // antes de volver (el viaje ya existe; no es que no haya viaje).
+    if(liveIsNetError(e) && tries < 2){ await new Promise(r=>setTimeout(r, 2000)); return openLiveTrip(requestId, asDriver, tries+1); }
+    toast(e.message); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } return;
+  }
   liveFollow = true; liveHeading = null; liveRouteCoords = null; liveRouteFallback = false; liveOsrmRetryTick = 0; liveTraveledPts = [];
   acquireWakeLock();
   if(!liveMap){
@@ -2851,6 +2882,10 @@ async function changePayLive(ev, rid, current){
 function exitLive(){
   releaseWakeLock();
   if(livePoll) { clearInterval(livePoll); livePoll = null; }
+  stopDriverGpsWatch();
+  livePendingAdvance = null;
+  liveLocQueue = [];
+  liveSetOffline(false);
   if(liveAsDriver) go('chofer'); else go('viajes');
 }
 async function advanceLive(stage){
@@ -2866,7 +2901,18 @@ async function advanceLive(stage){
     if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); showTripSummary(liveReq, true); return; }
     await renderLiveMap();
     renderLiveStrips();
-  } catch(e){ toast(e.message); }
+  } catch(e){
+    // v1.4.45: sin internet el avance NO se pierde — se guarda pendiente
+    // y se reintenta solo cuando vuelve la conexión (sondeo o evento
+    // online). El servidor lo acepta idempotente, así que reintentarlo
+    // no duplica el avance. Solo se reintentan los errores de red; un
+    // rechazo del servidor ("Ese paso no sigue") se muestra y ya.
+    if(liveIsNetError(e)){
+      livePendingAdvance = stage;
+      liveSetOffline(true);
+      toast('Sin internet — el avance se enviará cuando vuelva la conexión.');
+    } else toast(e.message);
+  }
   finally { liveAdvancing = false; }
 }
 function driverPasteLocation(rid){ driverPasteLocationInline(rid); }
@@ -2886,7 +2932,19 @@ function driverPasteSend(rid){
   }).then(j=>{ liveReq = j.request; renderLiveMap(); renderLiveStrips(); toast('Punto de entrega actualizado.'); })
   .catch(e=>toast(e.message));
 }
+let summaryMiniMap = null;
+function summaryCashNote(r){
+  // Nota de cambio SOLO en efectivo (v1.4.45): por transferencia no sale.
+  return (r.payment_method||'efectivo')==='efectivo' ? 'Recuerda pagar con cambio al conductor' : '';
+}
 function showTripSummary(r, asDriver){
+  // v1.4.45: el resumen ya NO es hoja de diálogo — es flotante como el
+  // anuncio de entrada (misma geometría, X de 48×48 arriba que cierra al
+  // instante), para el chofer y para el pasajero, en viajes y en
+  // mandados. El sondeo del pasajero llama esto en cada tick mientras el
+  // viaje está finalizado: si el flotante ya está abierto, no se
+  // reconstruye (si no, la X no serviría y el mini mapa parpadearía).
+  if(document.getElementById('trip-summary-overlay')) return;
   const dur = (r.trip_started_at && r.finished_at)
     ? Math.round((new Date(r.finished_at.replace(' ','T')+'Z') - new Date(r.trip_started_at.replace(' ','T')+'Z'))/60000)
     : null;
@@ -2899,7 +2957,16 @@ function showTripSummary(r, asDriver){
     + 'Pago: '+(r.payment_method||'efectivo')+'\nTotal: '+fmt$(r.final_price||r.price)+'\nSan Fernando, Chiapas';
   const title = asDriver ? 'Resumen del viaje' : '¡Viaje terminado!';
   window.__receiptTxt = txt; window.__receiptName = 'recibo-sanfergo-'+r.id+'.txt';
-  openDialog('<h2>'+title+'</h2>'
+  const thanks = asDriver
+    ? '<div class="sumthanks">Gracias por concluir el viaje</div>'
+    : '<div class="sumthanks">Tu viaje ha concluido. Gracias por usar SanFerGo.</div>'
+      + (summaryCashNote(r) ? '<div class="sumcash">'+summaryCashNote(r)+'</div>' : '');
+  const minimap = (asDriver && r.origin_lat!=null && r.dest_lat!=null)
+    ? '<div class="summinimap" id="sum-minimap"></div>' : '';
+  const ov = document.createElement('div');
+  ov.id = 'trip-summary-overlay';
+  ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
+    + '<div class="sumfloat"><h2>'+title+'</h2>' + thanks + minimap
     + '<div class="card white"><div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
     + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
     + '<div class="kv"><span>Fecha</span><b>'+fmtDateTime(r.finished_at||r.created_at)+'</b></div>'
@@ -2910,16 +2977,148 @@ function showTripSummary(r, asDriver){
     + (asDriver ? '<div class="kv"><span>Pasajero</span><b>'+esc(r.passenger_name||'—')+' · '+esc(r.passenger_phone||'')+'</b></div>' : '<div class="kv"><span>Chofer</span><b>'+esc(r.driver_name||'—')+' · '+esc(r.driver_unit||'—')+'</b></div>')
     + '</div>'
     + '<button class="btn" onclick="downloadReceipt()">Generar recibo</button>'
-    + '<button class="btn ghost" onclick="closeDialog();exitLive()">'+(asDriver ? 'Cerrar y volver a recibir viajes' : 'Cerrar')+'</button>');
+    + '<button class="btn ghost" onclick="closeTripSummary()">'+(asDriver ? 'Cerrar y volver a recibir viajes' : 'Cerrar')+'</button></div></div>';
+  ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
+  document.body.appendChild(ov);
+  if(asDriver && r.origin_lat!=null && r.dest_lat!=null) drawSummaryMiniMap(r);
 }
+function closeTripSummary(){
+  // La X cierra AL INSTANTE, como la del anuncio de entrada: se borra el
+  // flotante del DOM antes que cualquier llamada de red y se vuelve a
+  // donde toca (chofer → Recibir Viajes, pasajero → inicio de Viajes).
+  const ov = document.getElementById('trip-summary-overlay');
+  if(ov) ov.remove();
+  if(summaryMiniMap){ try { summaryMiniMap.remove(); } catch(e){} summaryMiniMap = null; }
+  exitLive();
+}
+function drawSummaryMiniMap(r){
+  // Mini mapa SOLO en el resumen del chofer (v1.4.45): los dos puntos del
+  // viaje (recogida verde, destino rojo) con la línea azul de la ruta
+  // entre ellos. Misma receta que el mapa del detalle (drawWizMap): ruta
+  // OSRM y, si no responde, la recta de respaldo que no necesita internet.
+  const el = document.getElementById('sum-minimap');
+  if(!el) return;
+  if(summaryMiniMap){ try { summaryMiniMap.remove(); } catch(e){} summaryMiniMap = null; }
+  summaryMiniMap = makeMap('sum-minimap', false);
+  summaryMiniMap.on('load', async ()=>{
+    const o = { lat: r.origin_lat, lng: r.origin_lng }, d = { lat: r.dest_lat, lng: r.dest_lng };
+    new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([o.lng, o.lat]).addTo(summaryMiniMap);
+    new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([d.lng, d.lat]).addTo(summaryMiniMap);
+    let rt = null; try { rt = await osrmRoute(o, d); } catch(e){}
+    if(rt && rt.coords) setRouteLine(summaryMiniMap, 'route', rt.coords, '#2b7de9', 5);
+    else setRouteLine(summaryMiniMap, 'route', straightRouteCoords(o, d, []), '#2b7de9', 5);
+    fitPoints(summaryMiniMap, [[o.lng, o.lat], [d.lng, d.lat]], 30);
+  });
+  setTimeout(()=>{ if(summaryMiniMap) summaryMiniMap.resize(); }, 100);
+}
+/* ===== VIAJE EN CURSO SIN INTERNET (v1.4.45) =====
+   Diagnóstico (reporte del usuario 2026-11-23 20:46): con el teléfono sin
+   internet el mapa se congeló — él esperaba que por lo menos el GPS
+   siguiera moviendo su posición y la ruta. Causa: la posición de la
+   mototaxi en el mapa solo se movía desde el sondeo al servidor (cada 5 s
+   baja /api/requests?id= y mueve el marcador); el GPS del teléfono
+   (startDriverGpsWatch) SOLO mandaba la posición al servidor y al fallar
+   el envío la lectura se tiraba (.catch(()=>{})) sin dibujarse nunca en
+   local. Sin internet el fetch fallaba, el catch tragaba el error en
+   silencio y nada se movía: ni marcador, ni línea, ni distancia, ni
+   texto — y sin ningún aviso. El arreglo desacopla el render del GPS de
+   la red: el mapa se dibuja desde el GPS local con el último estado
+   conocido del viaje, aunque los fetches fallen. */
+function liveIsNetError(e){
+  // Detecta error de red (no rechazo del servidor): solo estos se
+  // reintentan. Un "Ese paso no sigue" NO es de red y no se reintenta.
+  // El chequeo de navigator es defensivo para poder evaluarla en Node.
+  const m = String((e && e.message) || e || '');
+  return (typeof navigator !== 'undefined' && navigator.onLine === false) || /tardó demasiado|Failed to fetch|NetworkError|Network request failed|Load failed|no hay conexión|sin conexión/i.test(m);
+}
+function liveSetOffline(off){
+  // Aviso chico "Sin internet": no congela nada, solo avisa. El mapa
+  // sigue con el GPS local y los reportes se encolan.
+  liveOffline = !!off;
+  const el = document.getElementById('live-offline');
+  if(el) el.classList.toggle('hidden', !liveOffline);
+}
+async function liveFlushLocQueue(){
+  // Envía la cola de posiciones al recuperar internet: en orden, sin
+  // atascarse en la primera que falle (la que falle vuelve a la cola).
+  if(!liveLocQueue.length || !myDriver || !liveReq) return;
+  const q = liveLocQueue.splice(0, liveLocQueue.length);
+  for(const p of q){
+    try { await api('/api/update-driver-location', { driver_id: myDriver.id, request_id: liveReq.id, lat: p.lat, lng: p.lng }); }
+    catch(e){ liveLocQueue.push(p); break; }
+  }
+}
+function liveApplyDriverPos(lat, lng, prevLat, prevLng){
+  // Dibuja la posición del chofer desde el GPS LOCAL: la comparten el
+  // sondeo (posición del servidor) y el watch del GPS (la lectura del
+  // teléfono). Sin internet el watch sigue moviendo la mototaxi, la
+  // línea, la distancia y el texto — el mapa ya no depende de que el
+  // fetch al servidor responda. El rumbo sale del movimiento (igual que
+  // antes) y el zoom de proximidad (v1.4.44) sigue en el mismo easeTo.
+  if(!liveReq || !liveMap) return;
+  if(prevLat==null){ prevLat = liveReq.driver_lat; prevLng = liveReq.driver_lng; }
+  liveReq.driver_lat = lat; liveReq.driver_lng = lng;
+  if(!liveDriverMarker) return;
+  const ll = { lng, lat };
+  liveDriverMarker.setLngLat([ll.lng, ll.lat]);
+  let liveBearing = null;
+  if(prevLat!=null && (Math.abs(lat-prevLat)>0.00002 || Math.abs(lng-prevLng)>0.00002)){
+    const h = (Math.atan2(lng-prevLng, lat-prevLat) * 180/Math.PI + 360) % 360;
+    liveBearing = applyHeading(h);
+  }
+  let proxZoom = null;
+  if(liveAsDriver){
+    const tgt = liveHeadingToDest(liveReq) ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
+    proxZoom = liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000);
+  }
+  if(liveFollow){
+    const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
+    if(liveBearing!=null) opts.bearing = liveBearing;
+    if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }
+    liveMap.easeTo(opts);
+  } else if(liveBearing!=null){
+    liveMap.easeTo({ bearing: liveBearing, duration: 300 });
+  }
+  // La línea de respaldo es recta desde la posición actual: se redibuja
+  // con cada lectura del GPS (no necesita internet). Con ruta OSRM real
+  // la línea no se mueve, pero el tramo recorrido sí.
+  if(liveRouteFallback && liveRouteCoords && liveRouteCoords.length){
+    const inT = liveHeadingToDest(liveReq);
+    const tgt = inT ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
+    const fb = straightRouteCoords({ lat, lng }, tgt, liveRouteWaypoints(liveReq, inT));
+    liveRouteCoords = fb;
+    setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
+  }
+  if(liveRouteCoords && liveRouteCoords.length){
+    let best=0, bd=1e9;
+    liveRouteCoords.forEach((c,i)=>{ const d = havKm(c[1],c[0],lat,lng); if(d<bd){bd=d;best=i;} });
+    setRouteLine(liveMap, 'traveled', smoothTrack(liveRouteCoords.slice(0, best+1)), '#7fb5f5', 5);
+  }
+  // Las tiras (distancia y texto) se repintan como mucho cada 2 s: el GPS
+  // llega ~1 vez por segundo y repintar el botón en cada lectura podría
+  // comerse el toque del chofer en "Ya estoy afuera" / "Entregado".
+  const nowStrip = Date.now();
+  if(nowStrip - liveLastStripAt >= 2000){ liveLastStripAt = nowStrip; renderLiveStrips(); }
+}
+window.addEventListener('online', ()=>{
+  // Al volver la conexión: vaciar la cola de posiciones y reintentar el
+  // avance pendiente (v1.4.45). Solo si se está en un viaje en curso.
+  if(currentView!=='live' || !liveReq) return;
+  liveSetOffline(false);
+  liveFlushLocQueue();
+  if(livePendingAdvance){ const st = livePendingAdvance; livePendingAdvance = null; advanceLive(st); }
+});
+window.addEventListener('offline', ()=>{ if(currentView==='live') liveSetOffline(true); });
 function startLivePolling(){
   if(livePoll) clearInterval(livePoll);
   livePoll = setInterval(async ()=>{
     if(currentView!=='live' || !liveReq) { clearInterval(livePoll); livePoll=null; return; }
+    if(livePollBusy) return; livePollBusy = true;
     try {
       const j = await api('/api/requests?id='+liveReq.id);
       const r = (j.requests||[])[0];
       if(!r) return;
+      liveSetOffline(false);
       const prevStage = liveReq.trip_stage, prevLat = liveReq.driver_lat, prevLng = liveReq.driver_lng;
       liveReq = r;
       if(r.status==='finalizado'){
@@ -2938,40 +3137,14 @@ function startLivePolling(){
       if(r.trip_stage==='en_viaje' && prevStage!=='en_viaje' && !liveAsDriver && r.kind==='viaje'){
         fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó y el viaje empieza.' });
       }
-      if(r.driver_lat && liveDriverMarker){
-        const ll = { lng: r.driver_lng, lat: r.driver_lat };
-        liveDriverMarker.setLngLat([ll.lng, ll.lat]);
-        // heading-up: rumbo desde el movimiento; UN SOLO easeTo por tick
-        // (centro + giro juntos en liveFollow, giro solo si no hay
-        // seguimiento): el giro separado lo cancelaba el centrado.
-        let liveBearing = null;
-        if(prevLat!=null && (Math.abs(r.driver_lat-prevLat)>0.00002 || Math.abs(r.driver_lng-prevLng)>0.00002)){
-          const h = (Math.atan2(r.driver_lng-prevLng, r.driver_lat-prevLat) * 180/Math.PI + 360) % 360;
-          liveBearing = applyHeading(h);
-        }
-        // v1.4.44: zoom de proximidad (como Uber) — solo en el mapa del
-        // chofer: cerca del punto final (recogida o destino) el mapa se
-        // acerca solo, suave y gradual. Solo sube el zoom, nunca lo baja,
-        // y solo con seguimiento activo: un gesto manual apaga el follow
-        // y con él el zoom (liveFollowOff).
-        let proxZoom = null;
-        if(liveAsDriver){
-          const tgt = liveHeadingToDest(r) ? { lat: r.dest_lat, lng: r.dest_lng } : { lat: r.origin_lat, lng: r.origin_lng };
-          proxZoom = liveTargetZoom(havKm(ll.lat, ll.lng, tgt.lat, tgt.lng) * 1000);
-        }
-        if(liveFollow){
-          const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
-          if(liveBearing!=null) opts.bearing = liveBearing;
-          if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }
-          liveMap.easeTo(opts);
-        } else if(liveBearing!=null){
-          liveMap.easeTo({ bearing: liveBearing, duration: 300 });
-        }
-        if(liveRouteCoords && liveRouteCoords.length){
-          // tramo recorrido en azul claro
-          let best=0, bd=1e9;
-          liveRouteCoords.forEach((c,i)=>{ const d = havKm(c[1],c[0],ll.lat,ll.lng); if(d<bd){bd=d;best=i;} });
-          setRouteLine(liveMap, 'traveled', smoothTrack(liveRouteCoords.slice(0, best+1)), '#7fb5f5', 5);
+      if(r.driver_lat){
+        // El GPS local es más fresco que el eco del servidor: si hay una
+        // lectura local reciente, no mover la mototaxi atrás con la
+        // posición vieja que trae el servidor (v1.4.45).
+        if(liveAsDriver && liveGpsPos && (Date.now()-liveGpsPos.t < 30000)){
+          liveReq.driver_lat = liveGpsPos.lat; liveReq.driver_lng = liveGpsPos.lng;
+        } else {
+          liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng);
         }
       }
       if(r.trip_stage!==prevStage){ await renderLiveMap(); }
@@ -2995,7 +3168,16 @@ function startLivePolling(){
         }
       }
       renderLiveStrips();
-    } catch(e){}
+      // Al recuperar internet: vaciar la cola de posiciones y reintentar
+      // el avance que se quedó pendiente sin conexión (v1.4.45).
+      liveFlushLocQueue();
+      if(livePendingAdvance){ const st = livePendingAdvance; livePendingAdvance = null; advanceLive(st); }
+    } catch(e){
+      // Sin internet el sondeo falla en silencio: el mapa NO se congela
+      // (el GPS local sigue dibujando con el último estado conocido) y
+      // solo sale el aviso chico "Sin internet". Nada saca del viaje.
+      liveSetOffline(true);
+    } finally { livePollBusy = false; }
   }, 5000);
 }
 /* GPS del chofer a nivel de app: se comparte desde cualquier pantalla mientras hay servicio activo */
@@ -3007,11 +3189,29 @@ function startDriverGpsWatch(){
   drvWatchId = navigator.geolocation.watchPosition(pos=>{
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
     const now = Date.now();
+    liveGpsPos = { lat, lng, t: now };
+    // v1.4.45: el GPS mueve el mapa EN LOCAL con cada lectura, sin
+    // esperar al servidor — sin internet la mototaxi, la línea, la
+    // distancia y el texto siguen actualizándose mientras avanza.
+    liveApplyDriverPos(lat, lng);
     const d = havKm(drvLastSent.lat||lat, drvLastSent.lng||lng, lat, lng) * 1000;
     if(now - drvLastSent.t < 8000 && d < 10) return;
     drvLastSent = { t: now, lat, lng };
-    api('/api/update-driver-location', { driver_id: myDriver.id, request_id: liveReq.id, lat, lng }).catch(()=>{});
+    api('/api/update-driver-location', { driver_id: myDriver.id, request_id: liveReq.id, lat, lng })
+      .catch(()=>{
+        // Sin internet el reporte NO se tira: se guarda en cola y se
+        // envía cuando vuelve la conexión (liveFlushLocQueue).
+        liveLocQueue.push({ lat, lng });
+        if(liveLocQueue.length > 20) liveLocQueue.shift();
+        liveSetOffline(true);
+      });
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 3000 });
+}
+function stopDriverGpsWatch(){
+  // Al salir del viaje en curso el GPS ya no se comparte (antes el watch
+  // quedaba vivo y seguía mandando posiciones del viaje terminado).
+  if(drvWatchId!=null){ try { navigator.geolocation.clearWatch(drvWatchId); } catch(e){} drvWatchId = null; }
+  liveGpsPos = null;
 }
 
 /* ===== TAXÍMETRO — motor con reloj de pared (sobrevive cambios de pestaña) ===== */
