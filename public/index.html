@@ -98,7 +98,7 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .strip button.ghostb{background:#f3f4f6;color:var(--dark)}
 .strip button.greenb{background:var(--green2);color:#fff}
 .strip button.blueb{background:var(--blue);color:#fff}
-.strip button.howbtn{width:auto;margin:0;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px;white-space:nowrap;flex-shrink:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.strip a.callbtn{display:block;text-align:center;background:#16a34a;color:#fff;font-weight:800;border-radius:14px;padding:13px;margin-top:8px;text-decoration:none;font-size:16px}
 .strip .exit{position:absolute;top:-34px;right:0;background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12px}
 .strip a.telbtn{display:block;text-align:center;background:#16a34a;color:#fff;border-radius:12px;padding:13px;width:100%;font-weight:800;font-size:16px;margin-top:8px;text-decoration:none}
 /* v1.4.43: renglones chicos del viaje en vivo (el mapa manda) y enlaces
@@ -344,6 +344,7 @@ input[type=file]{padding:8px}
 #trip-summary-overlay .sumfloat h2{padding-right:56px}
 #trip-summary-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
 #trip-summary-overlay .summinimap{height:180px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
+.histminimap{height:220px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
 #trip-summary-overlay .sumthanks{color:var(--green);font-weight:800;font-size:15px;margin-top:4px}
 #trip-summary-overlay .sumcash{color:#92400e;background:#fef3c7;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;margin-top:8px}
 /* Aviso "Sin internet" en el viaje en curso (v1.4.45): el mapa sigue con
@@ -581,7 +582,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.59'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.60'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1862,21 +1863,14 @@ async function myActiveRequest(kind){
   } catch(e){ return null; }
 }
 function whoStrip(){
-  // Tarjeta "Pides como…" (app real): foto circular o "Sin foto", nombre y
-  // la pista de que el conductor verá la foto. Sin perfil: formulario EN
-  // LA MISMA pantalla (nombre + teléfono) + enlace al perfil con foto.
-  if(!myPassenger) return '<div class="card white"><b>Sin perfil de pasajero: escribe tu nombre y tu número para que el conductor pueda marcarte cuando llegue por ti.</b>'
+  // v1.4.60: la tarjeta "Pides como…" (foto + nombre) YA NO se muestra en
+  // Viajes. Solo queda el formulario sin perfil (nombre + teléfono) para
+  // quien aún no tiene perfil de pasajero; con perfil no se pinta nada.
+  if(myPassenger) return '';
+  return '<div class="card white"><b>Sin perfil de pasajero: escribe tu nombre y tu número para que el conductor pueda marcarte cuando llegue por ti.</b>'
     + '<label class="mt">Tu nombre</label><input id="np-name" placeholder="Tu nombre">'
     + '<label class="mt">Tu número de teléfono / WhatsApp</label><input id="np-phone" placeholder="Ej. 961 000 0000" inputmode="tel">'
     + '<div class="center" style="margin-top:10px"><button class="linklike" onclick="openRegistro(\'pasajero\',\'viajes\')">O crea tu perfil de pasajero con tu foto</button></div></div>';
-  const complete = !!myPassenger.face_photo;
-  return '<div class="card white"><div class="flex">'
-    + (myPassenger.face_photo ? '<img class="avatar sm" src="'+myPassenger.face_photo+'">' : '<div class="avatar sm" style="display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">Sin foto</div>')
-    + '<div class="flex1"><span class="muted">Pides como '+esc(myPassenger.name)+'.</span><div class="muted">El conductor verá tu foto para reconocerte.</div>'
-    + (complete ? '' : '<div class="muted" style="color:#b45309;font-weight:700">Tu perfil está incompleto: falta la foto de tu cara.</div>')
-    + '</div></div>'
-    + (complete ? '' : '<button class="btn amber small" onclick="openRegistro(\'pasajero\',\'viajes\')">Completar</button>')
-    + '</div>';
 }
 async function ensureNoProfilePassenger(){
   // Sin perfil: toma nombre + teléfono del formulario en pantalla y crea el
@@ -1933,14 +1927,17 @@ async function renderViajes(){
       renderMandadoSearching(man55);
       return;
     }
+    // v1.4.60: pantalla limpia — sin título "¿A dónde vas?", sin tarjeta
+    // "Pides como…" (whoStrip ya solo trae el formulario sin perfil) y sin
+    // tarjeta "Tu último viaje" (repetir vive ahora en el detalle del
+    // historial). Solo: Solicitar (naranja), Programar (bloqueado,
+    // Próximamente), la ayuda y Historial (verde).
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
-      + '<h1>¿A dónde vas?</h1>'
       + whoStrip()
       + '<button class="btn amber" style="font-size:19px;padding:20px" onclick="startTripRequest()">Solicitar el viaje</button>'
+      + '<button class="btn" disabled style="background:#d1d5db;color:#4b5563">🔒 Programar un viaje · Próximamente</button>'
       + '<p class="muted center mt">Primero eliges de dónde sales, luego a dónde vas, y publicas tu viaje.</p>'
-      + '<div id="viajes-lasttrip"></div>'
-      + '<button class="btn amber" style="background:#f59e0b" onclick="go(\'historia\')">Historial de viajes</button>';
-    renderLastTripCard();
+      + '<button class="btn" onclick="go(\'historia\')">Historial de viajes</button>';
     return;
   }
   if(wiz.step===1){
@@ -2036,20 +2033,6 @@ async function startTripRequest(){
   }
   wiz.step = 1; renderViajes();
 }
-async function renderLastTripCard(){
-  // Tarjeta "Tu último viaje" (app real): el último viaje FINALIZADO, con
-  // ruta, fecha, precio y botón verde para repetirlo con los mismos puntos.
-  const box = $('#viajes-lasttrip'); if(!box || !myPassenger) return;
-  try {
-    const j = await api('/api/requests?passenger_id='+myPassenger.id+'&light=1');
-    const fin = (j.requests||[]).filter(r=>r.kind==='viaje' && r.status==='finalizado' && r.origin_lat!=null && r.dest_lat!=null)[0];
-    if(!fin){ box.innerHTML = ''; return; }
-    box.innerHTML = '<div class="card white" style="border:2px solid #16a34a;background:#f0fdf4"><div style="color:var(--green);font-size:13px;font-weight:700">Tu último viaje</div>'
-      + '<div style="font-size:19px;font-weight:800;margin-top:4px">'+esc(fin.origin_zone||fin.origin_detail||'')+' → '+esc(fin.dest_zone||fin.dest_detail||'')+'</div>'
-      + '<div class="muted mt">'+fmtDateTime(fin.created_at)+' · '+fmt$(fin.final_price||fin.price)+' · con los mismos puntos exactos de esa vez</div>'
-      + '<button class="btn" style="margin-top:10px" onclick="repeatTrip('+fin.id+')">Repetir este viaje</button></div>';
-  } catch(e){}
-}
 /* Repetir un viaje: pre-llena la solicitud con LOS MISMOS puntos de salida
    y destino del viaje dado (API; si falla, el último guardado en el
    dispositivo) y lleva directo al paso de detalles/precio. */
@@ -2068,13 +2051,9 @@ async function repeatTripFrom(last){
   toast('Repetimos tu último viaje: '+wiz.origin.label+' → '+wiz.dest.label);
 }
 async function repeatTrip(id){
-  // Repetir un viaje: primero la lista del historial si ya está cargada
-  // (el usuario viene de Historial). PERO la tarjeta "Tu último viaje" de
-  // la pantalla de Viajes NO carga el historial: en esa pantalla histReqs
-  // está vacío ([]), así que buscar solo ahí siempre fallaba con "No se
-  // encontró ese viaje para repetirlo." aunque la tarjeta mostrara el viaje
-  // (captura del usuario 20:56, v1.4.45). Por eso ahora se busca también
-  // en el servidor, y si ese id ya no existe se usa el último finalizado.
+  // Repetir un viaje (v1.4.60: el botón vive en el detalle del historial,
+  // donde histReqs ya está cargado). Si el id no está ahí se busca en el
+  // servidor, y si ese id ya no existe se usa el último finalizado.
   let last = (histReqs||[]).find(r=>r.id===id);
   if(!last || last.origin_lat==null || last.dest_lat==null){
     try {
@@ -2655,8 +2634,11 @@ async function cancelMyRequest(){
 
 /* ===== Historial de viajes + recibo ===== */
 let histReqs = [];
+let histDetailMap = null;
 async function renderHistoria(){
   // Historial SOLO de viajes (kind === 'viaje'): los mandados no se mezclan.
+  // v1.4.60: al volver a la lista se borra el mini mapa del detalle.
+  if(histDetailMap){ try { histDetailMap.remove(); } catch(e){} histDetailMap = null; }
   const page = $('#historia-page');
   page.innerHTML = backPill('Regresar', "go('viajes')") + '<h1>Historial de viajes</h1><div id="hist-list">Cargando…</div>';
   if(!myPassenger){ $('#hist-list').innerHTML = '<p class="muted mt">Regístrate como pasajero para ver tu historial.</p>'; return; }
@@ -2664,15 +2646,63 @@ async function renderHistoria(){
     const j = await api('/api/requests?passenger_id='+myPassenger.id);
     histReqs = j.requests.filter(r=>r.kind==='viaje' && (r.status==='finalizado' || r.status==='cancelado'));
     $('#hist-list').innerHTML = histReqs.length ? histReqs.map(r=>
-      '<div class="card white" '+(r.status==='finalizado' ? 'onclick="showReceipt('+r.id+')" style="cursor:pointer"' : '')+'><div class="flex"><div class="flex1"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b>'
+      '<div class="card white" onclick="showHistDetail('+r.id+')" style="cursor:pointer"><div class="flex"><div class="flex1"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b>'
       + '<div class="muted">'+fmtDateTime(r.created_at)+' · '+fmt$(r.final_price||r.price)+'</div>'
       + (r.driver_name?'<div class="muted">Chofer: '+esc(r.driver_name)+' · Unidad '+esc(r.driver_unit||'—')+'</div>':'')
       + '</div><span class="chip '+(r.status==='finalizado'?'':'red')+'">'+(r.status==='finalizado'?'Finalizado':'Cancelado')+'</span></div>'
-      + (r.status==='finalizado' ? '<div class="center" style="margin-top:8px"><button class="linklike" style="color:var(--green)" onclick="event.stopPropagation();showReceipt('+r.id+')">Ver recibo del viaje</button></div>'
-      + '<button class="btn" onclick="event.stopPropagation();repeatTrip('+r.id+')">Repetir este viaje</button>' : '')
+      + (r.status==='finalizado' ? '<div class="center" style="margin-top:8px"><button class="linklike" style="color:var(--green)" onclick="event.stopPropagation();showReceipt('+r.id+')">Ver recibo del viaje</button></div>' : '')
       + '</div>').join('')
       : '<p class="muted center mt">Aún no tienes viajes. Cuando termines o canceles un viaje, aparecerá aquí.</p>';
   } catch(e){ $('#hist-list').innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
+}
+/* ===== Detalle del viaje en el historial (v1.4.60) ===== */
+async function showHistDetail(id){
+  // Detalle GRANDE de un viaje del historial: mini mapa con los dos
+  // puntos (origen verde, destino rojo, línea azul como el resumen del
+  // recibo), los datos del viaje y, solo si terminó, el botón para
+  // repetirlo con los mismos puntos (repeatTrip). Un viaje cancelado
+  // muestra mapa + datos, sin botón de repetir ni de recibo.
+  let r = (histReqs||[]).find(x=>x.id===id);
+  if(!r){
+    try { const j = await api('/api/requests?id='+id); r = (j.requests||[])[0] || null; } catch(e){}
+  }
+  if(!r){ toast('No se encontró ese viaje.'); return; }
+  if(histDetailMap){ try { histDetailMap.remove(); } catch(e){} histDetailMap = null; }
+  const page = $('#historia-page');
+  const fin = r.status==='finalizado';
+  page.innerHTML = backPill('Regresar', "renderHistoria()")
+    + '<h1>Detalle del viaje</h1>'
+    + (r.origin_lat!=null && r.dest_lat!=null ? '<div class="histminimap" id="hist-minimap"></div>' : '')
+    + '<div class="card white"><div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
+    + '<div class="kv"><span>A</span><b>'+esc(r.dest_zone||r.dest_detail||'')+'</b></div>'
+    + '<div class="kv"><span>Fecha</span><b>'+fmtDateTime(r.created_at)+'</b></div>'
+    + '<div class="kv"><span>Precio</span><b class="price">'+fmt$(r.final_price||r.price)+'</b></div>'
+    + '<div class="kv"><span>Estado</span><b>'+(fin ? 'Finalizado' : 'Cancelado')+'</b></div>'
+    + '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'
+    + (r.driver_name ? '<div class="kv"><span>Chofer</span><b>'+esc(r.driver_name)+' · '+esc(r.driver_unit||'—')+'</b></div>' : '')
+    + '<div class="kv"><span>Pago</span><b>'+esc(r.payment_method||'efectivo')+'</b></div></div>'
+    + (fin ? '<div class="center" style="margin-top:8px"><button class="linklike" style="color:var(--green)" onclick="showReceipt('+r.id+')">Ver recibo del viaje</button></div>' : '')
+    + (fin ? '<button class="btn" onclick="repeatTrip('+r.id+')">Repetir este viaje</button>' : '');
+  if(r.origin_lat!=null && r.dest_lat!=null) drawHistMiniMap(r);
+}
+function drawHistMiniMap(r){
+  // Mini mapa del detalle del historial (v1.4.60): misma receta que el
+  // mini mapa del resumen (drawSummaryMiniMap) — origen verde, destino
+  // rojo, ruta OSRM con recta de respaldo si no responde.
+  const el = document.getElementById('hist-minimap');
+  if(!el) return;
+  if(histDetailMap){ try { histDetailMap.remove(); } catch(e){} histDetailMap = null; }
+  histDetailMap = makeMap('hist-minimap', false);
+  histDetailMap.on('load', async ()=>{
+    const o = { lat: r.origin_lat, lng: r.origin_lng }, d = { lat: r.dest_lat, lng: r.dest_lng };
+    new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([o.lng, o.lat]).addTo(histDetailMap);
+    new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([d.lng, d.lat]).addTo(histDetailMap);
+    let rt = null; try { rt = await osrmRoute(o, d); } catch(e){}
+    if(rt && rt.coords) setRouteLine(histDetailMap, 'route', rt.coords, '#2b7de9', 5);
+    else setRouteLine(histDetailMap, 'route', straightRouteCoords(o, d, []), '#2b7de9', 5);
+    fitPoints(histDetailMap, [[o.lng, o.lat], [d.lng, d.lat]], 30);
+  });
+  setTimeout(()=>{ if(histDetailMap) histDetailMap.resize(); }, 100);
 }
 async function showReceipt(requestId){
   try {
@@ -2711,7 +2741,7 @@ let liveMap = null, liveMarkers = {}, liveReq = null, liveAsDriver = false;
    de la red — el GPS local lo mueve, la cola guarda las posiciones y el
    avance pendiente se reintenta al volver la conexión. */
 let liveOffline = false, liveLocQueue = [], livePendingAdvance = null, livePollBusy = false, liveGpsPos = null, liveLastStripAt = 0;
-let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false, liveRouteFallback = false, liveOsrmRetryTick = 0;
+let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false, liveRouteFallback = false, liveOsrmRetryTick = 0, liveRerouting = false, liveLastRerouteAt = 0;
 let liveDriverMarker = null, liveTraveledPts = [];
 const STAGE_LABEL = { confirmado:'Confirmado', en_camino:'En camino', llego:'Llegó', en_viaje:'En viaje', finalizado:'Finalizado',
   recogido:'Recogido', entregado:'Entregado' };
@@ -2760,18 +2790,68 @@ function liveTargetZoom(distM){
   if(distM>200) return 17;
   return 18;
 }
+/* Punto más cercano de la ruta a una posición (v1.4.60): proyecta sobre
+   cada segmento de la línea (coords en [lng, lat] como OSRM) y devuelve
+   el índice del segmento, la distancia en metros y el punto proyectado.
+   Sirve para recortar lo ya recorrido y para detectar desvíos. */
+function closestOnRoute(lat, lng, coords){
+  let bestI = 0, bestD = Infinity, bestPt = coords.length ? coords[0] : null;
+  const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
+  const px = lng * kx, py = lat * ky;
+  for(let i = 0; i < coords.length - 1; i++){
+    const ax = coords[i][0] * kx, ay = coords[i][1] * ky;
+    const bx = coords[i + 1][0] * kx, by = coords[i + 1][1] * ky;
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * dx, cy = ay + t * dy;
+    const d = Math.hypot(px - cx, py - cy);
+    if(d < bestD){ bestD = d; bestI = i; bestPt = [cx / kx, cy / ky]; }
+  }
+  if(coords.length === 1){
+    bestD = Math.hypot(px - coords[0][0] * kx, py - coords[0][1] * ky);
+    bestI = 0; bestPt = coords[0];
+  }
+  return { i: bestI, d: bestD, pt: bestPt };
+}
+/* La línea azul NUNCA depende de que el mapa haya abierto con posición
+   del chofer (v1.4.60): si no hay ruta dibujada — porque renderLiveMap
+   corrió sin GPS del servidor y no pudo dibujar nada — se dibuja la
+   recta al instante desde la posición actual y se pide la ruta real en
+   segundo plano. Sin esto la línea solo aparecía al cambiar de etapa
+   (el usuario la vio recién después de "Ya estoy afuera"). */
+function ensureLiveRoute(){
+  if(!liveReq || !liveMap || (liveRouteCoords && liveRouteCoords.length)) return;
+  const inT = liveHeadingToDest(liveReq);
+  const tgt = inT ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
+  const from = (liveReq.driver_lat && liveReq.driver_lng) ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : null;
+  if(!from) return;
+  const rid = liveReq.id;
+  const fb = straightRouteCoords(from, tgt, liveRouteWaypoints(liveReq, inT));
+  liveRouteCoords = fb; liveRouteFallback = true; liveOsrmRetryTick = 0;
+  setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
+  osrmRoute(from, tgt, liveRouteWaypoints(liveReq, inT)).then(rt=>{
+    if(rt && rt.coords && rt.coords.length && liveReq && liveReq.id === rid && liveRouteFallback){
+      liveRouteCoords = rt.coords; liveRouteFallback = false;
+      setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5);
+    }
+  }).catch(()=>{});
+}
 function nextStage(r){
-  // Flujo simplificado del chofer (v1.4.43): Aceptar deja el servicio
-  // automáticamente "en camino" (sin botón). Viaje: "Ya estoy afuera"
-  // (sube el pasajero y empieza el recorrido) → "Llegué a destino".
-  // Mandado: "Ya estoy afuera para recoger el paquete" → "Ya voy en
-  // camino" (ya lo recogió, va a entregarlo) → "Entregado".
+  // Flujo del chofer (v1.4.60): Aceptar deja el servicio automáticamente
+  // "en camino" (sin botón). Viaje: "Ya estoy afuera" es SOLO la llegada
+  // (llego: avisa al pasajero, NO empieza el recorrido) → "Iniciar
+  // recorrido" (en_viaje: ahí empieza el viaje y se marca
+  // trip_started_at) → "Llegué a destino". Mandado: "Ya estoy afuera
+  // para recoger el paquete" → "Ya voy en camino" (ya lo recogió, va a
+  // entregarlo) → "Entregado".
   // Compatibilidad con servicios en curso: el 'llego' viejo de un viaje
-  // equivale a estar en camino a recoger (su botón sigue siendo
-  // "Ya estoy afuera" hacia en_viaje); el 'recogido' viejo de un mandado
-  // equivale a en_viaje (su botón es "Entregado").
+  // ya era la llegada (su botón ahora es "Iniciar recorrido" hacia
+  // en_viaje); el 'recogido' viejo de un mandado equivale a en_viaje
+  // (su botón es "Entregado").
   if(r.kind==='viaje'){
-    if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino' || r.trip_stage==='llego') return 'en_viaje';
+    if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino') return 'llego';
+    if(r.trip_stage==='llego') return 'en_viaje';
     if(r.trip_stage==='en_viaje') return 'finalizado';
     return null;
   }
@@ -2782,7 +2862,7 @@ function nextStage(r){
 }
 function stageButtonLabel(r){
   const n = nextStage(r); if(!n) return '';
-  if(r.kind==='viaje') return { en_viaje:'Ya estoy afuera', finalizado:'Llegué a destino' }[n] || '';
+  if(r.kind==='viaje') return { llego:'Ya estoy afuera', en_viaje:'Iniciar recorrido', finalizado:'Llegué a destino' }[n] || '';
   return { llego:'Ya estoy afuera para recoger el paquete', en_viaje:'Ya voy en camino', entregado:'Entregado' }[n] || '';
 }
 function passengerStageTitle(r){
@@ -2846,7 +2926,7 @@ async function renderLiveMap(){
   const r = liveReq; if(!r || !liveMap) return;
   Object.values(liveMarkers).forEach(m=>m.remove()); liveMarkers = {};
   if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
-  removeRouteLine(liveMap, 'route'); removeRouteLine(liveMap, 'traveled');
+  removeRouteLine(liveMap, 'route');
   const pick = { lat: r.origin_lat, lng: r.origin_lng };
   const dest = { lat: r.dest_lat, lng: r.dest_lng };
   const inTrip = liveHeadingToDest(r);
@@ -2967,7 +3047,8 @@ function renderLiveStrips(){
     const dir = (r.driver_lat && tLat) ? compassDir({lat:r.driver_lat,lng:r.driver_lng},{lat:tLat,lng:tLng}) : '';
     top.innerHTML = '<button class="exit" onclick="exitLive()">‹ Regresar</button>'
       + '<div class="row"><b>'+stage+'</b></div>'
-      + '<div class="row" style="margin-top:6px"><span style="flex:1;min-width:0">Dirígete '+targetLabel+': '+(dd!=null ? 'faltan '+(dd<1 ? Math.round(dd*1000)+' m' : dd.toFixed(1)+' km')+' · ~'+etaMin(dd)+' min · '+dir : 'esperando tu ubicación…')+'</span><button type="button" class="howbtn" onclick="openGmaps('+r.origin_lat+','+r.origin_lng+','+r.dest_lat+','+r.dest_lng+','+inTrip+')">Cómo llegar</button></div>';
+      + '<div style="margin-top:6px"><b>Dirígete '+targetLabel+'</b></div>'
+      + '<div class="muted" style="margin-top:2px">'+(dd!=null ? 'faltan '+(dd<1 ? Math.round(dd*1000)+' m' : dd.toFixed(1)+' km')+' · ~'+etaMin(dd)+' min · '+dir : 'esperando tu ubicación…')+'</div>';
     pill.classList.add('hidden');
     const nxt = nextStage(r);
     // v1.4.43: pantalla despejada — el mapa manda. La caja verde de
@@ -2986,10 +3067,17 @@ function renderLiveStrips(){
     const miniLinks = [];
     if(r.trip_stage==='en_camino' || r.trip_stage==='llego') miniLinks.push('<a class="minilink" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>');
     if(r.kind==='mandado') miniLinks.push('<a class="minilink" href="javascript:void(0)" onclick="driverPasteLocationInline('+r.id+')">📍 Pegar ubicación de WhatsApp</a>');
+    // v1.4.60: después de "Ya estoy afuera" (llego) el botón verde para
+    // marcarle al pasajero NO desaparece: sigue en la tarjeta durante
+    // todo el recorrido (llego y en_viaje), hasta el destino. El enlace
+    // chico de antes de llegar queda como estaba.
+    const callBtn60 = (r.kind==='viaje' && (r.trip_stage==='llego' || r.trip_stage==='en_viaje') && r.passenger_phone)
+      ? '<a class="callbtn" href="tel:'+esc(r.passenger_phone)+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>' : '';
     bot.innerHTML = '<div class="row live-mini"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
       + (recvLine ? '<div class="row live-mini"><span>'+recvLine+'</span></div>' : '')
       + (payLine ? '<div class="row live-mini"><span>'+payLine+'</span></div>' : '')
       + (miniLinks.length ? '<div class="row live-mini-links">'+miniLinks.join('')+'</div>' : '')
+      + callBtn60
       + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
       + (nxt ? '<button onclick="advanceLive(\''+nxt+'\')">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
@@ -3061,11 +3149,6 @@ function compassDir(from, to){
   const ang = Math.atan2(to.lng-from.lng, to.lat-from.lat) * 180/Math.PI;
   return dirs[Math.round(((ang+360)%360)/45)%8];
 }
-function openGmaps(oLat,oLng,dLat,dLng,toDest){
-  const d = toDest ? dLat+','+dLng : oLat+','+oLng;
-  const o = (liveReq && liveReq.driver_lat) ? liveReq.driver_lat+','+liveReq.driver_lng : oLat+','+oLng;
-  window.open('https://www.google.com/maps/dir/?api=1&origin='+o+'&destination='+d+'&travelmode=driving', '_blank');
-}
 async function cancelLiveRequest(rid){
   try { await api('/api/cancel-request', { request_id: rid }); exitLive(); toast('Servicio cancelado.'); }
   catch(e){ toast(e.message); }
@@ -3086,9 +3169,11 @@ async function advanceLive(stage){
   try {
     const j = await api('/api/advance-stage', { driver_id: myDriver.id, request_id: liveReq.id, stage });
     liveReq = j.request;
-    // v1.4.43: "Ya estoy afuera" avisa al pasajero (en viajes el viaje
-    // empieza ahí; en mandados es la llegada al punto de recogida).
-    if(stage==='llego' || (stage==='en_viaje' && liveReq.kind==='viaje')) showNotice('Le avisamos al pasajero que ya estás afuera.', 'green');
+    // v1.4.60: "Ya estoy afuera" (llego) avisa al pasajero que ya estás
+    // afuera — el viaje NO empieza ahí; empieza con "Iniciar recorrido"
+    // (en_viaje). En mandados llego es la llegada al punto de recogida.
+    if(stage==='llego') showNotice('Le avisamos al pasajero que ya estás afuera.', 'green');
+    else if(stage==='en_viaje' && liveReq.kind==='viaje') showNotice('El viaje empezó: vas rumbo al destino.', 'green');
     if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); showTripSummary(liveReq, true); return; }
     await renderLiveMap();
     renderLiveStrips();
@@ -3269,23 +3354,56 @@ function liveApplyDriverPos(lat, lng, prevLat, prevLng){
     if(liveBearing!=null) opts.bearing = liveBearing;
     if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts.zoom = proxZoom; opts.duration = 800; }
     liveMap.easeTo(opts);
-  } else if(liveBearing!=null){
-    liveMap.easeTo({ bearing: liveBearing, duration: 300 });
+  } else {
+    // v1.4.60: aunque el chofer haya tocado el mapa (follow apagado), el
+    // zoom de proximidad sigue subiendo al acercarse al punto — solo el
+    // zoom, sin recentrar: el centro lo manda él hasta que toque
+    // "Centrar en mi ubicación". El rumbo sigue girando igual.
+    const opts2 = { duration: 800 };
+    if(liveBearing!=null){ opts2.bearing = liveBearing; opts2.duration = 300; }
+    if(proxZoom!=null && proxZoom > liveMap.getZoom() + 0.25){ opts2.zoom = proxZoom; opts2.duration = 800; }
+    if(opts2.zoom!=null || opts2.bearing!=null) liveMap.easeTo(opts2);
   }
-  // La línea de respaldo es recta desde la posición actual: se redibuja
-  // con cada lectura del GPS (no necesita internet). Con ruta OSRM real
-  // la línea no se mueve, pero el tramo recorrido sí.
-  if(liveRouteFallback && liveRouteCoords && liveRouteCoords.length){
+  // v1.4.60: la línea azul SIEMPRE sale de la posición actual de la
+  // mototaxi. 1) Si no hay ruta (el mapa abrió sin posición del chofer:
+  // renderLiveMap no pudo dibujar nada), se crea al instante — recta
+  // ahora, ruta real en segundo plano. 2) Si hay ruta, se recorta lo ya
+  // recorrido (la línea arranca en la mototaxi, sin estela azul atrás)
+  // y si la mototaxi se salió de la ruta (agarró otra calle, >40 m), se
+  // recalcula desde donde está.
+  ensureLiveRoute();
+  if(liveRouteCoords && liveRouteCoords.length){
     const inT = liveHeadingToDest(liveReq);
     const tgt = inT ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
-    const fb = straightRouteCoords({ lat, lng }, tgt, liveRouteWaypoints(liveReq, inT));
-    liveRouteCoords = fb;
-    setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
-  }
-  if(liveRouteCoords && liveRouteCoords.length){
-    let best=0, bd=1e9;
-    liveRouteCoords.forEach((c,i)=>{ const d = havKm(c[1],c[0],lat,lng); if(d<bd){bd=d;best=i;} });
-    setRouteLine(liveMap, 'traveled', smoothTrack(liveRouteCoords.slice(0, best+1)), '#7fb5f5', 5);
+    const distTgtM = havKm(lat, lng, tgt.lat, tgt.lng) * 1000;
+    const near = closestOnRoute(lat, lng, liveRouteCoords);
+    if(near.d > 40 && distTgtM > 60 && !liveRerouting && (Date.now() - (liveLastRerouteAt || 0) > 10000)){
+      // Desvío: otra calle. La recta desde aquí quita ya la línea vieja
+      // y la ruta real se recalcula en segundo plano (máximo 1 vez cada
+      // 10 s para no saturar el servidor de rutas).
+      liveRerouting = true; liveLastRerouteAt = Date.now();
+      const fromNow = { lat, lng };
+      const fb = straightRouteCoords(fromNow, tgt, liveRouteWaypoints(liveReq, inT));
+      liveRouteCoords = fb; liveRouteFallback = true; liveOsrmRetryTick = 0;
+      setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
+      osrmRoute(fromNow, tgt, liveRouteWaypoints(liveReq, inT)).then(rt=>{
+        liveRerouting = false;
+        if(!liveReq || !liveMap) return;
+        if(rt && rt.coords && rt.coords.length){ liveRouteCoords = rt.coords; liveRouteFallback = false; }
+        else {
+          const fb2 = straightRouteCoords(fromNow, tgt, liveRouteWaypoints(liveReq, inT));
+          liveRouteCoords = fb2; liveRouteFallback = true; liveOsrmRetryTick = 0;
+        }
+        setRouteLine(liveMap, 'route', liveRouteCoords, '#2b7de9', 5);
+      }).catch(()=>{ liveRerouting = false; });
+    } else {
+      // Recorte: la ruta restante arranca en la mototaxi (su posición +
+      // lo que falta de la ruta), sin dejar la estela atrás.
+      let rest = [[lng, lat]].concat(liveRouteCoords.slice(near.i + 1));
+      if(rest.length < 2) rest = [[lng, lat], [tgt.lng, tgt.lat]];
+      liveRouteCoords = rest;
+      setRouteLine(liveMap, 'route', rest, '#2b7de9', 5);
+    }
   }
   // Las tiras (distancia y texto) se repintan como mucho cada 2 s: el GPS
   // llega ~1 vez por segundo y repintar el botón en cada lectura podría
@@ -3323,12 +3441,12 @@ function startLivePolling(){
       if(r.trip_stage==='llego' && prevStage!=='llego' && !liveAsDriver){
         fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó.' });
       }
-      // v1.4.43: en viajes "Ya estoy afuera" lleva directo a en_viaje
-      // (ya no hay etapa 'llego'): el aviso de que ya está afuera sale al
-      // entrar a en_viaje. En mandados en_viaje es "va a entregarte" y la
-      // tarjeta de estado ya lo dice sola.
+      // v1.4.60: en viajes "Ya estoy afuera" es llego (el aviso de que ya
+      // está afuera sale ahí, arriba); al entrar a en_viaje el pasajero
+      // ya va abordo: el aviso dice que el viaje empezó. En mandados
+      // en_viaje es "va a entregarte" y la tarjeta de estado ya lo dice sola.
       if(r.trip_stage==='en_viaje' && prevStage!=='en_viaje' && !liveAsDriver && r.kind==='viaje'){
-        fireAlert('outside', { strong:true, title:'¡Tu mototaxi ya está afuera!', body:'Sal de tu casa, tu mototaxi ya llegó y el viaje empieza.' });
+        fireAlert('outside', { strong:true, title:'¡El viaje empezó!', body:'Vas rumbo a tu destino.' });
       }
       if(r.driver_lat){
         // El GPS local es más fresco que el eco del servidor: si hay una
@@ -3340,6 +3458,10 @@ function startLivePolling(){
           liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng);
         }
       }
+      // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
+      // crea en cuanto llega la primera posición (no espera al cambio de
+      // etapa): ensureLiveRoute dibuja la recta y pide la ruta real.
+      ensureLiveRoute();
       if(r.trip_stage!==prevStage){ await renderLiveMap(); }
       // v1.4.44: si la línea es recta (OSRM falló), reintentar la ruta
       // real cada ~15 s (cada 3er tick) y cambiarla en cuanto responda.
