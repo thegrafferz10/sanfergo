@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.54 en /api/health', h.ok && h.version === '1.4.54', JSON.stringify(h));
+  check('versión 1.4.55 en /api/health', h.ok && h.version === '1.4.55', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.54', h134.ok && h134.version === '1.4.54', JSON.stringify(h134));
+  check('versión 1.4.55', h134.ok && h134.version === '1.4.55', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.54)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.54';") && h.version === '1.4.54', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.55)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.55';") && h.version === '1.4.55', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.54 en /api/health (sección)', h27.ok && h27.version === '1.4.54', JSON.stringify(h27));
+  check('versión 1.4.55 en /api/health (sección)', h27.ok && h27.version === '1.4.55', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.54 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.54', JSON.stringify(h28));
+  check('versión 1.4.55 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.55', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.54 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.54', JSON.stringify(h29));
+  check('versión 1.4.55 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.55', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.54 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.54', JSON.stringify(h30));
+  check('versión 1.4.55 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.55', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2072,9 +2072,9 @@ async function api(path, body) {
   check('v1.4.50: con viaje buscando, entrar a Mandados muestra la misma pantalla de espera del viaje (wiz.step=5, <div id="searching">, renderSearching)', tripLock50.includes('wiz.requestId = trip50.id; wiz.step = 5;') && tripLock50.includes("backPill('Volver al inicio'") && tripLock50.includes("'<div id=\"searching\"></div>'") && tripLock50.includes('renderSearching();'));
   check('v1.4.50: el formulario del mandado sigue intacto detrás del candado ("¿Qué quieres hacer?", Quiero/Enviar)', mdSec50.includes('¿Qué quieres hacer?') && mdSec50.includes("md.kind=\\'quiero\\'") && mdSec50.includes("md.kind=\\'enviar\\'"));
   const tripSec50 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
-  check('v1.4.50: NO se agrega el candado inverso (Viajes no consulta el mandado pendiente)', !tripSec50.includes("myActiveRequest('mandado')"));
+  check('v1.4.50: el candado inverso NO existía en v1.4.50; en v1.4.55 el usuario lo pidió (reporte 23:16, ver sección v1.4.55): Viajes SÍ consulta el mandado pendiente', tripSec50.includes("myActiveRequest('mandado')"));
   check('v1.4.50: el sondeo refresca la pantalla de espera del viaje también cuando se ve desde Mandados', html.includes("(currentView==='viajes' || currentView==='mandados') && wiz && wiz.step===5) renderSearching();"));
-  check('v1.4.50: el sondeo de Mandados no pinta la pantalla del mandado cuando se está viendo la del viaje', html.includes("if(currentView==='mandados' && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
+  check('v1.4.50: el sondeo de Mandados no pinta la pantalla del mandado cuando se está viendo la del viaje (v1.4.55: el sondeo también refresca la pantalla del mandado desde Viajes)', html.includes("if((currentView==='mandados' || currentView==='viajes') && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
   check('v1.4.50: si el viaje se cancela o finaliza estando en Mandados, se vuelve a pintar Mandados (se levanta el candado)', html.includes("if(r.status==='cancelado' || r.status==='finalizado'){ wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); return; }"));
   check('v1.4.50: al cancelar el viaje desde Mandados, se vuelve a pintar Mandados (no Viajes)', html.includes("wiz = newWizard(); if(currentView==='mandados') renderMandados(); else renderViajes(); toast('Viaje cancelado.');"));
   check('v1.4.50: refreshSearching refresca la pantalla del viaje cuando se ve desde Mandados', html.includes("if(currentView==='mandados' && wiz && wiz.step===5 && wiz.requestId){ renderSearching(); return; }"));
@@ -2459,6 +2459,187 @@ async function api(path, body) {
   check('v1.4.54: en vivo, cuenta nueva para probar el envío del asistente', acc54.ok && !!acc54.token, JSON.stringify(acc54));
   const biz54 = await api('/api/request-business', { token: acc54.token, name: 'Negocio 54 ' + RUN, type: 'entrega', whatsapp: '961120' + RUN.slice(0, 4), category: 'Panadería', colony: 'Centro', schedule: 'Lunes a sábado, 9 AM a 7 PM', delivery_fee: 20, description: 'Pan y repostería' });
   check('v1.4.54: en vivo, crear negocio con nombre+categoría sigue guardando la categoría (el envío del asistente no cambia)', biz54.ok && biz54.business && biz54.business.category === 'Panadería', JSON.stringify(biz54));
+
+  // --- v1.4.55: al subir el precio, la solicitud se vuelve a publicar
+  //     como viaje nuevo con 'Precio mejorado'; y el candado inverso:
+  //     con un mandado activo, entrar a Viajes muestra el mandado.
+  //     (A) Republicar (reporte del usuario 23:14-23:15, captura 11:13
+  //     PM de la bandeja con el viaje de $25 y el aviso naranja
+  //     'Rechazado · El pasajero rechazó tu oferta de $30'): al subir
+  //     el precio de un viaje BUSCANDO, la lista anterior se borra y el
+  //     viaje se publica como nuevo con la leyenda 'Precio mejorado'
+  //     (placa verde en la fila + 'El pasajero ha aumentado su precio'
+  //     en el detalle); el viaje del pasajero y sus contraofertas
+  //     pendientes NO se pierden; la oferta rechazada desaparece (y el
+  //     chofer puede contraofertar de nuevo al precio mejorado) y el
+  //     descarte con la X se borra (era de la publicación anterior).
+  //     (B) Candado inverso (reporte del usuario 23:16-23:17): con un
+  //     mandado activo, entrar a Viajes NO muestra '¿A dónde vas?':
+  //     muestra la pantalla de espera del mandado (buscando) o su mapa
+  //     en vivo (aceptado), con 'Volver al inicio' sin cancelar; el
+  //     candado se levanta al cancelar o finalizar; el sondeo refresca
+  //     la pantalla del mandado también desde Viajes.
+  const raiseSec55 = srv.slice(srv.indexOf("if (pathname === '/api/raise-price')"), srv.indexOf("if (pathname === '/api/dismiss-request')"));
+  check('v1.4.55: subir el precio de un VIAJE marca price_improved=1, previous_price (el de antes) y republished_at=ahora (misma solicitud, no se crea otra)', raiseSec55.includes("if (r.kind === 'viaje')") && raiseSec55.includes("UPDATE requests SET price=?, price_improved=1, previous_price=?, republished_at=datetime('now') WHERE id=?"));
+  check('v1.4.55: en un mandado solo se actualiza el precio (sin leyenda ni republicación, igual que en la app real)', raiseSec55.includes("} else {\n      db.prepare('UPDATE requests SET price=? WHERE id=?').run(price, request_id);"));
+  check('v1.4.55: al republicar se borran las ofertas ya rechazadas (estaban muertas) y los descartes con la X (eran de la publicación anterior)', raiseSec55.includes("DELETE FROM offers WHERE request_id=? AND status='rechazada'") && raiseSec55.includes('DELETE FROM driver_dismissed WHERE request_id=?'));
+  check('v1.4.55: la tabla requests tiene price_improved, previous_price y republished_at (CREATE TABLE + migración addCol para bases viejas)', srv.includes('price_improved INTEGER DEFAULT 0, previous_price REAL, republished_at TEXT') && srv.includes("addCol('requests', 'price_improved', 'INTEGER DEFAULT 0')") && srv.includes("addCol('requests', 'previous_price', 'REAL')") && srv.includes("addCol('requests', 'republished_at', 'TEXT')"));
+  check('v1.4.55: la lista abierta ordena por republicación (COALESCE(republished_at, created_at) DESC): la republicada sube arriba', srv.includes('ORDER BY COALESCE(republished_at, created_at) DESC, id DESC'));
+  check('v1.4.55: la fila lleva la leyenda verde "✦ Precio mejorado" (fondo #dcfce7, texto #166534) con el precio de antes y el de ahora', html.includes('✦ Precio mejorado') && html.includes('background:#dcfce7') && html.includes('color:#166534') && html.includes("El pasajero ha aumentado su precio: antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'."));
+  check('v1.4.55: el detalle lleva la línea "El pasajero ha aumentado su precio." (placa verde) con antes y ahora', html.includes('El pasajero ha aumentado su precio.') && html.includes("Antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'. La solicitud se volvió a publicar"));
+  check('v1.4.55: al subir el precio de un viaje el pasajero ve la confirmación de republicación (en un mandado solo "Precio actualizado")', html.includes("j.request.price_improved ? 'Tu viaje se volvió a publicar con precio mejorado: '") && html.includes("'Precio actualizado a '+fmt$(price)+'.'"));
+  check('v1.4.55: las firmas de repintado de la bandeja y del flotante incluyen price_improved y republished_at', html.includes("':'+(r.price_improved||'')+':'+(r.republished_at||'')") && html.includes('r.price_improved, r.republished_at'));
+  check('v1.4.55: el sondeo detecta la republicación por firma (lastOpenSeen id → republished_at) y dispara el aviso \"¡Precio mejorado!\" con el mismo sonido', html.includes('let lastOpenSeen = {};') && html.includes("fireAlert('price-improved'") && html.includes("title:'¡Precio mejorado!'") && html.includes('El pasajero ha aumentado su precio.'));
+  // Evaluando el armado real de la fila compacta con precio mejorado:
+  // se extrae el mismo map de loadDriverInbox que en v1.4.54 y se
+  // ejecuta con solicitudes de mentira (mejorada sin oferta, mejorada
+  // con contraoferta pendiente del pasajero, y sin mejorar).
+  const rowMapStart55 = html.indexOf('html += list.map(r=>{');
+  const rowMapEnd55 = html.indexOf("}).join('');", rowMapStart55);
+  const rowSec55 = html.slice(rowMapStart55, rowMapEnd55 + "}).join('');".length);
+  function runRow55(r){
+    const stubs = {
+      esc: (s)=>String(s==null?'':s),
+      fmt$: (n)=>'$'+Math.round(Number(n)||0),
+      paxText: (p)=>{ const n=Math.max(1,Math.min(3,Number(p)||1)); return n===1?'1 persona':n+' personas'; },
+      myDriver: { id: 777 },
+      inboxToggle: ()=>{}, swipeDown: ()=>{}, swipeMove: ()=>{}, swipeUp: ()=>{}, swipeCancel: ()=>{}, dismissInboxRow: ()=>{}
+    };
+    const fn = new Function('list', ...Object.keys(stubs), 'let html="";' + rowSec55 + '; return html;');
+    return fn([r], ...Object.values(stubs));
+  }
+  function reqRow55(offers, improved){
+    return { id: 999, kind: 'viaje', passenger_name: 'Pax Prueba', price: 40, distance_km: 1.3, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2, _refO: 'cerca de Madero', _refD: 'Progreso Centro', order_payment: null, order_amount: 0, price_improved: improved ? 1 : 0, previous_price: improved ? 25 : null, republished_at: improved ? '2026-11-23 23:20:00' : null, offers: offers || [] };
+  }
+  function offRow55(status, price, counter){
+    return { id: 1, driver_id: 777, status, kind: 'contraoferta', price, passenger_counter_price: (counter == null ? null : counter) };
+  }
+  let row55a = '', row55aErr = '';
+  try { row55a = runRow55(reqRow55([], true)); } catch(e){ row55aErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — viaje con precio mejorado: la fila lleva la leyenda verde "✦ Precio mejorado" con "antes $25, ahora $40", sin "Rechazado"', !!row55a && row55a.includes('✦ Precio mejorado') && row55a.includes('antes $25, ahora $40') && row55a.includes('background:#dcfce7') && !row55a.includes('Rechazado'), row55aErr || row55a.slice(0, 300));
+  let row55b = '', row55bErr = '';
+  try { row55b = runRow55(reqRow55([offRow55('pendiente', 45, 40)], true)); } catch(e){ row55bErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — precio mejorado con contraoferta del pasajero pendiente: la fila lleva \"Precio mejorado\" y sigue con el aviso ámbar \"Te contraofertó $40\"', !!row55b && row55b.includes('✦ Precio mejorado') && row55b.includes('Te contraofertó $40') && !row55b.includes('Rechazado'), row55bErr || row55b.slice(0, 300));
+  let row55c = '', row55cErr = '';
+  try { row55c = runRow55(reqRow55([], false)); } catch(e){ row55cErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — viaje sin mejorar: la fila NO lleva \"Precio mejorado\" (no se marca lo que no se subió)', !!row55c && !row55c.includes('Precio mejorado'), row55cErr || row55c.slice(0, 200));
+  // Candado inverso: estáticas sobre renderViajes.
+  const tripSec55 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
+  check('v1.4.55: renderViajes consulta primero el viaje en curso y luego el mandado (el candado inverso va después del del viaje)', tripSec55.indexOf("myActiveRequest('viaje')") !== -1 && tripSec55.indexOf("myActiveRequest('viaje')") < tripSec55.indexOf("myActiveRequest('mandado')"));
+  const manLock55 = tripSec55.slice(tripSec55.indexOf('// v1.4.55:'), tripSec55.indexOf("page.innerHTML = backPill('Regresar al inicio'"));
+  check('v1.4.55: con mandado aceptado, entrar a Viajes va al mapa en vivo (goLive) en vez del formulario', manLock55.includes("if(man55.status==='aceptado'){ goLive(man55.id, false); return; }"));
+  check('v1.4.55: con mandado buscando, entrar a Viajes muestra la misma pantalla de espera del mandado (md.requestId, \"Volver al inicio\", <div id=\"md-searching\">, renderMandadoSearching)', manLock55.includes('md.requestId = man55.id;') && manLock55.includes("backPill('Volver al inicio'") && manLock55.includes("'<h2>Tu mandado</h2><div id=\"md-searching\"></div>'") && manLock55.includes('renderMandadoSearching(man55);'));
+  check('v1.4.55: el formulario del viaje sigue intacto detrás del candado (\"¿A dónde vas?\", Solicitar el viaje)', tripSec55.includes('¿A dónde vas?') && tripSec55.includes('Solicitar el viaje'));
+  check('v1.4.55: el sondeo refresca la pantalla de espera del mandado también cuando se ve desde Viajes (sin pintar la del viaje encima)', html.includes("if((currentView==='mandados' || currentView==='viajes') && md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
+  check('v1.4.55: si el mandado se cancela o finaliza estando en Viajes, se vuelve a pintar Viajes (se levanta el candado)', html.includes("if(r.status==='cancelado' || r.status==='finalizado'){ md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); return; }"));
+  check('v1.4.55: al cancelar el mandado desde Viajes, se vuelve a pintar Viajes (no Mandados)', html.includes("md = newMandado(); if(currentView==='viajes') renderViajes(); else renderMandados(); toast('Mandado cancelado.');"));
+  check('v1.4.55: refreshSearching refresca la pantalla del mandado también desde Viajes (la rama del mandado ya no exige estar en Mandados)', html.includes("if(md && md.requestId && !(wiz && wiz.step===5 && wiz.requestId)){"));
+  // Evaluando el candado real: se extrae renderViajes y se ejecuta con
+  // estado de mentira (sin DOM real) en cuatro casos: mandado buscando,
+  // mandado aceptado, sin nada activo, y viaje buscando + mandado
+  // buscando (gana el viaje, como en renderMandados).
+  const viajesFnSrc55 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('let wizMap = null;')); // el corte termina antes de 'let wizMap = null;' (declaración suelta entre renderViajes y drawWizMap): si entra en el corte, choca con el parámetro wizMap del new Function
+  async function runRenderViajes55(tripStatus, mdStatus){
+    const pageStub = { innerHTML: '' };
+    const calls = { goLive: null, searching: false, mandadoSearching: false };
+    const wizObj = { step: 0, requestId: null };
+    const mdObj = { step: 0, requestId: null, kind: null };
+    const stubs = {
+      $: (sel) => sel === '#viajes-page' ? pageStub : null,
+      wizMap: null,
+      wiz: wizObj,
+      newWizard: () => wizObj,
+      setPageNoScroll: () => {},
+      myActiveRequest: async (kind) => kind === 'viaje' ? (tripStatus ? { id: 999, status: tripStatus } : null) : (mdStatus ? { id: 888, status: mdStatus } : null),
+      goLive: (id) => { calls.goLive = id; },
+      md: null,
+      newMandado: () => mdObj,
+      backPill: (label) => '<button>' + label + '</button>',
+      renderMandadoSearching: () => { calls.mandadoSearching = true; },
+      renderSearching: () => { calls.searching = true; },
+      whoStrip: () => '<div>who</div>',
+      renderLastTripCard: () => {},
+    };
+    const fn = new Function(...Object.keys(stubs), viajesFnSrc55 + '; return renderViajes;')(...Object.values(stubs));
+    await fn();
+    return { html: pageStub.innerHTML, calls, wiz: wizObj, md: mdObj };
+  }
+  let sim55a = null, sim55aErr = '';
+  try { sim55a = await runRenderViajes55(null, 'buscando'); } catch(e){ sim55aErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — con mandado BUSCANDO, entrar a Viajes muestra la pantalla de espera del mandado (\"Tu mandado\", md-searching, \"Volver al inicio\"), no el formulario', !!sim55a && sim55a.html.includes('Tu mandado') && sim55a.html.includes('id="md-searching"') && sim55a.html.includes('Volver al inicio') && !sim55a.html.includes('¿A dónde vas?') && sim55a.calls.mandadoSearching && !sim55a.calls.searching && !sim55a.calls.goLive && sim55a.md.requestId === 888, sim55aErr || JSON.stringify(sim55a && { html: sim55a.html.slice(0, 120), md: sim55a.md }));
+  let sim55b = null, sim55bErr = '';
+  try { sim55b = await runRenderViajes55(null, 'aceptado'); } catch(e){ sim55bErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — con mandado ACEPTADO, entrar a Viajes va al mapa en vivo (goLive con el id del mandado)', !!sim55b && sim55b.calls.goLive === 888 && !sim55b.calls.mandadoSearching && sim55b.html === '', sim55bErr || JSON.stringify(sim55b && sim55b.calls));
+  let sim55c = null, sim55cErr = '';
+  try { sim55c = await runRenderViajes55(null, null); } catch(e){ sim55cErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — sin nada activo, entrar a Viajes abre el formulario normal (\"¿A dónde vas?\")', !!sim55c && sim55c.html.includes('¿A dónde vas?') && !sim55c.calls.mandadoSearching && !sim55c.calls.goLive, sim55cErr || JSON.stringify(sim55c && { html: sim55c.html.slice(0, 120) }));
+  let sim55d = null, sim55dErr = '';
+  try { sim55d = await runRenderViajes55('buscando', 'buscando'); } catch(e){ sim55dErr = String(e && e.message || e); }
+  check('v1.4.55: evaluado — con viaje BUSCANDO y mandado BUSCANDO, gana el viaje (la pantalla de espera del viaje, como en renderMandados)', !!sim55d && sim55d.calls.searching && sim55d.wiz.requestId === 999 && sim55d.wiz.step === 5 && !sim55d.calls.mandadoSearching, sim55dErr || JSON.stringify(sim55d && { calls: sim55d.calls, wiz: sim55d.wiz }));
+  console.log('== v1.4.55: precio mejorado republica; candado inverso Viajes ==');
+  const pax55 = await api('/api/register-passenger', { name: 'Pax Cincuentacinco', phone: '9610000062', face_photo: PHOTO });
+  check('v1.4.55: en vivo, pasajera de prueba registrada', pax55.ok && pax55.passenger.id, JSON.stringify(pax55));
+  const drv55a = await api('/api/register-driver', { name: 'Chofer 55A', phone: '9610000063', vehicle: 'mototaxi', unit: 'V55A', selfie: PHOTO, vehicle_photo: PHOTO });
+  const drv55b = await api('/api/register-driver', { name: 'Chofer 55B', phone: '9610000064', vehicle: 'mototaxi', unit: 'V55B', selfie: PHOTO, vehicle_photo: PHOTO });
+  check('v1.4.55: en vivo, dos choferes de prueba registrados con fotos', drv55a.ok && drv55a.driver.id && drv55b.ok && drv55b.driver.id, JSON.stringify([drv55a.driver && drv55a.driver.id, drv55b.driver && drv55b.driver.id]));
+  await approveDriver(drv55a.driver.id);
+  await approveDriver(drv55b.driver.id);
+  await api('/api/set-driver-online', { driver_id: drv55a.driver.id, online: true });
+  await api('/api/set-driver-online', { driver_id: drv55b.driver.id, online: true });
+  const trip55 = await api('/api/create-request', { passenger_id: pax55.passenger.id, kind: 'viaje', origin_zone: 'Madero', origin_detail: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Progreso Centro', dest_detail: 'Progreso Centro', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.3, eta_minutes: 5, price: 25, payment_method: 'efectivo', passenger_count: 2 });
+  check('v1.4.55: en vivo, el viaje de la prueba queda BUSCANDO ($25, 2 personas, 1.3 km)', trip55.ok && trip55.request.status === 'buscando' && trip55.request.price === 25 && trip55.request.passenger_count === 2, JSON.stringify(trip55.request && { st: trip55.request.status, p: trip55.request.price }));
+  const off55a = await api('/api/driver-respond', { driver_id: drv55a.driver.id, request_id: trip55.request.id, kind: 'contraoferta', price: 30 });
+  check('v1.4.55: en vivo, el primer chofer contraoferta $30 (queda pendiente)', off55a.ok && off55a.offer.status === 'pendiente', JSON.stringify(off55a));
+  const rej55 = await api('/api/respond-offer', { passenger_id: pax55.passenger.id, request_id: trip55.request.id, offer_id: off55a.offer.id, action: 'rechaza' });
+  check('v1.4.55: en vivo, el pasajero rechaza la contraoferta del chofer ($30)', rej55.ok, JSON.stringify(rej55));
+  const open55 = await api('/api/requests?open=1&light=1');
+  const trip55live = open55.ok ? open55.requests.find(r=>r.id===trip55.request.id) : null;
+  const off55live = trip55live ? (trip55live.offers||[]).find(o=>o.driver_id===drv55a.driver.id) : null;
+  check('v1.4.55: en vivo, la oferta rechazada llega al chofer con status rechazada (el aviso naranja de v1.4.54) y el viaje sigue buscando', trip55live && trip55live.status === 'buscando' && off55live && off55live.status === 'rechazada' && off55live.price === 30, JSON.stringify({ st: trip55live && trip55live.status, off: off55live && { s: off55live.status, p: off55live.price } }));
+  const off55b = await api('/api/driver-respond', { driver_id: drv55b.driver.id, request_id: trip55.request.id, kind: 'contraoferta', price: 35 });
+  check('v1.4.55: en vivo, el segundo chofer contraoferta $35 (pendiente: debe sobrevivir a la republicación)', off55b.ok && off55b.offer.status === 'pendiente', JSON.stringify(off55b));
+  const dis55 = await api('/api/dismiss-request', { driver_id: drv55a.driver.id, request_id: trip55.request.id });
+  check('v1.4.55: en vivo, el chofer A descarta la solicitud con la X', dis55.ok, JSON.stringify(dis55));
+  const open55a = await api('/api/requests?open=1&light=1&dismissed_for=' + drv55a.driver.id);
+  check('v1.4.55: en vivo, la lista del chofer A ya NO trae la solicitud descartada', open55a.ok && !open55a.requests.some(r=>r.id===trip55.request.id), JSON.stringify(open55a.requests && open55a.requests.map(r=>r.id)));
+  const trip55b = await api('/api/create-request', { passenger_id: pax55.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 1 });
+  check('v1.4.55: en vivo, segundo viaje de la prueba queda BUSCANDO ($30, creado después del primero)', trip55b.ok && trip55b.request.status === 'buscando', JSON.stringify(trip55b.request && { st: trip55b.request.status }));
+  const open55pre = await api('/api/requests?open=1&light=1');
+  check('v1.4.55: en vivo, antes de subir el precio el segundo viaje (más nuevo) va arriba del primero', open55pre.ok && open55pre.requests[0].id === trip55b.request.id && open55pre.requests.some(r=>r.id===trip55.request.id), JSON.stringify(open55pre.requests && open55pre.requests.map(r=>r.id)));
+  await new Promise(r=>setTimeout(r, 1100)); // la fecha de republicación debe quedar estrictamente después de la creación del segundo viaje
+  const raise55 = await api('/api/raise-price', { passenger_id: pax55.passenger.id, request_id: trip55.request.id, price: 40 });
+  check('v1.4.55: en vivo, subir el precio a $40 marca price_improved=1, previous_price=$25 y republished_at (misma solicitud, mismo id)', raise55.ok && raise55.request.id === trip55.request.id && raise55.request.price === 40 && raise55.request.price_improved === 1 && raise55.request.previous_price === 25 && !!raise55.request.republished_at, JSON.stringify(raise55.request && { id: raise55.request.id, p: raise55.request.price, imp: raise55.request.price_improved, prev: raise55.request.previous_price, rep: raise55.request.republished_at }));
+  const open55b = await api('/api/requests?open=1&light=1&dismissed_for=' + drv55a.driver.id);
+  const trip55new = open55b.ok ? open55b.requests.find(r=>r.id===trip55.request.id) : null;
+  check('v1.4.55: en vivo, tras republicar la solicitud VUELVE a la lista del chofer A (el descarte era de la publicación anterior), con $40 y precio mejorado', open55b.ok && trip55new && trip55new.price === 40 && trip55new.price_improved === 1, JSON.stringify(trip55new && { p: trip55new.price, imp: trip55new.price_improved }));
+  const open55post = await api('/api/requests?open=1&light=1');
+  check('v1.4.55: en vivo, tras republicar el viaje sube ARRIBA del segundo viaje (es la publicación más nueva)', open55post.ok && open55post.requests[0].id === trip55.request.id && open55post.requests[1].id === trip55b.request.id, JSON.stringify(open55post.requests && open55post.requests.map(r=>r.id)));
+  const trip55after = open55post.ok ? open55post.requests.find(r=>r.id===trip55.request.id) : null;
+  const off55after = trip55after ? (trip55after.offers||[]) : [];
+  check('v1.4.55: en vivo, tras republicar ya NO hay oferta rechazada (el aviso naranja se fue) y la contraoferta pendiente de $35 del chofer B sigue viva', trip55after && !off55after.some(o=>o.status==='rechazada') && off55after.some(o=>o.driver_id===drv55b.driver.id && o.status==='pendiente' && o.price===35), JSON.stringify(off55after.map(o=>({ d: o.driver_id, s: o.status, p: o.price }))));
+  const paxList55 = await api('/api/requests?passenger_id=' + pax55.passenger.id);
+  const trip55pax = paxList55.ok ? paxList55.requests.find(r=>r.id===trip55.request.id) : null;
+  check('v1.4.55: en vivo, el pasajero sigue viendo EL MISMO viaje (mismo id, buscando, $40) con la contraoferta de $35 del chofer B', trip55pax && trip55pax.id === trip55.request.id && trip55pax.status === 'buscando' && trip55pax.price === 40 && (trip55pax.offers||[]).some(o=>o.driver_id===drv55b.driver.id && o.status==='pendiente' && o.price===35), JSON.stringify(trip55pax && { id: trip55pax.id, st: trip55pax.status, p: trip55pax.price, off: (trip55pax.offers||[]).map(o=>({ d: o.driver_id, s: o.status, p: o.price })) }));
+  const reOff55a = await api('/api/driver-respond', { driver_id: drv55a.driver.id, request_id: trip55.request.id, kind: 'contraoferta', price: 45 });
+  check('v1.4.55: en vivo, el chofer A puede contraofertar DE NUEVO al precio mejorado ($45)', reOff55a.ok && reOff55a.offer.status === 'pendiente', JSON.stringify(reOff55a));
+  const manRaise55 = await api('/api/create-request', { passenger_id: pax55.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  const raiseMan55 = manRaise55.ok ? await api('/api/raise-price', { passenger_id: pax55.passenger.id, request_id: manRaise55.request.id, price: 40 }) : null;
+  check('v1.4.55: en vivo, el mandado NO se republica (solo viajes): subir su precio solo lo actualiza, sin marca de mejorado', manRaise55.ok && raiseMan55 && raiseMan55.ok && raiseMan55.request.id === manRaise55.request.id && raiseMan55.request.price === 40 && !raiseMan55.request.price_improved && !raiseMan55.request.republished_at, JSON.stringify(raiseMan55 && { id: raiseMan55.request && raiseMan55.request.id, p: raiseMan55.request && raiseMan55.request.price, imp: raiseMan55.request && raiseMan55.request.price_improved, rep: raiseMan55.request && raiseMan55.request.republished_at }));
+  await api('/api/cancel-request', { request_id: manRaise55.request.id });
+  await api('/api/cancel-request', { request_id: trip55.request.id });
+  await api('/api/cancel-request', { request_id: trip55b.request.id });
+  const man55 = await api('/api/create-request', { passenger_id: pax55.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  check('v1.4.55: en vivo, el mandado de la prueba del candado queda BUSCANDO ($30)', man55.ok && man55.request.status === 'buscando', JSON.stringify(man55.request && { st: man55.request.status }));
+  const paxAct55 = await api('/api/requests?passenger_id=' + pax55.passenger.id + '&light=1');
+  const actMan55 = paxAct55.ok ? paxAct55.requests.find(r=>r.kind==='mandado' && (r.status==='buscando' || r.status==='aceptado')) : null;
+  const actTrip55 = paxAct55.ok ? paxAct55.requests.find(r=>r.kind==='viaje' && (r.status==='buscando' || r.status==='aceptado')) : null;
+  check('v1.4.55: en vivo, con el mandado activo el pasajero tiene mandado BUSCANDO y ningún viaje activo (lo que consulta el candado de Viajes)', actMan55 && actMan55.id === man55.request.id && actMan55.status === 'buscando' && !actTrip55, JSON.stringify({ man: actMan55 && { id: actMan55.id, st: actMan55.status }, trip: !!actTrip55 }));
+  const accMan55 = await api('/api/driver-respond', { driver_id: drv55a.driver.id, request_id: man55.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.55: en vivo, el chofer acepta el mandado (queda aceptado: la condición con la que Viajes va al mapa en vivo)', accMan55.ok && accMan55.request.status === 'aceptado', JSON.stringify(accMan55.request && { st: accMan55.request.status }));
+  const canMan55 = await api('/api/cancel-request', { request_id: man55.request.id });
+  check('v1.4.55: en vivo, cancelar el mandado aceptado funciona (antes de empezar) y se levanta el candado', canMan55.ok, JSON.stringify(canMan55));
+  const paxFree55 = await api('/api/requests?passenger_id=' + pax55.passenger.id + '&light=1');
+  check('v1.4.55: en vivo, tras cancelar ya no hay mandado activo (entrar a Viajes vuelve a mostrar el formulario)', paxFree55.ok && !paxFree55.requests.some(r=>r.kind==='mandado' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(paxFree55.requests && paxFree55.requests.map(r=>({ k: r.kind, st: r.status }))));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

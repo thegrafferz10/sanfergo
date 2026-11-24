@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS requests (
   driver_id INTEGER, driver_name TEXT, driver_phone TEXT, driver_photo TEXT,
   driver_unit TEXT, driver_vehicle TEXT, vehicle_photo TEXT,
   driver_lat REAL, driver_lng REAL, driver_loc_at TEXT,
+  price_improved INTEGER DEFAULT 0, previous_price REAL, republished_at TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS offers (
@@ -241,6 +242,9 @@ function addCol(table, col, def) {
   try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`); } catch (e) { /* ya existe */ }
 }
 addCol('drivers', 'is_blocked', 'INTEGER DEFAULT 0');
+addCol('requests', 'price_improved', 'INTEGER DEFAULT 0');
+addCol('requests', 'previous_price', 'REAL');
+addCol('requests', 'republished_at', 'TEXT');
 addCol('drivers', 'block_reason', 'TEXT');
 addCol('drivers', 'blocked_at', 'TEXT');
 addCol('drivers', 'status', "TEXT DEFAULT 'pendiente'");
@@ -729,7 +733,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.54' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.55' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1870,8 +1874,8 @@ async function api(req, res, pathname) {
       // solicitud sigue abierta para los demás choferes.
       const df = q.get('dismissed_for');
       rows = df
-        ? db.prepare(`SELECT * FROM requests WHERE status='buscando' AND id NOT IN (SELECT request_id FROM driver_dismissed WHERE driver_id=?) ORDER BY id DESC LIMIT 50`).all(df)
-        : db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY id DESC LIMIT 50`).all();
+        ? db.prepare(`SELECT * FROM requests WHERE status='buscando' AND id NOT IN (SELECT request_id FROM driver_dismissed WHERE driver_id=?) ORDER BY COALESCE(republished_at, created_at) DESC, id DESC LIMIT 50`).all(df)
+        : db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY COALESCE(republished_at, created_at) DESC, id DESC LIMIT 50`).all();
     }
     else rows = db.prepare('SELECT * FROM requests ORDER BY id DESC LIMIT 50').all();
     // v1.4.42: ?light=1 quita las fotos base64 de las filas y de las ofertas:
@@ -2021,7 +2025,27 @@ async function api(req, res, pathname) {
     if (r.status !== 'buscando') return send(res, 400, { ok: false, error: 'Ya no está buscando conductor.' });
     const peR = negotiatedPriceError(price, r);
     if (peR) return send(res, 400, { ok: false, error: peR });
-    db.prepare('UPDATE requests SET price=? WHERE id=?').run(price, request_id);
+    // v1.4.55: subir el precio vuelve a publicar el VIAJE como NUEVO
+    // (la solicitud anterior se borra y se publica de nuevo con la
+    // leyenda 'Precio mejorado'): la misma solicitud, con precio
+    // mejorado, precio anterior guardado (previous_price, para mostrar
+    // 'antes $X, ahora $Y') y fecha de republicación nueva, así sube
+    // arriba en Recibir Viajes y suena como llegada nueva. El viaje del
+    // pasajero y sus contraofertas pendientes NO se tocan; las ofertas
+    // ya rechazadas se borran (estaban muertas: el pasajero ya las
+    // rechazó) para que el aviso naranja desaparezca y el chofer pueda
+    // contraofertar de nuevo al precio mejorado; y se borran los
+    // descartes con la X, porque eran de la publicación anterior.
+    // Solo VIAJES (el usuario dijo 'viaje'): en un mandado solo se
+    // actualiza el precio, sin leyenda ni republicación, igual que en
+    // la app real.
+    if (r.kind === 'viaje') {
+      db.prepare(`UPDATE requests SET price=?, price_improved=1, previous_price=?, republished_at=datetime('now') WHERE id=?`).run(price, r.price, request_id);
+      db.prepare(`DELETE FROM offers WHERE request_id=? AND status='rechazada'`).run(request_id);
+      db.prepare(`DELETE FROM driver_dismissed WHERE request_id=?`).run(request_id);
+    } else {
+      db.prepare('UPDATE requests SET price=? WHERE id=?').run(price, request_id);
+    }
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(request_id) });
   }
   if (pathname === '/api/dismiss-request') {
