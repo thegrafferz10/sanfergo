@@ -352,7 +352,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.45 en /api/health', h.ok && h.version === '1.4.45', JSON.stringify(h));
+  check('versión 1.4.46 en /api/health', h.ok && h.version === '1.4.46', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -453,7 +453,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.45', h134.ok && h134.version === '1.4.45', JSON.stringify(h134));
+  check('versión 1.4.46', h134.ok && h134.version === '1.4.46', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -615,7 +615,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.45)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.45';") && h.version === '1.4.45', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.46)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.46';") && h.version === '1.4.46', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1409,7 +1409,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.45 en /api/health (sección)', h27.ok && h27.version === '1.4.45', JSON.stringify(h27));
+  check('versión 1.4.46 en /api/health (sección)', h27.ok && h27.version === '1.4.46', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 4 pasos, Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1454,7 +1454,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.45 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.45', JSON.stringify(h28));
+  check('versión 1.4.46 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.46', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: la fila de opciones va ANTES del carrusel en renderBizMain', rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"'));
@@ -1468,7 +1468,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.45 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.45', JSON.stringify(h29));
+  check('versión 1.4.46 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.46', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1477,7 +1477,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.45 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.45', JSON.stringify(h30));
+  check('versión 1.4.46 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.46', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1854,6 +1854,74 @@ async function api(path, body) {
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'en_viaje' });
   const finMRow = (await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'entregado' })).request;
   check('v1.4.45: en vivo, el mandado finalizado por transferencia trae todo lo del resumen flotante (y la nota de cambio NO aplica)', finMRow && finMRow.status === 'finalizado' && !!finMRow.finished_at && finMRow.payment_method === 'transferencia' && finMRow.origin_lat === 16.8675 && finMRow.dest_lat === 16.8709 && finMRow.driver_lat === 16.8685 && cashFn(finMRow) === '', JSON.stringify(finMRow && { st: finMRow.status, pago: finMRow.payment_method, fin: finMRow.finished_at }));
+
+  // --- v1.4.46: "Repetir este viaje" fallaba + fila compacta del chofer con nombre, foto y referencia ---
+  // (a) Repetir: la tarjeta "Tu último viaje" mostraba el viaje pero al
+  //     tocar "Repetir este viaje" salía "No se encontró ese viaje para
+  //     repetirlo." (captura del usuario 20:56). Causa: repeatTrip(id)
+  //     buscaba solo en histReqs, un arreglo que solo se llena al abrir
+  //     Historial — en la pantalla de Viajes está vacío ([]). Ahora busca
+  //     también en el servidor (?id=) y, si ese id ya no existe, usa el
+  //     último viaje finalizado del pasajero.
+  const repSec = html.slice(html.indexOf('async function repeatTrip(id){'), html.indexOf('async function repeatLastTrip(){'));
+  check('v1.4.46: repeatTrip ya no depende solo de histReqs: busca el viaje por id en el servidor y si no existe usa el último finalizado (el error solo sale al final)', repSec.includes("api('/api/requests?id='+id)") && repSec.includes("api('/api/requests?passenger_id='+myPassenger.id+'&light=1')") && repSec.includes("r.kind==='viaje' && r.status==='finalizado'") && repSec.indexOf("toast('No se encontró ese viaje para repetirlo.')") > repSec.indexOf("api('/api/requests?id='+id)"));
+  check('v1.4.46: la tarjeta "Tu último viaje" y el historial siguen llamando a repeatTrip(id)', html.includes('onclick="repeatTrip(\'+fin.id+\')"') && html.includes('onclick="event.stopPropagation();repeatTrip(\'+r.id+\')"'));
+  // En vivo (evaluando la función real con la API real): el bug era que en
+  // la pantalla de Viajes histReqs está vacío porque la tarjeta no carga
+  // el historial.
+  const rptFactory = new Function('histReqs', 'api', 'myPassenger', 'toast', 'repeatTripFrom', html.slice(html.indexOf('async function repeatTrip(id){'), html.indexOf('async function repeatLastTrip(){')) + '\nreturn repeatTrip;');
+  let toasted = [];
+  let repeated = null;
+  const toastStub = (m)=>{ toasted.push(m); };
+  const rptStub = async (r)=>{ repeated = r; };
+  const apiCalls = [];
+  const apiSpy = async (...a)=>{ apiCalls.push(a[0]); return api(...a); };
+  const repA = rptFactory([], apiSpy, { id: pax.passenger.id }, toastStub, rptStub);
+  await repA(finVRow.id);
+  check('v1.4.46: en vivo, repetir con histReqs vacío (el bug: la tarjeta no carga el historial) pre-llena los puntos exactos del viaje', repeated && repeated.id === finVRow.id && repeated.origin_lat === 16.8709 && repeated.origin_lng === -93.2063 && repeated.dest_lat === 16.8675 && repeated.dest_lng === -93.2105 && toasted.length === 0, JSON.stringify({ rep: repeated && { id: repeated.id, o: [repeated.origin_lat, repeated.origin_lng], d: [repeated.dest_lat, repeated.dest_lng] }, toasted }));
+  toasted = []; repeated = null;
+  const repB = rptFactory([], apiSpy, { id: pax.passenger.id }, toastStub, rptStub);
+  await repB(999999);
+  check('v1.4.46: en vivo, repetir con un id viejo/inexistente usa el último viaje finalizado en vez de fallar', repeated && repeated.id === finVRow.id && repeated.status === 'finalizado' && toasted.length === 0, JSON.stringify({ rep: repeated && { id: repeated.id, st: repeated.status }, toasted }));
+  toasted = []; repeated = null; apiCalls.length = 0;
+  const repC = rptFactory([finVRow], apiSpy, { id: pax.passenger.id }, toastStub, rptStub);
+  await repC(finVRow.id);
+  check('v1.4.46: repetir con el viaje ya en el historial no pide nada al servidor (vía rápida)', repeated && repeated.id === finVRow.id && !apiCalls.some(c=>c.includes('?id=')) && toasted.length === 0, JSON.stringify({ calls: apiCalls }));
+  const repIdRow = (await api('/api/requests?id=' + finVRow.id)).requests[0];
+  check('v1.4.46: en vivo, /api/requests?id= trae el viaje finalizado con sus puntos exactos (la fuente que usa el repetir arreglado)', repIdRow && repIdRow.id === finVRow.id && repIdRow.status === 'finalizado' && repIdRow.origin_lat === 16.8709 && repIdRow.origin_lng === -93.2063 && repIdRow.dest_lat === 16.8675 && repIdRow.dest_lng === -93.2105, JSON.stringify(repIdRow && { id: repIdRow.id, st: repIdRow.status }));
+  const repMissing = await api('/api/requests?id=999999');
+  check('v1.4.46: en vivo, /api/requests?id= inexistente devuelve lista vacía (el camino del respaldo existe)', repMissing.ok && Array.isArray(repMissing.requests) && repMissing.requests.length === 0, JSON.stringify(repMissing));
+  const repCard = await api('/api/requests?passenger_id=' + pax.passenger.id + '&light=1');
+  const repCardFin = (repCard.requests||[]).filter(r=>r.kind==='viaje' && r.status==='finalizado' && r.origin_lat!=null && r.dest_lat!=null)[0];
+  check('v1.4.46: en vivo, la consulta de la tarjeta (último finalizado del pasajero) devuelve ese mismo viaje', repCardFin && repCardFin.id === finVRow.id && repCardFin.origin_lat === 16.8709 && repCardFin.dest_lat === 16.8675, JSON.stringify(repCardFin && { id: repCardFin.id }));
+  // (b) Fila compacta del chofer (captura del usuario 20:58): se veía muy
+  //     simple — "Punto en el mapa → Punto en el mapa" sin decir quién
+  //     pide el viaje ni de dónde a dónde. Causa de los nombres sin
+  //     resolver: 'Punto en el mapa' NO estaba en GENERIC_ZONES, así que
+  //     displayZoneName (v1.4.39) lo trataba como zona específica y lo
+  //     dejaba tal cual. Ahora la fila trae foto chica + nombre + la
+  //     referencia "cerca de Madero → cerca de Centro" igual que el
+  //     pasajero, sin engordar la lista (la foto se carga bajo demanda).
+  check('v1.4.46: "Punto en el mapa" ya es zona genérica y se resuelve al lugar conocido cercano', html.slice(html.indexOf('const GENERIC_ZONES'), html.indexOf('function nearestZoneWithin')).includes("'Punto en el mapa'"));
+  const rowSec = html.slice(html.indexOf('// Lista apilada (v1.4.36)'), html.indexOf('p.innerHTML = html;\n    loadInboxPhotos(list);'));
+  check('v1.4.46: la fila compacta trae foto chica, nombre del pasajero y ruta con la referencia "cerca de"', rowSec.includes('class="rowavatar" id="rowav-') && rowSec.includes("esc(r.passenger_name||'Pasajero')") && rowSec.includes("esc(r._refO)+' → '+esc(r._refD)") && !rowSec.includes('passenger_photo'));
+  check('v1.4.46: la foto de la fila se carga bajo demanda por id (una vez por solicitud, con caché) y la lista del sondeo sigue light sin fotos', html.includes('function loadInboxPhotos(list){') && html.includes('const inboxPhotoCache = {};') && html.includes("api('/api/requests?id='+r.id)") && html.includes("api('/api/requests?open=1&light=1')") && html.includes('loadInboxPhotos(list);'));
+  check('v1.4.46: el detalle flotante sigue completo (foto grande del pasajero, Aceptar/Contraofertar) — lo compacto es solo la fila', inboxSec.includes("'<img class=\"avatar\" src=\"'+r.passenger_photo+'\">'") && inboxSec.includes('Aceptar') && inboxSec.includes('Contraofertar'));
+  // En vivo (evaluando las funciones reales con los lugares del servidor):
+  // 'Punto en el mapa' se resolvía a sí mismo; ahora resuelve a Madero/Centro.
+  const placesJ = await api('/api/places');
+  const zoneFactory = new Function('allPlaces', 'havKm', html.slice(html.indexOf('const GENERIC_ZONES'), html.indexOf('function updatePickZone(){')) + '\nreturn { displayZoneName, rowPlaceRef };');
+  const zoneFns = zoneFactory(()=>(placesJ.places||[]), havKmT);
+  check('v1.4.46: en vivo, displayZoneName ya resuelve "Punto en el mapa" al lugar conocido cercano (antes lo dejaba tal cual)', zoneFns.displayZoneName('Punto en el mapa', 16.87291, -93.21374) === 'Madero' && zoneFns.displayZoneName('Punto en el mapa', 16.87137, -93.20652) === 'Centro' && zoneFns.displayZoneName('Mercado', 16.8675, -93.2105) === 'Mercado' && zoneFns.displayZoneName('Mi ubicación', 16.87291, -93.21374) === 'Madero', JSON.stringify({ madero: zoneFns.displayZoneName('Punto en el mapa', 16.87291, -93.21374), centro: zoneFns.displayZoneName('Punto en el mapa', 16.87137, -93.20652) }));
+  check('v1.4.46: en vivo, rowPlaceRef dice "cerca de <Lugar>" cuando el punto genérico resuelve cerca, el nombre solo si ya es específico, y la etiqueta de antes si no hay nada cerca', zoneFns.rowPlaceRef('Punto en el mapa', 16.87291, -93.21374) === 'cerca de Madero' && zoneFns.rowPlaceRef('Punto en el mapa', 16.87137, -93.20652) === 'cerca de Centro' && zoneFns.rowPlaceRef('Mercado', 16.8675, -93.2105) === 'Mercado' && zoneFns.rowPlaceRef('Punto en el mapa', 16.5, -93.5) === 'Punto en el mapa' && zoneFns.rowPlaceRef('Mi ubicación', 16.87291, -93.21374) === 'cerca de Madero', JSON.stringify({ m: zoneFns.rowPlaceRef('Punto en el mapa', 16.87291, -93.21374), c: zoneFns.rowPlaceRef('Punto en el mapa', 16.87137, -93.20652), lejos: zoneFns.rowPlaceRef('Punto en el mapa', 16.5, -93.5) }));
+  // En vivo: un viaje como el de la captura del usuario (1.5 km, $25,
+  // zonas "Punto en el mapa" cerca de Madero y de Centro).
+  const rowT = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Punto en el mapa', origin_detail: 'Punto en el mapa', origin_lat: 16.87291, origin_lng: -93.21374, dest_zone: 'Punto en el mapa', dest_detail: 'Punto en el mapa', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.5, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const rowTRow = (await api('/api/requests?id=' + rowT.request.id)).requests[0];
+  check('v1.4.46: en vivo, el viaje nuevo trae nombre y foto del pasajero por id y sus puntos resuelven a "cerca de Madero → cerca de Centro"', rowT.ok && rowTRow && rowTRow.passenger_name === 'Lucia Prueba' && !!rowTRow.passenger_photo && rowTRow.passenger_photo.startsWith('data:image/jpeg;base64,') && zoneFns.rowPlaceRef(rowTRow.origin_zone, rowTRow.origin_lat, rowTRow.origin_lng) === 'cerca de Madero' && zoneFns.rowPlaceRef(rowTRow.dest_zone, rowTRow.dest_lat, rowTRow.dest_lng) === 'cerca de Centro', JSON.stringify(rowTRow && { nombre: rowTRow.passenger_name, foto: !!rowTRow.passenger_photo, o: rowTRow.origin_zone, d: rowTRow.dest_zone }));
+  const openLight = await api('/api/requests?open=1&light=1');
+  const rowTLight = (openLight.requests||[]).find(r=>r.id===rowT.request.id);
+  check('v1.4.46: en vivo, la lista abierta light trae esa solicitud con el nombre pero SIN foto (la foto no vuelve al sondeo)', rowTLight && rowTLight.passenger_photo === null && rowTLight.passenger_name === 'Lucia Prueba', JSON.stringify(rowTLight && { foto: rowTLight.passenger_photo, nombre: rowTLight.passenger_name }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
