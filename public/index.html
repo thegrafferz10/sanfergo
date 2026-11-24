@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.64'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.65'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1799,6 +1799,7 @@ function goAfterLogin(){
 }
 async function doLogout(){
   try { await api('/api/logout', { token: store.token }); } catch(e){}
+  stopDriverGpsWatch(); // v1.4.65: sin sesión ya no hay servicio activo que reportar
   store.token = null; myAccount = null; myPassenger = null; myDriver = null;
   store.pid = null; store.did = null; // v1.4.20: no dejar el id del chofer/pasajero en el teléfono para la próxima cuenta
   await loadMe();
@@ -2939,7 +2940,7 @@ async function openLiveTrip(requestId, asDriver, tries){
   try { await renderLiveMap(); } catch(e){ /* el mapa igual abre: las tiras se dibujan abajo */ }
   renderLiveStrips();
   startLivePolling();
-  startDriverGpsWatch();
+  syncDriverGpsWatch();
 }
 async function renderLiveMap(){
   const r = liveReq; if(!r || !liveMap) return;
@@ -3175,7 +3176,10 @@ async function cancelLiveRequest(rid){
 function exitLive(){
   releaseWakeLock();
   if(livePoll) { clearInterval(livePoll); livePoll = null; }
-  stopDriverGpsWatch();
+  // v1.4.65: salir del mapa en vivo ya NO apaga el GPS del chofer —
+  // sync lo apaga solo si ya no hay servicio activo; si el viaje sigue,
+  // el pasajero sigue viendo avanzar la mototaxi.
+  syncDriverGpsWatch();
   livePendingAdvance = null;
   liveLocQueue = [];
   liveSetOffline(false);
@@ -3193,7 +3197,7 @@ async function advanceLive(stage){
     // (en_viaje). En mandados llego es la llegada al punto de recogida.
     if(stage==='llego') showNotice('Le avisamos al pasajero que ya estás afuera.', 'green');
     else if(stage==='en_viaje' && liveReq.kind==='viaje') showNotice('El viaje empezó: vas rumbo al destino.', 'green');
-    if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); showTripSummary(liveReq, true); return; }
+    if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); stopDriverGpsWatch(); showTripSummary(liveReq, true); return; }
     await renderLiveMap();
     renderLiveStrips();
   } catch(e){
@@ -3541,6 +3545,7 @@ function startLivePolling(){
       liveReq = r;
       if(r.status==='finalizado'){
         releaseWakeLock();
+        stopDriverGpsWatch(); // v1.4.65: el viaje terminó — se apaga directo (sync leería driverActiveTrip, que el sondeo global refresca cada 5 s y aún trae el viaje como activo)
         if(!liveAsDriver) showTripSummary(r, false);
         renderLiveStrips(); return;
       }
@@ -3565,16 +3570,24 @@ function startLivePolling(){
           liveApplyDriverPos(r.driver_lat, r.driver_lng, prevLat, prevLng);
         }
       }
+      // v1.4.65: si el marcador se perdió (un render lo quitó y otro lo
+      // dejó sin crear por la guardia de generación), se vuelve a crear
+      // en la posición fresca — sin esto el sondeo actualizaba el texto
+      // pero el mapa quedaba sin mototaxi hasta el próximo cambio de
+      // etapa. No reframa ni pide ruta: eso ya lo hace ensureLiveRoute.
+      if(r.driver_lat && !liveDriverMarker && liveMap){
+        liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);
+      }
       // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
       // crea en cuanto llega la primera posición (no espera al cambio de
       // etapa): ensureLiveRoute dibuja la recta y pide la ruta real.
       ensureLiveRoute();
       if(r.trip_stage!==prevStage){ await renderLiveMap(); }
       // v1.4.44: si la línea es recta (OSRM falló), reintentar la ruta
-      // real cada ~15 s (cada 3er tick) y cambiarla en cuanto responda.
+      // real cada ~16 s (cada 8º tick a 2 s) y cambiarla en cuanto responda.
       if(liveRouteFallback && liveMap && liveReq && liveReq.id===r.id){
         liveOsrmRetryTick = (liveOsrmRetryTick||0) + 1;
-        if(liveOsrmRetryTick >= 3){
+        if(liveOsrmRetryTick >= 8){
           liveOsrmRetryTick = 0;
           const rr = liveReq, inT = liveHeadingToDest(rr);
           const tgt = inT ? { lat: rr.dest_lat, lng: rr.dest_lng } : { lat: rr.origin_lat, lng: rr.origin_lng };
@@ -3600,13 +3613,43 @@ function startLivePolling(){
       // solo sale el aviso chico "Sin internet". Nada saca del viaje.
       liveSetOffline(true);
     } finally { livePollBusy = false; }
-  }, 5000);
+  // v1.4.65: el sondeo del mapa en vivo pasa de 5 s a 2 s — el chofer se
+  // mueve con su GPS local a ~1 Hz y el pasajero solo tiene este sondeo:
+  // a 5 s (con reportes del chofer cada 8 s) su mototaxi avanzaba a
+  // saltos. Una sola fila por tick, sin fotos: el costo es mínimo.
+  }, 2000);
 }
 /* GPS del chofer a nivel de app: se comparte desde cualquier pantalla mientras hay servicio activo */
-let drvWatchId = null, drvLastSent = { t: 0, lat: 0, lng: 0 };
-function startDriverGpsWatch(){
-  if(!myDriver || !liveReq || !liveAsDriver) return;
-  if(drvWatchId!=null) return;
+/* GPS del chofer desacoplado de la vista (v1.4.65): la causa del mapa
+   congelado del pasajero era que el watch solo vivía mientras el mapa
+   en vivo DEL CHOFER estaba abierto (guardia !liveAsDriver + stop en
+   exitLive). El chofer se veía perfecto porque su mapa se dibuja del
+   GPS local a ~1 Hz, pero el pasajero solo recibe la posición por el
+   sondeo al servidor (5 s): en cuanto el chofer salía de su mapa en
+   vivo — o el usuario cambiaba a la vista del pasajero en el mismo
+   teléfono, que es como él prueba (es chofer y pasajero a la vez) — el
+   servidor dejaba de recibir posiciones y el marcador y la línea del
+   pasajero se quedaban quietos. Ahora el watch sigue al VIAJE ACTIVO,
+   no a la pantalla: arranca cuando miDriver tiene un servicio aceptado
+   (driverActiveTrip del sondeo global, o liveReq si es su viaje) y se
+   apaga solo cuando ya no hay servicio activo. El dibujo local sigue
+   siendo solo del mapa del chofer (en la vista del pasajero el GPS
+   local NO dibuja: en "en camino" el teléfono del pasajero está en su
+   casa, no con la mototaxi — su marcador sale del sondeo al servidor). */
+let drvWatchId = null, drvLastSent = { t: 0, lat: 0, lng: 0 }, drvActiveReqId = null;
+function drvActiveReq(){
+  if(driverActiveTrip && driverActiveTrip.status==='aceptado') return driverActiveTrip;
+  if(liveReq && liveReq.status==='aceptado' && myDriver && liveReq.driver_id===myDriver.id) return liveReq;
+  return null;
+}
+function syncDriverGpsWatch(){
+  const act = myDriver ? drvActiveReq() : null;
+  if(act) startDriverGpsWatch(act.id);
+  else stopDriverGpsWatch();
+}
+function startDriverGpsWatch(reqId){
+  if(reqId) drvActiveReqId = reqId;
+  if(!myDriver || drvWatchId!=null) return;
   if(!navigator.geolocation) return;
   drvWatchId = navigator.geolocation.watchPosition(pos=>{
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
@@ -3615,11 +3658,16 @@ function startDriverGpsWatch(){
     // v1.4.45: el GPS mueve el mapa EN LOCAL con cada lectura, sin
     // esperar al servidor — sin internet la mototaxi, la línea, la
     // distancia y el texto siguen actualizándose mientras avanza.
-    liveApplyDriverPos(lat, lng);
+    // v1.4.65: el dibujo local es SOLO del mapa en vivo del chofer.
+    if(liveAsDriver && currentView==='live' && liveReq && liveReq.id===drvActiveReqId) liveApplyDriverPos(lat, lng);
     const d = havKm(drvLastSent.lat||lat, drvLastSent.lng||lng, lat, lng) * 1000;
-    if(now - drvLastSent.t < 8000 && d < 10) return;
+    // v1.4.65: reportar cada ~3 s en vez de cada 8 s — el pasajero se
+    // alimenta de estos reportes, y a 8 s su mototaxi avanzaba a saltos.
+    if(now - drvLastSent.t < 3000 && d < 10) return;
     drvLastSent = { t: now, lat, lng };
-    api('/api/update-driver-location', { driver_id: myDriver.id, request_id: liveReq.id, lat, lng })
+    const rid = drvActiveReqId || (liveReq && liveReq.id);
+    if(!rid) return;
+    api('/api/update-driver-location', { driver_id: myDriver.id, request_id: rid, lat, lng })
       .catch(()=>{
         // Sin internet el reporte NO se tira: se guarda en cola y se
         // envía cuando vuelve la conexión (liveFlushLocQueue).
@@ -3630,10 +3678,11 @@ function startDriverGpsWatch(){
   }, ()=>{}, { enableHighAccuracy:true, maximumAge: 3000 });
 }
 function stopDriverGpsWatch(){
-  // Al salir del viaje en curso el GPS ya no se comparte (antes el watch
-  // quedaba vivo y seguía mandando posiciones del viaje terminado).
+  // El GPS deja de compartirse solo cuando ya NO hay servicio activo
+  // (syncDriverGpsWatch lo decide); salir del mapa en vivo ya no lo
+  // apaga, para que el pasajero siga viendo avanzar la mototaxi.
   if(drvWatchId!=null){ try { navigator.geolocation.clearWatch(drvWatchId); } catch(e){} drvWatchId = null; }
-  liveGpsPos = null;
+  liveGpsPos = null; drvActiveReqId = null;
 }
 
 /* ===== TAXÍMETRO — motor con reloj de pared (sobrevive cambios de pestaña) ===== */
@@ -6971,6 +7020,10 @@ function startPolling(){
         // v1.4.42: el aviso de viaje activo del chofer se alimenta de estos
         // mismos datos (sin descarga extra) y se repinta donde esté.
         setDriverActiveFromList(mine.requests);
+        // v1.4.65: el GPS del chofer sigue al viaje activo, no a la
+        // pantalla: si hay servicio aceptado el watch arranca (o sigue)
+        // aunque el chofer no esté mirando su mapa en vivo.
+        syncDriverGpsWatch();
         for(const r of mine.requests){
           const key = 'drv_'+r.id;
           const prev = lastSnapshot[key];
