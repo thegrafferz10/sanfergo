@@ -347,6 +347,15 @@ input[type=file]{padding:8px}
 .histminimap{height:220px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
 #trip-summary-overlay .sumthanks{color:var(--green);font-weight:800;font-size:15px;margin-top:4px}
 #trip-summary-overlay .sumcash{color:#92400e;background:#fef3c7;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700;margin-top:8px}
+/* Recibo del pasajero (v1.4.61): TODA la tarjeta flotante es naranja —
+   título, gracias, precio enorme centrado y recordatorio, todo sobre
+   naranja; texto oscuro para que se lea bien (el recordatorio va en una
+   banda naranja más oscura con texto blanco). */
+#trip-summary-overlay .sumfloat.orange{background:linear-gradient(180deg,#fbbf24,#f59e0b)}
+#trip-summary-overlay .sumfloat.orange h2{color:#1c1917;text-align:center}
+#trip-summary-overlay .sumfloat.orange .sumthanks{color:#451a03;text-align:center}
+#trip-summary-overlay .sumfloat.orange .sumprice-big{text-align:center;font-size:56px;font-weight:900;color:#111827;margin:20px 0 8px;line-height:1}
+#trip-summary-overlay .sumfloat.orange .sumremind{background:#c2410c;color:#fff;font-size:18px;font-weight:800;text-align:center;border-radius:14px;padding:14px 12px;margin-top:16px;line-height:1.35}
 /* Aviso "Sin internet" en el viaje en curso (v1.4.45): el mapa sigue con
    el GPS local aunque se caiga la red; este aviso chico lo dice en vez
    de congelar la pantalla. */
@@ -582,7 +591,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.60'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.61'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2704,11 +2713,23 @@ function drawHistMiniMap(r){
   });
   setTimeout(()=>{ if(histDetailMap) histDetailMap.resize(); }, 100);
 }
-async function showReceipt(requestId){
+/* Recibo abierto desde el historial (v1.4.61): "Ver recibo" muestra la
+   tarjeta naranja flotante y al cerrarla hay que quedarse en el
+   historial — exitLive() sacaría al usuario al inicio de Viajes. */
+let receiptFromHist = false;
+async function showReceipt(requestId, asDriver){
   try {
     const j = await api('/api/requests');
     const r = j.requests.find(x=>x.id===requestId);
     if(!r){ toast('No se encontró el viaje.'); return; }
+    // v1.4.61: "Ver recibo" del historial del PASAJERO (viaje) muestra la
+    // misma tarjeta naranja flotante del final del viaje (la app real ya
+    // lo hace así y la web debe ser idéntica). El recibo del chofer y el
+    // del mandado NO se tocan (siguen con el diálogo viejo, intactos).
+    // El lado lo decide el sitio que llama (historial del pasajero /
+    // historial del chofer), NO el driver_id: el mismo usuario puede ser
+    // chofer y pasajero a la vez y su propio viaje lo conduciría él.
+    if(!asDriver && r.kind==='viaje'){ receiptFromHist = true; showTripSummary(r, false); return; }
     const dur = (r.trip_started_at && r.finished_at)
       ? Math.round((new Date(r.finished_at.replace(' ','T')+'Z') - new Date(r.trip_started_at.replace(' ','T')+'Z'))/60000) + ' min'
       : '—';
@@ -2743,6 +2764,12 @@ let liveMap = null, liveMarkers = {}, liveReq = null, liveAsDriver = false;
 let liveOffline = false, liveLocQueue = [], livePendingAdvance = null, livePollBusy = false, liveGpsPos = null, liveLastStripAt = 0;
 let liveRouteCoords = null, livePoll = null, liveFollow = true, liveHeading = null, liveLastHeading = null, liveAdvancing = false, liveRouteFallback = false, liveOsrmRetryTick = 0, liveRerouting = false, liveLastRerouteAt = 0;
 let liveDriverMarker = null, liveTraveledPts = [];
+/* Generación del render del mapa en vivo (v1.4.61): dos renders solapados
+   (apertura + cambio de etapa en el sondeo) creaban DOS mototaxis — el
+   segundo render no borraba el marcador del primero porque la variable ya
+   apuntaba al nuevo y el viejo quedaba huérfano y congelado en el mapa.
+   La generación descarta el render viejo antes de crear marcadores. */
+let liveRenderGen = 0;
 const STAGE_LABEL = { confirmado:'Confirmado', en_camino:'En camino', llego:'Llegó', en_viaje:'En viaje', finalizado:'Finalizado',
   recogido:'Recogido', entregado:'Entregado' };
 function stageLabel(r){
@@ -2924,6 +2951,11 @@ async function openLiveTrip(requestId, asDriver, tries){
 }
 async function renderLiveMap(){
   const r = liveReq; if(!r || !liveMap) return;
+  // v1.4.61: generación del render — si mientras este render espera la
+  // ruta empieza otro (cambio de etapa en el sondeo), este ya no crea
+  // nada: el nuevo es el que pinta. Sin esto quedaban DOS mototaxis en el
+  // mapa del pasajero (una congelada en la recogida y otra en la ruta).
+  const gen61 = ++liveRenderGen;
   Object.values(liveMarkers).forEach(m=>m.remove()); liveMarkers = {};
   if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
   removeRouteLine(liveMap, 'route');
@@ -2937,6 +2969,7 @@ async function renderLiveMap(){
   // objetivo y el sondeo reintenta la ruta real cada ~15 s (v1.4.44).
   let rt = null;
   if(from){ try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; } }
+  if(gen61 !== liveRenderGen) return; // un render más nuevo ya empezó: no crear marcadores ni línea huérfanos
   if(rt){ liveRouteCoords = rt.coords; liveRouteFallback = false; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
   else if(from){
     // v1.4.44: respaldo — el 2026-11-23 el chofer yendo a recoger (viaje
@@ -2975,35 +3008,29 @@ async function renderLiveMap(){
     liveMarkers.pick = new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([pick.lng, pick.lat]).addTo(liveMap);
   }
   liveMarkers.dest = new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([dest.lng, dest.lat]).addTo(liveMap);
-  const dPos = from || pick;
+  // v1.4.61: la mototaxi se pinta en la posición MÁS FRESCA del chofer
+  // (el sondeo pudo actualizarla mientras este render esperaba la ruta):
+  // si no, nacía en un punto viejo y parecía no moverse. Y si por lo que
+  // sea ya hay un marcador, se quita antes de crear el nuevo: UNA sola
+  // mototaxi en el mapa (la del chofer; la posición del pasajero, si se
+  // muestra, es un punto, nunca una mototaxi).
+  const dPos = (liveReq.driver_lat && liveReq.driver_lng)
+    ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : (from || pick);
+  if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
   liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([dPos.lng, dPos.lat]).addTo(liveMap);
-  const pts = [[pick.lng, pick.lat], [dest.lng, dest.lat]];
-  if(from) pts.push([from.lng, from.lat]);
-  // Encuadre (v1.3.4, orden corregido): arriba solo van Regresar + tarjeta
-  // de estado (~145 px) y abajo van Cancelar + aviso verde + tarjeta del
-  // chofer (hasta ~275 px), así que el mapa deja más aire abajo que arriba
-  // para que los puntos se sigan viendo en la franja libre.
-  const canCancelLive = !liveAsDriver && r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','en_viaje','entregado'].includes(r.trip_stage||''));
-  const noticeLive = !liveAsDriver && r.kind==='viaje' && (((r.trip_stage==='confirmado'||r.trip_stage==='en_camino') && from) || r.trip_stage==='llego' || r.trip_stage==='en_viaje');
-  const botPad = 150 + (canCancelLive ? 54 : 0) + (noticeLive ? 70 : 0);
-  if(liveAsDriver){
-    // Encuadre (v1.4.43): con la ruta dibujada se encuadra TODA la ruta
-    // (de la posición del chofer al objetivo, pasando por las paradas) en
-    // la franja libre, para que la línea azul se vea completa de punta a
-    // punta y no "cortada" bajo las tarjetas. Antes solo se encuadraban
-    // chofer + objetivo y la línea se perdía bajo las tarjetas (captura
-    // del usuario 19:01). Sin ruta OSRM se encuadra chofer + objetivo.
-    if(liveRouteCoords && liveRouteCoords.length){
-      fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
-    } else {
-      const framePts = inTrip
-        ? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])
-        : (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);
-      fitPoints(liveMap, framePts, liveFollowPadding());
-    }
+  // Encuadre (v1.4.43 chofer; v1.4.61 también pasajero): con la ruta
+  // dibujada se encuadra TODA la ruta restante en la franja libre, para
+  // que la línea azul se vea completa y no "cortada" bajo las tarjetas.
+  // El pasajero antes encuadraba los DOS puntos del viaje (recogida +
+  // destino) y el mapa quedaba a lo ancho de todo el pueblo. Sin ruta
+  // OSRM se encuadra chofer → objetivo.
+  if(liveRouteCoords && liveRouteCoords.length){
+    fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
   } else {
-    fitPoints(liveMap, pts, { top: 170, bottom: botPad, left: 50, right: 50 });
-    if(!inTrip) liveMap.easeTo({ center: [pick.lng, pick.lat], zoom: 16, offset: [0, -60], duration: 500 });
+    const framePts = inTrip
+      ? (from ? [[from.lng, from.lat], [dest.lng, dest.lat]] : [[dest.lng, dest.lat]])
+      : (from ? [[from.lng, from.lat], [pick.lng, pick.lat]] : [[pick.lng, pick.lat]]);
+    fitPoints(liveMap, framePts, liveFollowPadding());
   }
   if(liveAsDriver) $('#live-recenter').textContent = '◎ Centrar en mi ubicación';
   else $('#live-recenter').textContent = '◎ Centrar en tu mototaxi';
@@ -3242,6 +3269,25 @@ function showTripSummary(r, asDriver){
     ? '<div class="summinimap" id="sum-minimap"></div>' : '';
   const ov = document.createElement('div');
   ov.id = 'trip-summary-overlay';
+  if(!asDriver && r.kind==='viaje'){
+    // v1.4.61: recibo del PASAJERO rediseñado — TODA la tarjeta flotante
+    // es naranja (no solo el recordatorio), sin tabla de detalles ni
+    // "Generar recibo": solo el título, la línea de gracias, el precio
+    // enorme centrado y abajo el recordatorio (solo efectivo), más grande.
+    // La X de arriba cierra al instante, como el anuncio de entrada. El
+    // recibo del chofer y el del mandado NO se tocan (siguen abajo,
+    // intactos).
+    const cash61 = summaryCashNote(r);
+    ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
+      + '<div class="sumfloat orange"><h2>¡Viaje terminado!</h2>'
+      + '<div class="sumthanks">Tu viaje ha concluido. Gracias por usar SanFerGo.</div>'
+      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + (cash61 ? '<div class="sumremind">'+cash61+'</div>' : '')
+      + '</div></div>';
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
+    document.body.appendChild(ov);
+    return;
+  }
   ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
     + '<div class="sumfloat"><h2>'+title+'</h2>' + thanks + minimap
     + '<div class="card white"><div class="kv"><span>De</span><b>'+esc(r.origin_zone||r.origin_detail||'')+'</b></div>'
@@ -3267,6 +3313,10 @@ function closeTripSummary(){
   const ov = document.getElementById('trip-summary-overlay');
   if(ov) ov.remove();
   if(summaryMiniMap){ try { summaryMiniMap.remove(); } catch(e){} summaryMiniMap = null; }
+  // v1.4.61: el recibo abierto desde el historial ("Ver recibo") se
+  // cierra quedándose en el historial — la página sigue debajo del
+  // flotante; exitLive() lo sacaría al inicio de Viajes.
+  if(receiptFromHist){ receiptFromHist = false; return; }
   exitLive();
 }
 function drawSummaryMiniMap(r){
@@ -3345,10 +3395,12 @@ function liveApplyDriverPos(lat, lng, prevLat, prevLng){
     liveBearing = applyHeading(h);
   }
   let proxZoom = null;
-  if(liveAsDriver){
-    const tgt = liveHeadingToDest(liveReq) ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
-    proxZoom = liveTargetZoom(havKm(lat, lng, tgt.lat, tgt.lng) * 1000);
-  }
+  // v1.4.61: el zoom de proximidad también vive en el mapa del PASAJERO
+  // (antes solo el chofer lo tenía: el mapa del pasajero se quedaba a lo
+  // ancho de todo el pueblo y no se acercaba al llegar). Mismo objetivo
+  // que el chofer: destino en viaje, recogida antes de empezar.
+  const tgtZoom = liveHeadingToDest(liveReq) ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
+  proxZoom = liveTargetZoom(havKm(lat, lng, tgtZoom.lat, tgtZoom.lng) * 1000);
   if(liveFollow){
     const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
     if(liveBearing!=null) opts.bearing = liveBearing;
@@ -4749,7 +4801,7 @@ async function loadDriverHist(){
     box.innerHTML = list.length ? list.map(r=>'<div class="card white"><div class="flex"><div class="flex1"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b>'
       + '<div class="muted">'+fmtDateTime(r.created_at)+' · '+fmt$(r.final_price||r.price)+'</div></div>'
       + '<span class="chip '+(r.status==='finalizado'?'':'red')+'">'+(r.status==='finalizado'?'Finalizado':'Cancelado')+'</span></div>'
-      + (r.status==='finalizado' ? '<button class="btn small" onclick="showReceipt('+r.id+')">Ver recibo del viaje</button>' : '')+'</div>').join('')
+      + (r.status==='finalizado' ? '<button class="btn small" onclick="showReceipt('+r.id+', true)">Ver recibo del viaje</button>' : '')+'</div>').join('')
       : '<p class="muted">Aún no tienes viajes terminados.</p>';
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p><div class="center"><button class="btn small" onclick="loadDriverHist()">Reintentar</button></div>'; }
 }
