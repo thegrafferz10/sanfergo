@@ -581,7 +581,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.58'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.59'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -5449,6 +5449,18 @@ async function adminUnblock(did){
   catch(e){ toast(e.message); }
 }
 async function adminSetSubscription(did, plan){
+  // (v1.4.59) Antes de activar nada, una advertencia: el admin confirma
+  // con el nombre del chofer, el plan, el precio y los días; si ya tiene
+  // un plan vigente, se le dice que los días se suman al que ya tiene.
+  // Sin confirmar no se llama al servidor. Mismo mecanismo (confirm
+  // nativo) que las demás confirmaciones del panel (borrar, suspender).
+  const p = SUB_PLANS.find(x=>x.key===plan); if(!p) return;
+  const d = (adminDrivers||[]).find(x=>x.id===did);
+  const nm = d ? d.name : 'este chofer';
+  const vigente = d && d.subscription_until && new Date(d.subscription_until) > new Date();
+  let msg = '¿Estás seguro que quieres activar la suscripción '+p.label+' ($'+p.price+' · '+p.days+' días) a '+nm+'?';
+  if(vigente) msg += ' Ya tiene un plan vigente: se sumarán los '+p.days+' días a su plan actual.';
+  if(!confirm(msg)) return;
   try { const j = await api('/api/admin/set-subscription', { token: store.token, driver_id: did, plan }); toast('Suscripción activada por '+j.days+' días ('+fmt$(j.price)+').'); renderAdminDetail(); }
   catch(e){ toast(e.message); }
 }
