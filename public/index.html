@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.66'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.67'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -610,6 +610,9 @@ function suggestedPrice(km){ return roundUp5(fare(km)); }
 // v1.4.48: mínimo por número de personas (modelo B): 1=$20, 2=$25, 3=$30.
 // Solo sube el mínimo; la tarifa NO cambia.
 function minForPax(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return MIN_TRIP + 5*(n-1); }
+const FREE_TRIP_COVER = 30; // v1.4.67: el viaje gratis por recomendación cubre hasta $30; lo que pase de ahí lo paga el pasajero en efectivo al terminar
+function freeTripPays(price){ return Math.max(0, (Number(price)||0) - FREE_TRIP_COVER); }
+function freeTripCovered(price){ return Math.min(Math.max(0, Number(price)||0), FREE_TRIP_COVER); }
 function roundUp5For(x, pax){ return Math.max(minForPax(pax), Math.ceil(x / 5) * 5); }
 function suggestedPriceFor(km, pax){ return roundUp5For(fare(km), pax); }
 function paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? ' persona' : ' personas'); }
@@ -744,6 +747,8 @@ let PLACES = [];
 let LANDMARKS = []; // negocios y lugares con nombre (rótulos del mapa)
 let myPassenger = null, myDriver = null, myAccount = null;
 let negociosLocked = true; // v1.4.64: candado de Negocios — por defecto BLOQUEADO hasta que /api/me diga lo contrario; solo el perfil del dueño (@thegrafferz10) y el admin entran, y el admin lo abre/cierra desde el panel.
+let referralEnabled = true; // v1.4.67: la promo de viajes gratis por recomendación — prendida por defecto; el admin la apaga desde el panel y /api/me dice cómo está
+let refCodeFromUrl = ''; // v1.4.67: ?ref=<usuario> del enlace de recomendación, para prellenar el campo del registro
 function negociosCanEnter(){ return !negociosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }
 let currentView = 'home';
 let pollTimer = null, pollBusy = false;
@@ -770,6 +775,7 @@ async function loadMe(){
         const j = await api('/api/me?token=' + encodeURIComponent(store.token));
         myAccount = j.account;
         negociosLocked = !!j.negocios_locked; // v1.4.64: el candado viene del servidor (por defecto bloqueado)
+        referralEnabled = j.referral_enabled !== false; // v1.4.67: la promo de viajes gratis viene del servidor (por defecto prendida)
         myPassenger = j.passenger || null;
         myDriver = j.driver || null;
         hasSession = true;
@@ -1532,6 +1538,8 @@ function renderLogin(){
       + '<label class="mt">Nombre de usuario</label><input id="rc-user" placeholder="Ej. maria.hernandez" autocomplete="username">'
       + '<label class="mt">Número de teléfono / WhatsApp</label><input id="rc-phone" placeholder="Ej. 961 000 0000" inputmode="tel">'
       + '<p class="muted" style="margin-top:6px;font-size:13px">Si prefieres registrarte con tu correo, déjalo vacío: en el siguiente paso lo escribes.</p>'
+      + '<label class="mt">Código de referido (opcional)</label><input id="rc-ref" placeholder="Ej. thegrafferz10" value="'+esc(refCodeFromUrl)+'">'
+      + '<p class="muted" style="margin-top:6px;font-size:13px">Si alguien te recomendó SanFerGo, escribe su nombre de usuario: cuando hagas tu primer viaje, esa persona gana un viaje gratis.</p>'
       + '<div class="err hidden" id="rc-err0"></div>'
       + '<button class="btn" onclick="rcNext(0)">Siguiente</button>'
       + '</div>'
@@ -1640,7 +1648,7 @@ async function onGoogleSignIn(resp){
   const cred = resp && resp.credential;
   if(!cred) return showErr('#li-err', 'Google no devolvió tu cuenta. Inténtalo de nuevo.');
   try {
-    const j = await api('/api/auth/google', { id_token: cred });
+    const j = await api('/api/auth/google', { id_token: cred, referral_code: refCodeFromUrl || undefined });
     if(!j.account) throw new Error('No se pudo iniciar sesión con Google.');
     applySession(j);
     toast('¡Hola, ' + j.account.name + '!');
@@ -1691,7 +1699,7 @@ async function doVerifyEmailCode(){
   const btn = document.getElementById('ec-submit'); if(btn){ btn.disabled = true; btn.textContent = 'Verificando…'; }
   try {
     const v = await api('/api/verify-email-code', { email: pendingReg.email, code });
-    const j = await api('/api/register-account', { name: pendingReg.name, username: pendingReg.username, phone: pendingReg.phone, email: pendingReg.email, password: pendingReg.password, email_code_token: v.verification_token });
+    const j = await api('/api/register-account', { name: pendingReg.name, username: pendingReg.username, phone: pendingReg.phone, email: pendingReg.email, password: pendingReg.password, email_code_token: v.verification_token, referral_code: pendingReg.referral_code || undefined });
     pendingReg = null;
     applySession(j);
     toast('¡Cuenta creada! Ya puedes pedir viajes.');
@@ -1740,6 +1748,8 @@ async function doRegister(){
   const name = $('#rc-name').value.trim(), user = $('#rc-user').value.trim();
   const phone = $('#rc-phone').value.trim(), email = $('#rc-email').value.trim();
   const pw = $('#rc-pass').value, pw2 = $('#rc-pass2').value;
+  // v1.4.67: el código de referido (del enlace /?ref= o escrito a mano).
+  const refCode = (($('#rc-ref')||{}).value || '').trim().toLowerCase();
   if(!name || !user) return showErr('#rc-err', 'Pon tu nombre y un nombre de usuario.');
   if(!phone && !email) return showErr('#rc-err', 'Regístrate con tu número o con tu correo.');
   if(pw.length < 6) return showErr('#rc-err', 'La contraseña debe tener al menos 6 caracteres.');
@@ -1752,7 +1762,7 @@ async function doRegister(){
     if(cfg.emailCode){
       try {
         await api('/api/request-email-code', { email });
-        pendingReg = { name, username: user, phone: phone||null, email, password: pw };
+        pendingReg = { name, username: user, phone: phone||null, email, password: pw, referral_code: refCode || null };
         showEmailCodeStep(email);
       } catch(e){
         if(btn){ btn.disabled = false; btn.textContent = 'Registrarme'; }
@@ -1762,7 +1772,7 @@ async function doRegister(){
     }
   }
   try {
-    const j = await api('/api/register-account', { name, username: user, phone: phone||null, email: email||null, password: pw });
+    const j = await api('/api/register-account', { name, username: user, phone: phone||null, email: email||null, password: pw, referral_code: refCode || undefined });
     applySession(j);
     toast('¡Cuenta creada! Ya puedes pedir viajes.');
     goAfterLogin();
@@ -1836,6 +1846,10 @@ function renderCuenta(){
         + '<button class="btn ghost small" onclick="openRegistro(\'pasajero\',\'cuenta\')">Editar mi perfil de pasajero</button>'
       : '<p class="muted mt">Aún no tienes perfil de pasajero.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'cuenta\')">Crear mi perfil de pasajero</button>')
     + '</div>';
+  // v1.4.67: saldo de viajes gratis por recomendación (también en el inicio de Viajes).
+  if(myPassenger && (myPassenger.free_trips||0) > 0){
+    html += '<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Tienes '+myPassenger.free_trips+' viaje'+(myPassenger.free_trips>1?'s':'')+' gratis</b><p class="muted mt">Cubre hasta '+fmt$(FREE_TRIP_COVER)+' por viaje. Si el viaje cuesta más, pagas solo la diferencia en efectivo al terminar.</p></div>';
+  }
   html += '<div class="card white"><h3>Trabajar como chofer</h3>';
   if(myDriver){
     const st = myDriver.status==='pendiente' ? 'Tu registro está pendiente de aprobación del administrador.' : (myDriver.is_blocked ? 'Estás bloqueado: '+esc(myDriver.block_reason||'infracción') : (myDriver.online ? 'En línea · recibiendo viajes y mandados.' : 'Fuera de línea.'));
@@ -1874,7 +1888,7 @@ async function saveAccountPhone(){
 
 /* ===== VIAJES — asistente para pedir ===== */
 let wiz = null;
-function newWizard(){ return { step:0, origin:null, dest:null, km:0, eta:0, price:0, suggested:0, payment:'efectivo', desc:'', requestId:null, pax:1 }; }
+function newWizard(){ return { step:0, origin:null, dest:null, km:0, eta:0, price:0, suggested:0, payment:'efectivo', desc:'', requestId:null, pax:1, useFreeTrip:false }; }
 async function myActiveRequest(kind){
   if(!myPassenger) return null;
   try {
@@ -1921,6 +1935,10 @@ async function renderViajes(){
   if(!wiz) wiz = newWizard();
   setPageNoScroll('viajes-page', false);
   if(wiz.step===0){
+    // v1.4.67: al entrar a Viajes se refresca el saldo de viajes gratis
+    // (pudo ganarse uno desde la última vez) y el estado de la promo.
+    // El typeof deja la pantalla intacta si loadMe aún no cargó.
+    if(typeof loadMe === 'function'){ try { await loadMe(); } catch(e){} }
     const active = await myActiveRequest('viaje');
     if(active){
       if(active.status==='aceptado'){ goLive(active.id, false); return; }
@@ -1957,6 +1975,7 @@ async function renderViajes(){
       + '<button class="btn amber" style="font-size:19px;padding:20px" onclick="startTripRequest()">Solicitar el viaje</button>'
       + '<button class="btn" disabled style="background:#d1d5db;color:#4b5563">🔒 Programar un viaje · Próximamente</button>'
       + '<p class="muted center mt">Primero eliges de dónde sales, luego a dónde vas, y publicas tu viaje.</p>'
+      + (typeof referralHomeHtml === 'function' ? referralHomeHtml() : '')
       + '<button class="btn" onclick="go(\'historia\')">Historial de viajes</button>';
     return;
   }
@@ -2023,6 +2042,36 @@ async function renderViajes(){
   renderSearching();
 }
 let wizMap = null;
+/* ===== Viajes gratis por recomendación (v1.4.67) ===== */
+// El saldo de viajes gratis y la tarjeta para compartir viven en el
+// inicio de Viajes (y el saldo también en Mi cuenta). Con la promo
+// apagada la tarjeta de compartir se esconde; los viajes gratis ya
+// ganados se siguen mostrando y se pueden usar.
+function referralLink(){
+  if(!myAccount) return '';
+  return location.origin + '/?ref=' + encodeURIComponent(myAccount.username);
+}
+function referralHomeHtml(){
+  let h = '';
+  const n = myPassenger ? (myPassenger.free_trips||0) : 0;
+  if(n > 0) h += '<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Tienes '+n+' viaje'+(n>1?'s':'')+' gratis</b><p class="muted mt">Cubre hasta '+fmt$(FREE_TRIP_COVER)+' por viaje. Si el viaje cuesta más, pagas solo la diferencia en efectivo al terminar.</p></div>';
+  if(referralEnabled && myAccount){
+    h += '<div class="card white"><b>🎁 Gana un viaje gratis</b><p class="muted mt">Comparte SanFerGo con tus amigos: cuando alguien se registre con tu enlace y haga su primer viaje, tú ganas un viaje gratis (cubre hasta '+fmt$(FREE_TRIP_COVER)+').</p>'
+      + '<div class="btnrow"><button class="btn small" onclick="shareReferralWhatsApp()">Compartir por WhatsApp</button><button class="btn ghost small" onclick="copyReferralLink()">Copiar enlace</button></div></div>';
+  }
+  return h;
+}
+function shareReferralWhatsApp(){
+  const link = referralLink();
+  const msg = '¡Pide tu mototaxi en San Fernando con SanFerGo! Regístrate con mi enlace y pide tu primer viaje: ' + link;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+function copyReferralLink(){
+  const link = referralLink();
+  const done = ()=>toast('Enlace copiado: ' + link);
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done, ()=>toast(link)); }
+  else toast(link);
+}
 function drawWizMap(){
   const el = document.getElementById('wiz-map');
   if(!el || !wiz.origin || !wiz.dest) return;
@@ -2337,6 +2386,17 @@ async function confirmPick(){
   else if(pickWhich==='mdest' || pickWhich==='morigin'){ mandadoPickDone(pickWhich, pickPos, label); }
   else { wiz.dest = { lat:pickPos.lat, lng:pickPos.lng, label, zone }; await computeTrip(); go('viajes'); }
 }
+function pricePayNoteText(kind, price){
+  // v1.4.67: con el viaje gratis puesto, la nota dice lo que el pasajero
+  // paga de verdad (la diferencia sobre $30, o nada si el precio no pasa
+  // de $30); sin él, la nota de siempre.
+  if(kind==='viaje' && wiz.useFreeTrip){
+    const pays = freeTripPays(price);
+    if(pays > 0) return 'Viaje gratis: pagas solo '+fmt$(pays)+' en efectivo directo al conductor al terminar el viaje. SanFerGo cubre '+fmt$(freeTripCovered(price))+' de tu precio.';
+    return 'Viaje gratis: no pagas nada al terminar, SanFerGo cubre todo el viaje (hasta '+fmt$(FREE_TRIP_COVER)+').';
+  }
+  return 'Pagas '+fmt$(price)+' en efectivo directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
+}
 function priceSheetHtml(kind){
   // Hoja inferior del paso de precio (app real), igual para viajes y
   // mandados: stepper con "Sugerido: $X", pago (Efectivo + Tarjeta ·
@@ -2346,7 +2406,7 @@ function priceSheetHtml(kind){
   const isTrip = kind === 'viaje';
   const st = isTrip ? wiz : md;
   const sugg = st.suggested;
-  const payNote = 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(isTrip?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(isTrip?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
+  const payNote = pricePayNoteText(kind, st.price);
   // v1.4.48: cuántas personas van (solo viajes): el mínimo sube con las
   // personas (1=$20, 2=$25, 3=$30) y el sugerido se recalcula al cambiar.
   let paxHtml = '';
@@ -2363,6 +2423,17 @@ function priceSheetHtml(kind){
     const base = suggestedPrice(md.km);
     extra = '<div style="background:#14532d;color:#fff;border-radius:12px;padding:12px;display:flex;justify-content:space-between;margin-top:8px"><span>Distancia estimada · '+md.km.toFixed(1)+' km</span><span>Tiempo estimado · ≈ '+md.eta+' min</span></div>'
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
+  }
+  // v1.4.67: usar el viaje gratis (solo viajes, solo si el pasajero tiene
+  // saldo). Al prenderlo, la nota de pago dice la diferencia que paga.
+  let freeHtml = '';
+  if(isTrip && myPassenger && (myPassenger.free_trips||0) > 0){
+    const on = !!st.useFreeTrip;
+    freeHtml = '<div style="font-weight:700;margin-top:10px">🎁 Viaje gratis</div>'
+      + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(on?'sel':'')+'" onclick="priceToggleFreeTrip()">'+(on?'✓ Usar mi viaje gratis':'Usar mi viaje gratis')+'</button></div>'
+      + (on
+        ? '<p class="muted mt">Viaje gratis: SanFerGo cubre hasta '+fmt$(FREE_TRIP_COVER)+' de tu precio. Si tu precio pasa de '+fmt$(FREE_TRIP_COVER)+', pagas la diferencia ('+fmt$(freeTripPays(st.price))+') en efectivo al terminar. Solo lo hace el chofer de SanFerGo.</p>'
+        : '<p class="muted mt">Tienes '+(myPassenger.free_trips||0)+' viaje'+((myPassenger.free_trips||0)>1?'s':'')+' gratis · cubre hasta '+fmt$(FREE_TRIP_COVER)+'.</p>');
   }
   // v1.4.49: el botón "‹ Regresar" vive DENTRO de la hoja, arriba de todo.
   // Antes la píldora flotaba en la franja de arriba y la hoja (más alta
@@ -2381,6 +2452,7 @@ function priceSheetHtml(kind){
     + '<div class="stepper"><button class="pm" onclick="priceStep(\''+kind+'\',-5)">−</button><span class="val" id="price-val">'+fmt$(st.price)+'</span><button class="pm" onclick="priceStep(\''+kind+'\',5)">+</button></div>'
     + (isTrip ? '<p class="muted center mt">Tú pones el precio, de $5 en $5. El conductor lo acepta o te ofrece el suyo.</p>' : '')
     + paxHtml
+    + freeHtml
     + '<div style="font-weight:700;margin-top:10px">¿Cómo vas a pagar?</div>'
     + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(st.payment==='efectivo'?'sel':'')+'" onclick="priceSetPay(\''+kind+'\',\'efectivo\')">Efectivo</button><button type="button" class="pay-opt" disabled>Tarjeta · Próximamente</button></div>'
     + (isTrip ? '<p class="muted mt" id="price-pay-note">'+payNote+'</p>' : '')
@@ -2429,13 +2501,20 @@ function priceStep(kind, d){
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
   const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
   const n = document.getElementById('price-pay-note');
-  if(n) n.textContent = 'Pagas '+fmt$(st.price)+' en efectivo directo al conductor al terminar el '+(kind==='viaje'?'viaje':'mandado')+'. Lo eliges ahora para que, en cuanto un chofer acepte tu precio, tu '+(kind==='viaje'?'viaje':'mandado')+' quede confirmado sin volverte a preguntar.';
+  if(n) n.textContent = pricePayNoteText(kind, st.price); // v1.4.67: la nota sigue al viaje gratis (lo que paga de verdad)
 }
 function priceSetSuggested(kind){
   const st = kind==='viaje' ? wiz : md;
   st.price = st.suggested;
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
   const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
+  const n = document.getElementById('price-pay-note'); if(n) n.textContent = pricePayNoteText(kind, st.price); // v1.4.67: igual que el stepper
+}
+function priceToggleFreeTrip(){
+  // v1.4.67: prende/apaga el uso del viaje gratis en este viaje (solo
+  // viajes; el servidor valida el saldo al publicar).
+  wiz.useFreeTrip = !wiz.useFreeTrip;
+  renderViajes();
 }
 function priceSetPay(kind, m){
   const st = kind==='viaje' ? wiz : md;
@@ -2467,7 +2546,8 @@ async function publishTrip(){
       passenger_id: myPassenger.id, kind:'viaje',
       origin_zone: wiz.origin.zone, origin_detail: wiz.origin.label, origin_lat: wiz.origin.lat, origin_lng: wiz.origin.lng,
       dest_zone: wiz.dest.zone, dest_detail: wiz.dest.label, dest_lat: wiz.dest.lat, dest_lng: wiz.dest.lng,
-      distance_km: wiz.km, eta_minutes: wiz.eta, price, payment_method: pay, paymentMethod: pay, description: desc, passenger_count: wiz.pax });
+      distance_km: wiz.km, eta_minutes: wiz.eta, price, payment_method: pay, paymentMethod: pay, description: desc, passenger_count: wiz.pax,
+      is_free_trip: wiz.useFreeTrip ? 1 : 0 }); // v1.4.67: el viaje gratis lo valida el servidor (saldo y chofer del dueño)
     wiz.requestId = j.request.id; wiz.step = 5;
     requestNotificationPermission();
     try { localStorage.setItem('sfg_last_trip', JSON.stringify({ origin_lat: wiz.origin.lat, origin_lng: wiz.origin.lng, origin_zone: wiz.origin.zone, origin_detail: wiz.origin.label, dest_lat: wiz.dest.lat, dest_lng: wiz.dest.lng, dest_zone: wiz.dest.zone, dest_detail: wiz.dest.label, payment_method: pay })); } catch(e){}
@@ -2516,6 +2596,7 @@ async function renderSearching(){
       + '<div class="muted">'+r.distance_km+' km · ≈ '+r.eta_minutes+' min</div>'
       + '<div style="margin-top:8px"><span class="chip blue">BUSCANDO</span></div>'
       + '<div class="muted mt">Tu precio: <b>'+fmt$(r.price)+'</b> (sugerido '+fmt$(r.suggested||suggestedPrice(r.distance_km||1))+')</div>'
+      + (r.is_free_trip ? '<div style="margin-top:8px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:8px 10px;font-size:13px"><b>🎁 Viaje gratis</b> · SanFerGo cubre '+fmt$(freeTripCovered(r.price))+'. Tú pagas '+fmt$(freeTripPays(r.price))+' en efectivo al terminar.</div>' : '')
       + (offers.length ? '' : '<div class="card warn"><b>Ningún conductor real en línea ha respondido todavía.</b><p class="muted mt">Los conductores registrados responden desde el apartado Soy conductor cuando están en línea. Súbelo un poco y tu solicitud se vuelve más atractiva.</p>'
         + '<div class="btnrow"><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+10)+')">Subir a '+fmt$(r.price+10)+'</button><button class="btn amber small" onclick="raisePrice('+r.id+', '+(r.price+20)+')">Subir a '+fmt$(r.price+20)+'</button></div></div>')
       + '</div>';
@@ -3278,10 +3359,14 @@ function showTripSummary(r, asDriver){
     // "Revisa que el pasajero no haya olvidado algo en tu mototaxi",
     // en la misma banda crema de siempre.
     ov.classList.add('orange-receipt');
+    // v1.4.67: viaje gratis — el precio grande es lo que el chofer COBRA
+    // (la diferencia sobre $30, o $0) y se ve lo que cubre SanFerGo.
+    const paysD = r.is_free_trip ? freeTripPays(r.final_price||r.price) : (r.final_price||r.price);
     ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
       + '<div class="sumfloat orange"><h2>Resumen del viaje</h2>'
       + '<div class="sumthanks">Gracias por concluir el viaje</div>'
-      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + '<div class="sumprice-big">'+fmt$(paysD)+'</div>'
+      + (r.is_free_trip ? '<div class="sumbelong">🎁 Viaje gratis · Cubierto por SanFerGo: '+fmt$(freeTripCovered(r.final_price||r.price))+'</div>' : '')
       + '<div class="sumbelong">Revisa que el pasajero no haya olvidado algo en tu mototaxi</div>'
       + '</div></div>';
     ov.addEventListener('click', e=>{ if(e.target === ov) closeTripSummary(); });
@@ -3300,11 +3385,16 @@ function showTripSummary(r, asDriver){
     // de la tarjeta para no tapar el texto y la tarjeta va centrada en
     // la pantalla (clase orange-receipt en el flotante).
     ov.classList.add('orange-receipt');
-    const cash61 = summaryCashNote(r);
+    // v1.4.67: viaje gratis — el precio grande es lo que el pasajero
+    // PAGA de verdad (la diferencia sobre $30, o $0) y se ve lo que
+    // cubre SanFerGo. La nota de cambio solo sale si paga algo.
+    const paysP = r.is_free_trip ? freeTripPays(r.final_price||r.price) : (r.final_price||r.price);
+    const cash61 = (r.is_free_trip && paysP <= 0) ? '' : summaryCashNote(r);
     ov.innerHTML = '<div class="sumwrap"><button class="adx" aria-label="Cerrar" onclick="closeTripSummary()">✕</button>'
       + '<div class="sumfloat orange"><h2>¡Viaje terminado!</h2>'
       + '<div class="sumthanks">Tu viaje ha concluido. Gracias por usar SanFerGo.</div>'
-      + '<div class="sumprice-big">'+fmt$(r.final_price||r.price)+'</div>'
+      + '<div class="sumprice-big">'+fmt$(paysP)+'</div>'
+      + (r.is_free_trip ? '<div class="sumbelong">🎁 Viaje gratis · Cubierto por SanFerGo: '+fmt$(freeTripCovered(r.final_price||r.price))+'</div>' : '')
       + (cash61 ? '<div class="sumremind">'+cash61+'</div>' : '')
       + '<div class="sumbelong">Recuerda revisar todas tus pertenencias</div>'
       + '</div></div>';
@@ -5115,7 +5205,7 @@ async function loadDriverInbox(force){
     ]);
     const myList = mj.requests||[];
     const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
-    const todayCount = myList.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
+    const todayCount = myList.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && !r.is_free_trip && (r.created_at||'').slice(0,10)===today).length; // v1.4.67: los viajes gratis no cuentan para el límite de 5/día
     const atLimit = !sub && todayCount >= FREE_DAILY_LIMIT;
     const active = myList.filter(r=>r.status==='aceptado');
     const list = (j.requests||[]).filter(r => {
@@ -5146,7 +5236,7 @@ async function loadDriverInbox(force){
     // Si nada cambió desde la última vez que se pintó, no se toca la
     // pantalla: ni parpadeo, ni salto de scroll, ni formulario perdido.
     // La insignia y la lista salen del mismo ciclo, así no discrepan.
-    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.price_improved||'')+':'+(r.republished_at||'')+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.passenger_count||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','))]);
+    const sig = JSON.stringify([myDriver.is_blocked, myDriver.online, todayCount, driverInboxTab, inboxExpandedId, driverCounter?driverCounter.rid+':'+driverCounter.price:'', active.map(r=>r.id+':'+r.status+':'+(r.trip_stage||'')), list.map(r=>r.id+':'+r.status+':'+r.price+':'+(r.price_improved||'')+':'+(r.republished_at||'')+':'+r._dispO+'>'+r._dispD+':'+r._refO+'>'+r._refD+':'+(r.passenger_name||'')+':'+(r.distance_km||'')+':'+(r.eta_minutes||'')+':'+(r.payment_method||'')+':'+(r.passenger_count||'')+':'+(r.order_payment||'')+':'+(r.order_amount||0)+':'+(r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(',')), list.map(r=>r.is_free_trip||'')]);
     if(inboxLoaded && !force && sig===inboxSig) return;
     inboxSig = sig; inboxLoaded = true;
     let html = head;
@@ -5238,6 +5328,7 @@ async function loadDriverInbox(force){
       // en la fila para que el chofer la vea de un vistazo, con el
       // precio de antes y el de ahora (igual que en la app real).
       + (r.price_improved?'<div style="margin-top:6px;background:#dcfce7;color:#166534;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">✦ Precio mejorado<br><span style="font-weight:400">El pasajero ha aumentado su precio: antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'.</span></div>':'')
+      + (r.is_free_trip?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">🎁 Viaje gratis · el pasajero paga '+fmt$(freeTripPays(r.price))+'</div>':'')
       + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
       + (counter && !rejected?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
       + (rejected?'<div style="margin-top:6px;background:#ffedd5;color:#9a3412;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Rechazado · '+esc(rejectedTxt)+'</div>':'')
@@ -5305,6 +5396,8 @@ function inboxDetailHtml(r, sub, atLimit){
   + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
   + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
   + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
+  // v1.4.67: viaje gratis — el chofer ve de un vistazo que SanFerGo cubre hasta $30 y lo que el pasajero paga al terminar.
+  + (r.is_free_trip?'<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Viaje gratis</b><p class="muted mt">SanFerGo cubre hasta '+fmt$(FREE_TRIP_COVER)+' de este viaje. El pasajero paga '+fmt$(freeTripPays(r.price))+' en efectivo al terminar. Solo tú (chofer de SanFerGo) ves este viaje.</p></div>':'')
   // (v1.4.55) Precio mejorado: el pasajero subió el precio y la
   // solicitud se volvió a publicar como nueva.
   + (r.price_improved?'<div class="card" style="background:#dcfce7;border:1px solid #16a34a"><b>Precio mejorado: el pasajero ha aumentado su precio.</b><p class="muted mt">Antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'. La solicitud se volvió a publicar como nueva con este precio mejorado.</p></div>':'')
@@ -5331,9 +5424,9 @@ function inboxDetailHtml(r, sub, atLimit){
       + '<button class="btn ghost" onclick="driverRejectCounter('+r.id+', '+mineLive.id+')">Rechazar contraoferta</button></div></div>';
   } else if(mineLive){
     h += '<div class="card" style="background:#f0fdf4;border:1px solid #16a34a"><b>Ya respondiste: '+(mineLive.kind==='contraoferta' ? 'contraofertaste '+fmt$(mineLive.price) : 'aceptaste '+fmt$(mineLive.price))+'. Al aceptar el precio del pasajero, el servicio queda confirmado en el acto y pasa a «En curso».</b></div>';
-  } else if(highFare && !sub){
+  } else if(highFare && !sub && !r.is_free_trip){
     h += '<div class="card warn"><b>Servicio de mayor tarifa ('+fmt$(r.price)+'): solo con suscripción activa.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
-  } else if(atLimit){
+  } else if(atLimit && !r.is_free_trip){ // v1.4.67: el viaje gratis no lo frena el límite de 5/día (el servidor tampoco lo cuenta)
     h += '<div class="card warn"><b>Ya hiciste tus '+FREE_DAILY_LIMIT+' servicios de hoy con el plan gratis.</b><p class="muted mt">Elige tu suscripción: $50 por semana, $150 por mes o $500 por año, desde tu panel de conductor, pagando por transferencia.</p></div>';
   } else if(driverCounter && driverCounter.rid===r.id){
     // (v1.4.56) El borrador nunca se pre-llena por debajo del precio
@@ -5373,7 +5466,7 @@ function renderInboxOverlay(list){
     if(ov) ov.remove();
     return;
   }
-  const sig = JSON.stringify([r.id, r.status, r.price, r.price_improved, r.republished_at, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit]);
+  const sig = JSON.stringify([r.id, r.status, r.price, r.price_improved, r.republished_at, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit, r.is_free_trip]);
   if(ov && sig===inboxOvSig) return; // nada cambió en el flotante: no se toca
   inboxOvSig = sig;
   const inner = '<div class="reqwrap"><button class="adx" aria-label="Cerrar" onclick="closeInboxOverlay()">✕</button>'
@@ -5530,6 +5623,8 @@ function renderAdminGrid(){
     + '</div>'
     // v1.4.64: interruptor del candado de Negocios (solo lo ve el admin, que es el único que entra al panel). El perfil del dueño (@thegrafferz10) sigue exento aunque el candado esté puesto.
     + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div></div>'
+    // v1.4.67: interruptor de la promo de viajes gratis por recomendación + estadísticas (recomendaciones, pendientes, ganados, usados, por usar).
+    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🎁 Viajes gratis por recomendación ' + (referralEnabled ? '· prendida' : '· apagada') + '</b><div class="muted" style="font-size:12px;line-height:1.4" id="referral-stats-line">Cargando…</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleReferralPromo()">' + (referralEnabled ? 'Apagar promoción' : 'Prender promoción') + '</button></div></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -5543,8 +5638,29 @@ function renderAdminGrid(){
     + '</div>'
     + '<button class="btn" style="border:2px solid #374151;color:#374151;background:#fff" onclick="doLogout()">‹ Cerrar sesión</button>';
   loadAdminOverview();
+  loadReferralStats(); // v1.4.67: estadísticas de la promo de viajes gratis
   if(adminPoll) clearInterval(adminPoll);
   adminPoll = setInterval(loadAdminOverview, 5000); // revisa cada 5 segundos
+}
+async function loadReferralStats(){
+  // v1.4.67: la tarjeta de la promo en el panel muestra recomendaciones
+  // totales, pendientes, viajes gratis ganados, usados y por usar.
+  try {
+    const j = await api('/api/admin/referral-stats?token=' + encodeURIComponent(store.token));
+    const el = document.getElementById('referral-stats-line');
+    if(el && j.stats){
+      const s = j.stats;
+      el.textContent = 'Recomendaciones: '+s.total+' · pendientes: '+s.pending+' · viajes gratis ganados: '+s.free_trips_earned+' · usados: '+s.free_trips_used+' · por usar: '+s.free_trips_outstanding+'.';
+    }
+  } catch(e){}
+}
+async function toggleReferralPromo(){ // v1.4.67: prende/apaga la promo de viajes gratis por recomendación (solo admin)
+  try {
+    const j = await api('/api/admin/set-referral-enabled', { token: store.token, enabled: !referralEnabled });
+    referralEnabled = !!j.referral_enabled;
+    toast(referralEnabled ? 'Promoción prendida: las recomendaciones vuelven a ganar viajes gratis.' : 'Promoción apagada: ya no se ganan viajes gratis nuevos. Los ya ganados se pueden usar.');
+    renderAdminGrid();
+  } catch(e){ toast(e.message); }
 }
 async function toggleNegociosLock(){ // v1.4.64: abre/cierra el candado de Negocios desde el panel (solo admin)
   try {
@@ -5759,7 +5875,7 @@ async function renderAdminDetail(){
     const list = j.requests || [];
     tripsCount = list.length;
     const today = new Date(Date.now() - 6*3600*1000).toISOString().slice(0,10);
-    todayCount = list.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && (r.created_at||'').slice(0,10)===today).length;
+    todayCount = list.filter(r=>(r.status==='aceptado'||r.status==='finalizado') && !r.is_free_trip && (r.created_at||'').slice(0,10)===today).length; // v1.4.67: los viajes gratis no cuentan para el límite de 5/día
   } catch(e){}
   const subBlock = sub
     ? '<b>Suscripción de paga activa · Servicios ilimitados · Taxímetro ilimitado · '+(d.taxi_runs_today||0)+' recorridos de taxímetro hoy · vence el '+new Date(d.subscription_until).toLocaleDateString('es-MX')+' · le quedan '+daysLeft+' días</b>' + (d.subscription_start ? '<p class="muted mt">Activa desde el '+new Date(d.subscription_start).toLocaleDateString('es-MX')+'.</p>' : '')
@@ -7116,6 +7232,9 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && myDri
 
 /* ===== Inicio ===== */
 (async function init(){
+  // v1.4.67: el enlace de recomendación (/?ref=<usuario>) deja el código
+  // listo para el registro, aunque la persona entre directo a crear cuenta.
+  try { refCodeFromUrl = (new URLSearchParams(location.search).get('ref') || '').trim().toLowerCase(); } catch(e){}
   await loadPlaces();
   await loadMe();
   if (myAccount) { preloadEntryAds(); if (myAccount.role === 'admin') { adminScreen = null; go('admin'); } else renderHome(); }
