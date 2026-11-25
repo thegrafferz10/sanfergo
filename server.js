@@ -136,6 +136,14 @@ CREATE TABLE IF NOT EXISTS driver_dismissed (
   created_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY(driver_id, request_id)
 );
+-- v1.4.67: viajes gratis por recomendación — una fila por cuenta
+-- referida (un solo referidor por cuenta: el primero que se registra);
+-- 'earned' cuando el referido termina su primer viaje pagado.
+CREATE TABLE IF NOT EXISTS referrals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  referrer_account_id INTEGER NOT NULL, referred_account_id INTEGER NOT NULL UNIQUE,
+  status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')), earned_at TEXT
+);
 -- v1.4.66: recorridos de taxímetro terminados, para la ficha del chofer
 -- (total y hoy) en el panel de admin. El historial del taxímetro vive en
 -- el teléfono del chofer (localStorage); el servidor solo guarda el
@@ -289,6 +297,8 @@ addCol('requests', 'vehicle', 'TEXT');
 addCol('requests', 'passenger_count', 'INTEGER DEFAULT 1'); // v1.4.48: cuántas personas van en el viaje (1/2/3; mandados siempre 1)
 addCol('requests', 'trip_started_at', 'TEXT');
 addCol('requests', 'finished_at', 'TEXT');
+addCol('passengers', 'free_trips', 'INTEGER DEFAULT 0'); // v1.4.67: viajes gratis ganados por recomendación (se gastan al terminar el viaje gratis)
+addCol('requests', 'is_free_trip', 'INTEGER DEFAULT 0'); // v1.4.67: viaje gratis — solo lo hace el chofer del dueño
 // Duración de la cita en minutos (copia de la duración del servicio al
 // reservar; las citas viejas sin este campo usan la del servicio o 60).
 addCol('business_appointments', 'duration_minutes', 'INTEGER');
@@ -501,6 +511,13 @@ const LANDMARKS = [
 const BASE_FARE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
 const MANDADO_EXTRA_STOP = 10;
 const FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
+// v1.4.67: el viaje gratis por recomendación cubre hasta $30; si el viaje
+// cuesta más, el pasajero paga la diferencia en efectivo al terminar.
+const FREE_TRIP_COVER = 30;
+// v1.4.67: el dueño de SanFerGo — solo el chofer enlazado a su cuenta
+// (@thegrafferz10) hace los viajes gratis; a los demás choferes ni
+// siquiera les aparecen en Recibir Viajes.
+const OWNER_USERNAME = 'thegrafferz10';
 // Suscripción en tres planes (v1.3.0):
 // semanal $50/7 días, mensual $150/30 días, anual $500/365 días.
 // Los días se SUMAN a una suscripción activa.
@@ -583,6 +600,7 @@ function todayStr() { return new Date(Date.now() - 6 * 3600 * 1000).toISOString(
 function driverServicesToday(driverId) {
   const row = db.prepare(
     `SELECT COUNT(*) c FROM requests WHERE driver_id=? AND status IN ('aceptado','finalizado')
+     AND COALESCE(is_free_trip,0)=0
      AND substr(datetime(created_at,'-6 hours'),1,10)=?`).get(driverId, todayStr());
   return row ? row.c : 0;
 }
@@ -609,6 +627,65 @@ function driverHasSub(driver) {
 function driverComplete(driver) { return !!(driver && driver.selfie && driver.vehicle_photo); }
 function blockedMsg(driver) {
   return 'Estás bloqueado: ' + (driver.block_reason || 'infracción') + '. Habla con el administrador de SanFerGo.';
+}
+// ---- Viajes gratis por recomendación (v1.4.67) ----
+// La promo, como el lanzamiento de Uber: un pasajero recomienda la app
+// con su enlace (/?ref=<su usuario>); cuando el referido termina su
+// PRIMER viaje pagado, el referidor gana 1 viaje gratis (cubre hasta
+// $30). Los viajes gratis los hace SOLO el chofer del dueño (Josué),
+// directamente; los demás choferes nunca trabajan gratis. El viaje
+// gratis se gasta solo al terminarlo (si se cancela, se conserva) y NO
+// cuenta para el límite gratis de 5 servicios al día del chofer.
+function referralPromoEnabled(){
+  const row = db.prepare(`SELECT value FROM admin_state WHERE key='referral_enabled'`).get();
+  return !row || row.value !== '0'; // por defecto PRENDIDA
+}
+function ownerDriverId(){
+  const a = db.prepare(`SELECT driver_id FROM accounts WHERE username=?`).get(OWNER_USERNAME);
+  return a && a.driver_id ? a.driver_id : null;
+}
+function freeTripCovered(price){ return Math.min(Math.max(0, Number(price) || 0), FREE_TRIP_COVER); }
+function freeTripPays(price){ return Math.max(0, (Number(price) || 0) - FREE_TRIP_COVER); }
+function recordReferral(referrerUsername, newAccount){
+  // Un solo referidor por cuenta (el primero que se registra gana); la
+  // autorreferencia (misma cuenta o mismo teléfono) no cuenta. Un código
+  // inválido no rompe el registro: simplemente no se anota nada.
+  if (!referrerUsername || !newAccount) return false;
+  const ref = db.prepare('SELECT * FROM accounts WHERE username=?').get(cleanUsername(referrerUsername));
+  if (!ref || ref.id === newAccount.id) return false;
+  if (newAccount.phone && ref.phone && cleanPhone(newAccount.phone) === cleanPhone(ref.phone)) return false;
+  const existing = db.prepare('SELECT id FROM referrals WHERE referred_account_id=?').get(newAccount.id);
+  if (existing) return false;
+  db.prepare(`INSERT INTO referrals (referrer_account_id, referred_account_id, status) VALUES (?,?, 'pending')`).run(ref.id, newAccount.id);
+  return true;
+}
+function referralStats(){
+  const total = db.prepare(`SELECT COUNT(*) c FROM referrals`).get().c;
+  const pending = db.prepare(`SELECT COUNT(*) c FROM referrals WHERE status='pending'`).get().c;
+  const earned = db.prepare(`SELECT COUNT(*) c FROM referrals WHERE status='earned'`).get().c;
+  const used = db.prepare(`SELECT COUNT(*) c FROM requests WHERE COALESCE(is_free_trip,0)=1 AND status='finalizado'`).get().c;
+  const outstanding = db.prepare(`SELECT COALESCE(SUM(free_trips),0) s FROM passengers`).get().s;
+  return { enabled: referralPromoEnabled(), total, pending, earned, free_trips_earned: earned, free_trips_used: used, free_trips_outstanding: outstanding };
+}
+function maybeEarnReferral(r){
+  // Al terminar el PRIMER viaje PAGADO de un pasajero referido, su
+  // referidor gana 1 viaje gratis. Solo viajes (no mandados), solo con
+  // la promo prendida, y solo el primer viaje terminado cuenta (al
+  // ganar, la fila pasa a 'earned' y ya no vuelve a dar nada). Un viaje
+  // gratis nunca gana otro viaje gratis.
+  if (!r || r.kind !== 'viaje' || r.is_free_trip) return;
+  if (!referralPromoEnabled()) return;
+  const price = Number(r.final_price || r.price) || 0;
+  if (price <= 0) return;
+  const acc = r.passenger_id ? db.prepare('SELECT * FROM accounts WHERE passenger_id=?').get(r.passenger_id) : null;
+  if (!acc) return;
+  const ref = db.prepare(`SELECT * FROM referrals WHERE referred_account_id=? AND status='pending'`).get(acc.id);
+  if (!ref) return;
+  const finished = db.prepare(`SELECT COUNT(*) c FROM requests WHERE passenger_id=? AND kind='viaje' AND status='finalizado' AND COALESCE(is_free_trip,0)=0`).get(r.passenger_id).c;
+  if (finished !== 1) return;
+  db.prepare(`UPDATE referrals SET status='earned', earned_at=datetime('now') WHERE id=?`).run(ref.id);
+  const referrer = db.prepare('SELECT * FROM accounts WHERE id=?').get(ref.referrer_account_id);
+  if (referrer && referrer.passenger_id) db.prepare(`UPDATE passengers SET free_trips = COALESCE(free_trips,0)+1 WHERE id=?`).run(referrer.passenger_id);
 }
 
 function send(res, code, obj) {
@@ -756,7 +833,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.66' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.67' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -901,6 +978,23 @@ async function api(req, res, pathname) {
     return send(res, 200, { ok: true, negocios_locked: locked });
   }
 
+  // v1.4.67: interruptor de la promo de viajes gratis por recomendación
+  // (solo admin). Por defecto PRENDIDA (sin fila = prendida). Apagada,
+  // ya no se ganan viajes gratis nuevos (la tarjeta de compartir se
+  // esconde); los viajes gratis ya ganados se siguen pudiendo usar.
+  if (pathname === '/api/admin/set-referral-enabled') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const enabled = body.enabled !== false && body.enabled !== '0' && body.enabled !== 0;
+    db.prepare(`INSERT OR REPLACE INTO admin_state (key, value) VALUES ('referral_enabled', ?)`).run(enabled ? '1' : '0');
+    return send(res, 200, { ok: true, referral_enabled: enabled, stats: referralStats() });
+  }
+  if (pathname === '/api/admin/referral-stats') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    return send(res, 200, { ok: true, stats: referralStats() });
+  }
+
   // ---- Cuentas e inicio de sesión ----
   if (pathname === '/api/register-account') {
     const { name, username, phone, email, password } = body;
@@ -948,6 +1042,11 @@ async function api(req, res, pathname) {
     const r = db.prepare(`INSERT INTO accounts (name, username, phone, email, password_salt, password_hash, role, passenger_id, driver_id, email_verified)
       VALUES (?,?,?,?,?,?,'user',?,NULL,?)`).run(nm, un, ph, em, salt, hash, passenger.id, emailVerified);
     const account = db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid);
+    // v1.4.67: si se registró con el código de referido de otro usuario
+    // (/?ref=<usuario> o el campo del formulario), se anota la
+    // recomendación; cuando este pasajero termine su primer viaje, su
+    // referidor gana 1 viaje gratis.
+    if (body.referral_code) recordReferral(body.referral_code, account);
     const token = newSession(account.id);
     return send(res, 200, { ok: true, account: publicAccount(account), token, passenger });
   }
@@ -1065,6 +1164,9 @@ async function api(req, res, pathname) {
       const r = db.prepare(`INSERT INTO accounts (name, username, phone, email, password_salt, password_hash, role, passenger_id, driver_id, email_verified)
         VALUES (?,?,NULL,?,?,?,'user',?,NULL,1)`).run(nm, un, em, salt, hash, passenger.id);
       account = db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid);
+      // v1.4.67: igual que en el registro normal, si entró con el enlace
+      // de recomendación (/?ref=<usuario>) se anota la recomendación.
+      if (body.referral_code) recordReferral(body.referral_code, account);
     }
     // v1.4.30: una cuenta suspendida o bloqueada tampoco entra con Google.
     if (account.status === 'suspendido') return send(res, 400, { ok: false, error: suspendedMessage(account) });
@@ -1104,7 +1206,7 @@ async function api(req, res, pathname) {
     if (a.status === 'bloqueado') return send(res, 403, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
-    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null, negocios_locked: negociosLocked() });
+    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null, negocios_locked: negociosLocked(), referral_enabled: referralPromoEnabled() });
   }
   if (pathname === '/api/logout') {
     if (body.token) db.prepare('DELETE FROM sessions WHERE token=?').run(String(body.token));
@@ -1959,13 +2061,27 @@ async function api(req, res, pathname) {
       if (order_payment !== 'pagado' && order_payment !== 'por_pagar') return send(res, 400, { ok: false, error: 'Elige cómo se paga el pedido: ya pagado o se pagará.' });
       if (order_payment === 'por_pagar' && !(Number(order_amount) > 0)) return send(res, 400, { ok: false, error: 'Escribe la cantidad que el chofer necesita llevar para recoger el mandado.' });
     }
+    // v1.4.67: VIAJE GRATIS por recomendación — solo viajes (no
+    // mandados), solo si el pasajero tiene viajes gratis sin gastar (los
+    // que están buscando o en curso ya cuentan como apartados: el viaje
+    // gratis se gasta solo al terminarlo, así que no se pueden publicar
+    // dos con un solo saldo) y solo si existe el chofer del dueño, que
+    // es el único que los hace.
+    const useFree = body.is_free_trip === 1 || body.is_free_trip === true || body.is_free_trip === '1';
+    if (useFree) {
+      if (kind !== 'viaje') return send(res, 400, { ok: false, error: 'Los viajes gratis son solo para viajes, no para mandados.' });
+      if (!ownerDriverId()) return send(res, 400, { ok: false, error: 'Los viajes gratis no están disponibles por ahora.' });
+      if (!p) return send(res, 400, { ok: false, error: 'Necesitas tu perfil de pasajero para usar un viaje gratis.' });
+      const inFlight = db.prepare(`SELECT COUNT(*) c FROM requests WHERE passenger_id=? AND COALESCE(is_free_trip,0)=1 AND status IN ('buscando','aceptado')`).get(p.id).c;
+      if ((p.free_trips || 0) - inFlight <= 0) return send(res, 400, { ok: false, error: 'No tienes viajes gratis disponibles.' });
+    }
     const itemsJson = items ? JSON.stringify(items) : null;
     const stopsJson = stops ? JSON.stringify(stops) : null;
     const r = db.prepare(`INSERT INTO requests (kind, passenger_id, passenger_name, passenger_phone, passenger_photo,
       origin_zone, origin_detail, origin_lat, origin_lng, dest_zone, dest_detail, dest_lat, dest_lng,
       distance_km, eta_minutes, price, payment_method, passenger_count, description, recipient_phone, recipient_name, order_payment, order_amount, items_json, stops_json, extra_stops,
-      vehicle, status, trip_stage)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
+      vehicle, is_free_trip, status, trip_stage)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'buscando', 'confirmado')`).run(
       kind, passenger_id || null, pName || null, pPhone, p ? p.face_photo : null,
       origin_zone || null, origin_detail || null, origin_lat ?? null, origin_lng ?? null,
       dest_zone || null, dest_detail || null, dest_lat ?? null, dest_lng ?? null,
@@ -1975,7 +2091,7 @@ async function api(req, res, pathname) {
       recipient_name ? String(recipient_name).trim() : null,
       order_payment === 'pagado' || order_payment === 'por_pagar' ? order_payment : null,
       order_payment === 'por_pagar' ? Number(order_amount) || 0 : 0,
-      itemsJson, stopsJson, extra_stops || 0, reqVehicle);
+      itemsJson, stopsJson, extra_stops || 0, reqVehicle, useFree ? 1 : 0);
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(r.lastInsertRowid) });
   }
   if (pathname === '/api/requests') {
@@ -1992,6 +2108,12 @@ async function api(req, res, pathname) {
       rows = df
         ? db.prepare(`SELECT * FROM requests WHERE status='buscando' AND id NOT IN (SELECT request_id FROM driver_dismissed WHERE driver_id=?) ORDER BY COALESCE(republished_at, created_at) DESC, id DESC LIMIT 50`).all(df)
         : db.prepare(`SELECT * FROM requests WHERE status='buscando' ORDER BY COALESCE(republished_at, created_at) DESC, id DESC LIMIT 50`).all();
+      // v1.4.67: un viaje gratis solo lo ve el chofer del dueño en su
+      // bandeja (dismissed_for es su id); para los demás choferes no
+      // existe — ni siquiera aparece en la lista abierta.
+      const dfNum = df ? parseInt(df, 10) : null;
+      const oid = ownerDriverId();
+      rows = rows.filter(r => !r.is_free_trip || (oid && dfNum === oid));
     }
     else rows = db.prepare('SELECT * FROM requests ORDER BY id DESC LIMIT 50').all();
     // v1.4.42: ?light=1 quita las fotos base64 de las filas y de las ofertas:
@@ -2025,9 +2147,16 @@ async function api(req, res, pathname) {
     if (!driverComplete(d)) return send(res, 400, { ok: false, error: 'Completa tu registro con tus fotos para responder.' });
     if (r.kind === 'viaje' && d.vehicle !== 'mototaxi') return send(res, 400, { ok: false, error: 'Los viajes son solo en mototaxi.' });
     if (r.vehicle && d.vehicle !== r.vehicle) return send(res, 400, { ok: false, error: r.vehicle === 'moto' ? 'Este mandado es para moto.' : 'Este servicio es para mototaxi.' });
+    // v1.4.67: un viaje gratis solo lo toma el chofer del dueño (Josué):
+    // los demás choferes no lo ven en su bandeja y tampoco lo pueden
+    // tomar por la API. Y el viaje gratis NO cuenta para su límite de 5
+    // servicios gratis al día (tampoco el tope de $80+: el viaje gratis
+    // lo hace el dueño como promoción, no como servicio de paga).
+    const isFreeTrip = !!r.is_free_trip;
+    if (isFreeTrip && d.id !== ownerDriverId()) return send(res, 403, { ok: false, error: 'Este viaje gratis es solo para el chofer de SanFerGo.' });
     const hasSub = driverHasSub(d);
     const offeredPrice = price ?? r.price;
-    if (!hasSub) {
+    if (!hasSub && !isFreeTrip) {
       if (driverServicesToday(driver_id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
       if (offeredPrice >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
     }
@@ -2062,7 +2191,8 @@ async function api(req, res, pathname) {
       if (!existing || existing.passenger_counter_price == null) return send(res, 400, { ok: false, error: 'No hay contraoferta del pasajero para aceptar.' });
       // La confirmación también pasa por el límite gratis, el tope de $80+
       // y la rejilla de $5 (igual que al aceptar el precio del pasajero).
-      if (!hasSub) {
+      // v1.4.67: salvo en un viaje gratis, que no cuenta para el límite.
+      if (!hasSub && !isFreeTrip) {
         if (driverServicesToday(driver_id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
         if (existing.passenger_counter_price >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
       }
@@ -2118,12 +2248,15 @@ async function api(req, res, pathname) {
     if (action === 'acepta') {
       const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(o.driver_id);
       if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
+      // v1.4.67: un viaje gratis solo lo confirma el chofer del dueño.
+      if (r.is_free_trip && d.id !== ownerDriverId()) return send(res, 403, { ok: false, error: 'Este viaje gratis es solo para el chofer de SanFerGo.' });
       if (d.is_blocked) return send(res, 403, { ok: false, error: 'Este conductor está bloqueado y no puede tomar el servicio.' });
       const finalPrice = o.passenger_counter_price || o.price; // si el pasajero contraofertó, se confirma a ese precio
       // Esta vía también la usa el chofer al aceptar la contraoferta del
       // pasajero: los chequeos son sobre el chofer de la oferta. Límite
       // gratis, tope de $80+ y rejilla de $5, igual que en driver-respond.
-      if (!driverHasSub(d)) {
+      // v1.4.67: salvo en un viaje gratis, que no cuenta para el límite.
+      if (!driverHasSub(d) && !r.is_free_trip) {
         if (driverServicesToday(d.id) >= FREE_DAILY_LIMIT) return send(res, 400, { ok: false, error: `Ya hiciste tus ${FREE_DAILY_LIMIT} servicios gratis de hoy. Activa una suscripción para seguir.` });
         if (finalPrice >= PREMIUM_MIN_PRICE) return send(res, 400, { ok: false, error: `Los servicios de $${PREMIUM_MIN_PRICE} o más son solo para suscripción. Activa una suscripción.` });
       }
@@ -2233,6 +2366,19 @@ async function api(req, res, pathname) {
       ${stampStart ? ', trip_started_at=datetime(\'now\')' : ''}
       ${isFinal ? ', finished_at=datetime(\'now\')' : ''}
       WHERE id=?`).run(stage, status, request_id);
+    if (isFinal && r.kind === 'viaje') {
+      const done = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
+      if (done.is_free_trip) {
+        // v1.4.67: el viaje gratis se gasta SOLO al terminarlo — si se
+        // canceló antes, el pasajero lo conserva (por eso no se descuenta
+        // al publicarlo).
+        if (done.passenger_id) db.prepare(`UPDATE passengers SET free_trips = MAX(0, COALESCE(free_trips,0)-1) WHERE id=?`).run(done.passenger_id);
+      } else {
+        // v1.4.67: si este era el PRIMER viaje pagado de un pasajero
+        // referido, su referidor gana 1 viaje gratis.
+        maybeEarnReferral(done);
+      }
+    }
     return send(res, 200, { ok: true, request: db.prepare('SELECT * FROM requests WHERE id=?').get(request_id) });
   }
   if (pathname === '/api/update-driver-location') {
