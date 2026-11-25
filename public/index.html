@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.67'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.68'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2056,7 +2056,7 @@ function referralHomeHtml(){
   const n = myPassenger ? (myPassenger.free_trips||0) : 0;
   if(n > 0) h += '<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Tienes '+n+' viaje'+(n>1?'s':'')+' gratis</b><p class="muted mt">Cubre hasta '+fmt$(FREE_TRIP_COVER)+' por viaje. Si el viaje cuesta más, pagas solo la diferencia en efectivo al terminar.</p></div>';
   if(referralEnabled && myAccount){
-    h += '<div class="card white"><b>🎁 Gana un viaje gratis</b><p class="muted mt">Comparte SanFerGo con tus amigos: cuando alguien se registre con tu enlace y haga su primer viaje, tú ganas un viaje gratis (cubre hasta '+fmt$(FREE_TRIP_COVER)+').</p>'
+    h += '<div class="card white"><b>🎁 Gana un viaje gratis</b><p class="muted mt">Comparte SanFerGo con tus amigos: cuando alguien se registre con tu enlace y haga su primer viaje, tú ganas un viaje gratis (cubre hasta '+fmt$(FREE_TRIP_COVER)+'). Solo puedes ganar un viaje gratis en total.</p>'
       + '<div class="btnrow"><button class="btn small" onclick="shareReferralWhatsApp()">Compartir por WhatsApp</button><button class="btn ghost small" onclick="copyReferralLink()">Copiar enlace</button></div></div>';
   }
   return h;
@@ -5624,7 +5624,7 @@ function renderAdminGrid(){
     // v1.4.64: interruptor del candado de Negocios (solo lo ve el admin, que es el único que entra al panel). El perfil del dueño (@thegrafferz10) sigue exento aunque el candado esté puesto.
     + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div></div>'
     // v1.4.67: interruptor de la promo de viajes gratis por recomendación + estadísticas (recomendaciones, pendientes, ganados, usados, por usar).
-    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🎁 Viajes gratis por recomendación ' + (referralEnabled ? '· prendida' : '· apagada') + '</b><div class="muted" style="font-size:12px;line-height:1.4" id="referral-stats-line">Cargando…</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleReferralPromo()">' + (referralEnabled ? 'Apagar promoción' : 'Prender promoción') + '</button></div></div>'
+    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🎁 Viajes gratis por recomendación ' + (referralEnabled ? '· prendida' : '· apagada') + '</b><div class="muted" style="font-size:12px">Solo se gana 1 viaje gratis por persona.</div><div class="muted" style="font-size:12px;line-height:1.4" id="referral-stats-line">Cargando…</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleReferralPromo()">' + (referralEnabled ? 'Apagar promoción' : 'Prender promoción') + '</button></div></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
