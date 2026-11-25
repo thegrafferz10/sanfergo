@@ -846,7 +846,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.70' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.71' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -880,6 +880,11 @@ async function api(req, res, pathname) {
   if (pathname === '/api/register-passenger') {
     const { name, phone, face_photo } = body;
     if (!name || !phone) return send(res, 400, { ok: false, error: 'Faltan datos del pasajero.' });
+    // v1.4.71: la foto de cara (selfie) es OBLIGATORIA para guardar el
+    // perfil de pasajero: sin ella no se guarda nada. El registro de la
+    // cuenta en sí (que crea un pasajero automático sin foto) NO se toca:
+    // ese pasajero nace incompleto y se completa en el formulario.
+    if (!face_photo || !String(face_photo).trim()) return send(res, 400, { ok: false, error: 'Falta tu foto de cara (selfie): súbela para guardar tu perfil de pasajero.' });
     const r = db.prepare(`INSERT INTO passengers (name, phone, face_photo) VALUES (?,?,?)`)
       .run(name.trim(), phone.trim(), face_photo || null);
     return send(res, 200, { ok: true, passenger: db.prepare('SELECT * FROM passengers WHERE id=?').get(r.lastInsertRowid) });
@@ -897,10 +902,15 @@ async function api(req, res, pathname) {
     return send(res, 200, { ok: true, passenger: db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id) });
   }
   if (pathname === '/api/update-passenger') {
-    const { passenger_id, name, phone } = body;
+    const { passenger_id, name, phone, face_photo } = body;
     const p = db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id);
     if (!p) return send(res, 404, { ok: false, error: 'Pasajero no encontrado.' });
-    db.prepare('UPDATE passengers SET name=?, phone=? WHERE id=?').run(name || p.name, phone || p.phone, passenger_id);
+    // v1.4.71: la foto de cara es obligatoria: la foto efectiva es la que
+    // viene en la petición o la ya guardada; si no hay ninguna, no se
+    // guarda el perfil (el formulario la pide antes de llamar aquí).
+    const effPhoto = (face_photo && String(face_photo).trim()) ? face_photo : p.face_photo;
+    if (!effPhoto) return send(res, 400, { ok: false, error: 'Falta tu foto de cara (selfie): súbela para guardar tu perfil de pasajero.' });
+    db.prepare('UPDATE passengers SET name=?, phone=?, face_photo=? WHERE id=?').run(name || p.name, phone || p.phone, effPhoto, passenger_id);
     return send(res, 200, { ok: true, passenger: db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id) });
   }
   if (pathname === '/api/update-driver') {
@@ -2043,6 +2053,12 @@ async function api(req, res, pathname) {
     const pName = p ? p.name : (passenger_name || '').trim();
     const pPhone = p ? p.phone : (passenger_phone || '').trim();
     if (!pPhone) return send(res, 400, { ok: false, error: 'Falta tu número de teléfono: el conductor necesita poder marcarte. Regístrate como pasajero o escribe tu teléfono.' });
+    // v1.4.71: la foto de cara (selfie) es obligatoria para publicar: el
+    // conductor reconoce al pasajero por ella. Sin perfil, o con perfil
+    // sin foto, no se publica ni el viaje ni el mandado (mismo 400 que
+    // sin teléfono). El registro de la cuenta no se toca: el pasajero
+    // automático nace sin foto y se completa en el formulario.
+    if (!p || !p.face_photo) return send(res, 400, { ok: false, error: 'Falta tu foto de cara (selfie): súbela en tu perfil de pasajero para poder pedir viajes y mandados.' });
     const km = distance_km ?? (origin_lat != null && dest_lat != null ? haversineKm(origin_lat, origin_lng, dest_lat, dest_lng) : 1);
     // Vehículo elegido para el mandado (el cliente lo manda en "Quiero un
     // mandado": mototaxi predeterminado, moto como opción). En viajes

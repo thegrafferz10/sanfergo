@@ -145,8 +145,12 @@ async function api(path, body) {
   check('sin teléfono no se publica', !noPhone.ok, JSON.stringify(noPhone));
   const cheap = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 15 });
   check('precio menor a $20 rechazado', !cheap.ok && /20/.test(cheap.error || ''), JSON.stringify(cheap));
-  const withPhone = await api('/api/create-request', { passenger_name: 'Sin Perfil', passenger_phone: '9610000009', kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
-  check('sin perfil pero con teléfono sí se publica', withPhone.ok && withPhone.request.passenger_phone === '9610000009', JSON.stringify(withPhone));
+  // (v1.4.71: sin foto ya no se publica — el pasajero con solo nombre +
+  // teléfono, sin selfie, es rechazado con el mensaje de la foto.)
+  const accNoFoto = await api('/api/register-account', { name: 'Sin Foto Pub', username: 'sinfoto_' + RUN, phone: '9610000009', password: 'secreta123' });
+  const meNoFoto = await api('/api/me?token=' + accNoFoto.token);
+  const withPhone = await api('/api/create-request', { passenger_id: meNoFoto.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  check('sin perfil completo (sin foto) ya no se publica (v1.4.71: la selfie es obligatoria)', accNoFoto.ok && meNoFoto.ok && meNoFoto.passenger && meNoFoto.passenger.phone === '9610000009' && !meNoFoto.passenger.face_photo && !withPhone.ok && /foto/.test(withPhone.error || ''), JSON.stringify(withPhone));
 
   console.log('== Cancelación solo antes de empezar ==');
   async function acceptedTrip(price) {
@@ -367,7 +371,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.70 en /api/health', h.ok && h.version === '1.4.70', JSON.stringify(h));
+  check('versión 1.4.71 en /api/health', h.ok && h.version === '1.4.71', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +472,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.70', h134.ok && h134.version === '1.4.70', JSON.stringify(h134));
+  check('versión 1.4.71', h134.ok && h134.version === '1.4.71', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +634,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.70)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.70';") && h.version === '1.4.70', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.71)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.71';") && h.version === '1.4.71', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -786,9 +790,11 @@ async function api(path, body) {
   const celiaPhone = '961105' + RUN.slice(0, 4);
   const setOk = await api('/api/set-account-phone', { token: liCelia.token, phone: celiaPhone });
   check('cuenta solo-correo pone su teléfono (200) y queda guardado', setOk.ok && setOk.account.phone === celiaPhone, JSON.stringify(setOk));
-  // Flujo de saveAccountPhone (tarjeta "Mi cuenta"): teléfono ya puesto,
-  // crear pasajero y enlazar; /api/me muestra el pasajero nuevo.
-  const paxCelia = await api('/api/register-passenger', { name: 'Celia Correo', phone: celiaPhone, face_photo: null });
+  // Flujo de la tarjeta "Mi cuenta" (v1.4.71: el número se guarda y el
+  // formulario crea el pasajero CON foto, que luego se enlaza; antes se
+  // creaba aquí mismo sin foto): teléfono ya puesto, crear pasajero con
+  // foto y enlazar; /api/me muestra el pasajero nuevo.
+  const paxCelia = await api('/api/register-passenger', { name: 'Celia Correo', phone: celiaPhone, face_photo: PHOTO });
   check('pasajero creado para Celia', paxCelia.ok && paxCelia.passenger.id, JSON.stringify(paxCelia));
   const linkCelia = await api('/api/link-profiles', { token: liCelia.token, passenger_id: paxCelia.passenger.id });
   check('tras poner el teléfono, el pasajero sí se enlaza (200)', linkCelia.ok && linkCelia.account.passenger_id === paxCelia.passenger.id, JSON.stringify(linkCelia));
@@ -807,7 +813,7 @@ async function api(path, body) {
   const doraPhone = '961107' + RUN.slice(0, 4);
   const setDora = await api('/api/set-account-phone', { token: liDora.token, phone: doraPhone });
   check('Dora pone su teléfono antes de pedir el viaje (200)', setDora.ok && setDora.account.phone === doraPhone, JSON.stringify(setDora));
-  const paxDora = await api('/api/register-passenger', { name: 'Dora Correo', phone: doraPhone, face_photo: null });
+  const paxDora = await api('/api/register-passenger', { name: 'Dora Correo', phone: doraPhone, face_photo: PHOTO });
   check('pasajero del viaje creado para Dora', paxDora.ok && paxDora.passenger.id, JSON.stringify(paxDora));
   const linkDora = await api('/api/link-profiles', { token: liDora.token, passenger_id: paxDora.passenger.id });
   check('el pasajero del viaje se enlaza a la cuenta (200)', linkDora.ok && linkDora.account.passenger_id === paxDora.passenger.id, JSON.stringify(linkDora));
@@ -819,7 +825,7 @@ async function api(path, body) {
   const sapStart = html.indexOf('async function saveAccountPhone(){');
   const sapEnd = html.indexOf('\n/* ===== VIAJES', sapStart);
   const sapSrc = sapStart >= 0 && sapEnd > sapStart ? html.slice(sapStart, sapEnd) : '';
-  check('saveAccountPhone() llama a set-account-phone ANTES de crear el pasajero', sapSrc.includes("api('/api/set-account-phone'") && sapSrc.indexOf("set-account-phone") < sapSrc.indexOf("register-passenger"), sapSrc.slice(0, 300));
+  check('saveAccountPhone() guarda el teléfono y abre el formulario de perfil (v1.4.71: ya no crea el pasajero sin foto)', sapSrc.includes("api('/api/set-account-phone'") && sapSrc.includes("openRegistro('pasajero','cuenta')") && !sapSrc.includes("register-passenger"), sapSrc.slice(0, 300));
   const enpStart = html.indexOf('async function ensureNoProfilePassenger(){');
   const enpEnd = html.indexOf('\nasync function renderViajes(){', enpStart);
   const enpSrc = enpStart >= 0 && enpEnd > enpStart ? html.slice(enpStart, enpEnd) : '';
@@ -864,7 +870,7 @@ async function api(path, body) {
   const inesPhone = '961108' + RUN.slice(0, 4);
   const setInes = await api('/api/set-account-phone', { token: ines.li.token, phone: inesPhone });
   check('Inés pone su teléfono antes del formulario (200)', setInes.ok && setInes.account.phone === inesPhone, JSON.stringify(setInes));
-  const paxInes = await api('/api/register-passenger', { name: 'Inés Correo', phone: inesPhone, face_photo: null });
+  const paxInes = await api('/api/register-passenger', { name: 'Inés Correo', phone: inesPhone, face_photo: PHOTO });
   check('pasajero creado para Inés desde el formulario', paxInes.ok && paxInes.passenger.id, JSON.stringify(paxInes));
   const linkInes = await api('/api/link-profiles', { token: ines.li.token, passenger_id: paxInes.passenger.id });
   check('el pasajero de Inés se enlaza (200)', linkInes.ok && linkInes.account.passenger_id === paxInes.passenger.id, JSON.stringify(linkInes));
@@ -910,7 +916,7 @@ async function api(path, body) {
   check('perfil ya enlazado a otra cuenta no lo puede enlazar el admin (400)', !lkOther.ok, JSON.stringify(lkOther));
   const meAna3 = await api('/api/me?token=' + li1.token);
   check('el chofer sigue enlazado a su cuenta original', meAna3.ok && meAna3.driver && meAna3.driver.id === drvAcc.driver.id, JSON.stringify(meAna3));
-  const paxFar = await api('/api/register-passenger', { name: 'Lejos Prueba', phone: '961110' + RUN.slice(0, 4), face_photo: null });
+  const paxFar = await api('/api/register-passenger', { name: 'Lejos Prueba', phone: '961110' + RUN.slice(0, 4), face_photo: PHOTO });
   check('pasajero sin enlazar para la prueba de números distintos', paxFar.ok && paxFar.passenger.id, JSON.stringify(paxFar));
   const lkMis = await api('/api/admin/link-profile', { token: ADM.token, account_id: accB.account.id, kind: 'passenger', profile_id: paxFar.passenger.id });
   check('enlazar de admin con números distintos rechazado (400)', !lkMis.ok, JSON.stringify(lkMis));
@@ -1422,7 +1428,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.70 en /api/health (sección)', h27.ok && h27.version === '1.4.70', JSON.stringify(h27));
+  check('versión 1.4.71 en /api/health (sección)', h27.ok && h27.version === '1.4.71', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1473,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.70 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.70', JSON.stringify(h28));
+  check('versión 1.4.71 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.71', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1487,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.70 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.70', JSON.stringify(h29));
+  check('versión 1.4.71 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.71', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1496,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.70 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.70', JSON.stringify(h30));
+  check('versión 1.4.71 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.71', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -3912,12 +3918,18 @@ async function api(path, body) {
     if (!a.ok) return a;
     return finishTrip67(driverId, reqId);
   }
+  // v1.4.71: la selfie es obligatoria para publicar: los pasajeros de
+  // esta sección nacen del registro con teléfono pero sin foto, así que
+  // se les sube la foto antes de publicar (lo que haría el formulario).
+  async function fotoPara(acc){ await api('/api/upload-passenger-photo', { passenger_id: acc.passenger.id, photo: PHOTO }); }
   // --- En vivo: registro de la recomendación y ganancia ---
   const accA67 = await api('/api/register-account', { name: 'Ana Refiere', username: 'refa_' + RUN, phone: '961670' + RUN.slice(0, 4), password: 'secreta123' });
+  await fotoPara(accA67);
   check('v1.4.68: en vivo, referidora registrada', accA67.ok && accA67.account.id && accA67.passenger.id, JSON.stringify(accA67));
   const stats0 = await api('/api/admin/referral-stats?token=' + ADM.token);
   check('v1.4.68: en vivo, stats de referidos empiezan en cero y la promo está prendida por defecto', stats0.ok && stats0.stats.enabled === true && stats0.stats.total === 0 && stats0.stats.pending === 0 && stats0.stats.earned === 0 && stats0.stats.free_trips_earned === 0 && stats0.stats.free_trips_used === 0 && stats0.stats.free_trips_outstanding === 0, JSON.stringify(stats0.stats));
   const accB67 = await api('/api/register-account', { name: 'Beto Referido', username: 'refb_' + RUN, phone: '961671' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
+  await fotoPara(accB67);
   const statsB = await api('/api/admin/referral-stats?token=' + ADM.token);
   check('v1.4.68: en vivo, el referido con código queda anotado (pendiente)', accB67.ok && statsB.stats.total === 1 && statsB.stats.pending === 1 && statsB.stats.earned === 0, JSON.stringify(statsB.stats));
   const accC67 = await api('/api/register-account', { name: 'Celia Sola', username: 'refc_' + RUN, phone: '961672' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refc_' + RUN });
@@ -3935,6 +3947,7 @@ async function api(path, body) {
   const meA2 = await api('/api/me?token=' + accA67.token);
   check('v1.4.68: en vivo, el SEGUNDO viaje del referido ya no gana nada (solo el primero)', statsE2.stats.earned === 1 && statsE2.stats.free_trips_outstanding === 1 && meA2.passenger.free_trips === 1, JSON.stringify(statsE2.stats));
   const accE67 = await api('/api/register-account', { name: 'Ema Referida', username: 'refe_' + RUN, phone: '961674' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
+  await fotoPara(accE67);
   const tripE1 = await trip67(accE67.passenger.id, 25);
   const canE1 = await api('/api/cancel-request', { request_id: tripE1.request.id });
   const statsCan = await api('/api/admin/referral-stats?token=' + ADM.token);
@@ -3945,6 +3958,7 @@ async function api(path, body) {
   const meA3 = await api('/api/me?token=' + accA67.token);
   check('v1.4.68: en vivo, TOPE: el SEGUNDO amigo referido que termina su primer viaje NO gana nada más (ganados 1, saldo 1, ya no pendiente)', statsE3.stats.total === 2 && statsE3.stats.pending === 0 && statsE3.stats.earned === 1 && statsE3.stats.free_trips_earned === 1 && statsE3.stats.free_trips_outstanding === 1 && meA3.passenger.free_trips === 1, JSON.stringify({ st: statsE3.stats, free: meA3.passenger.free_trips }));
   const accF67 = await api('/api/register-account', { name: 'Fer Referido', username: 'reff_' + RUN, phone: '961675' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
+  await fotoPara(accF67);
   const manF = await api('/api/create-request', { passenger_id: accF67.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete' });
   const manAcc = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: manF.request.id, kind: 'acepta', price: 30 });
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: manF.request.id, stage: 'llego' });
@@ -3983,6 +3997,7 @@ async function api(path, body) {
   const meA4 = await api('/api/me?token=' + accA67.token);
   check('v1.4.68: en vivo, TOPE: después de USAR el viaje gratis, el TERCER amigo referido que termina su primer viaje TAMPOCO gana nada (total ganado sigue 1, saldo 0)', statsE4.stats.total === 3 && statsE4.stats.pending === 0 && statsE4.stats.earned === 1 && statsE4.stats.free_trips_earned === 1 && statsE4.stats.free_trips_used === 1 && statsE4.stats.free_trips_outstanding === 0 && meA4.passenger.free_trips === 0, JSON.stringify({ st: statsE4.stats, free: meA4.passenger.free_trips }));
   const accZ67 = await api('/api/register-account', { name: 'Zed Sin Saldo', username: 'refz_' + RUN, phone: '961676' + RUN.slice(0, 4), password: 'secreta123' });
+  await fotoPara(accZ67);
   const freeNo = await api('/api/create-request', { passenger_id: accZ67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
   check('v1.4.68: en vivo, sin viajes gratis el servidor rechaza publicar uno gratis', !freeNo.ok && /No tienes viajes gratis/.test(freeNo.error || ''), JSON.stringify(freeNo));
   const freeMan = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete', is_free_trip: 1 });
@@ -3996,7 +4011,9 @@ async function api(path, body) {
   // del límite lo aporta OTRO referidor (Gus), que gana el suyo con su
   // primer referido — el tope es por persona, no global.
   const accG68 = await api('/api/register-account', { name: 'Gus Refiere', username: 'refg_' + RUN, phone: '961678' + RUN.slice(0, 4), password: 'secreta123' });
+  await fotoPara(accG68);
   const accH2 = await api('/api/register-account', { name: 'Hugo Dos', username: 'refh2_' + RUN, phone: '961679' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refg_' + RUN });
+  await fotoPara(accH2);
   const tripH2 = await trip67(accH2.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripH2.request.id, 25);
   const statsG = await api('/api/admin/referral-stats?token=' + ADM.token);
@@ -4024,6 +4041,7 @@ async function api(path, body) {
   const meOff = await api('/api/me?token=' + accA67.token);
   check('v1.4.68: en vivo, el admin apaga la promo y /api/me lo refleja', togOff.ok && togOff.referral_enabled === false && meOff.referral_enabled === false, JSON.stringify({ tog: togOff.referral_enabled, me: meOff.referral_enabled }));
   const accH67 = await api('/api/register-account', { name: 'Hugo Referido', username: 'refh_' + RUN, phone: '961677' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
+  await fotoPara(accH67);
   const tripH1 = await trip67(accH67.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripH1.request.id, 25);
   const statsOff = await api('/api/admin/referral-stats?token=' + ADM.token);
@@ -4039,14 +4057,14 @@ async function api(path, body) {
   // usuario hacía TODOS los pasos hasta que el servidor rechazaba publicar
   // sin teléfono. Ahora Viajes muestra arriba la tarjeta de completar
   // perfil y "Solicitar el viaje" no entra al flujo hasta completarlo.
-  // "Perfil completo" = lo mismo que exige publicar: nombre + teléfono.
-  // La foto NO se exige para pedir el viaje (el perfil se puede guardar
-  // sin foto).
+  // "Perfil completo" = lo mismo que exige publicar: nombre + teléfono
+  // + foto de cara (v1.4.71: la foto pasó a ser obligatoria; en v1.4.69
+  // no se exigía y el usuario guardó su perfil solo con el número).
   console.log('== v1.4.69: perfil incompleto no entra a pedir viaje ==');
   const ppcStart = html.indexOf('function passengerProfileComplete(){');
   const ppcEnd = html.indexOf('\nfunction profileBannerHtml(){', ppcStart);
   const ppcSrc = ppcStart >= 0 && ppcEnd > ppcStart ? html.slice(ppcStart, ppcEnd) : '';
-  check('v1.4.69: "perfil completo" = nombre + teléfono del pasajero (la foto NO se exige)', ppcSrc.includes('myPassenger.name') && ppcSrc.includes('myPassenger.phone') && !ppcSrc.includes('face_photo'), ppcSrc.slice(0, 300));
+  check('v1.4.69: "perfil completo" = nombre + teléfono + foto de cara del pasajero (v1.4.71)', ppcSrc.includes('myPassenger.name') && ppcSrc.includes('myPassenger.phone') && ppcSrc.includes('face_photo'), ppcSrc.slice(0, 300));
   const pbStart = html.indexOf('function profileBannerHtml(){');
   const pbEnd = html.indexOf('\nasync function renderViajes(){', pbStart);
   const pbSrc = pbStart >= 0 && pbEnd > pbStart ? html.slice(pbStart, pbEnd) : '';
@@ -4057,14 +4075,15 @@ async function api(path, body) {
   check('v1.4.69: "Solicitar el viaje" no entra al flujo con perfil incompleto: avisa y lleva a completar el perfil', stSrc69.includes('passengerProfileComplete()') && stSrc69.includes("openRegistro('pasajero','viajes')") && stSrc69.indexOf('passengerProfileComplete()') < stSrc69.indexOf('wiz.step = 1'), stSrc69.slice(0, 300));
   // Evaluado: la definición real de perfil completo y la tarjeta real.
   const ppcFn = new Function('myPassenger', ppcSrc + '\nreturn passengerProfileComplete();');
-  const ppcCases = { sinPerfil: ppcFn(null), telefonoVacio: ppcFn({ name: 'Kike Correo', phone: '' }), soloTelefono: ppcFn({ name: '', phone: '9611234567' }), completo: ppcFn({ name: 'Kike Correo', phone: '9611234567' }), completoSinFoto: ppcFn({ name: 'Kike Correo', phone: '9611234567', face_photo: null }) };
-  check('v1.4.69: evaluado — perfil completo solo con nombre + teléfono (sin perfil, teléfono vacío o sin nombre = incompleto; sin foto = completo)', ppcCases.sinPerfil === false && ppcCases.telefonoVacio === false && ppcCases.soloTelefono === false && ppcCases.completo === true && ppcCases.completoSinFoto === true, JSON.stringify(ppcCases));
+  const ppcCases = { sinPerfil: ppcFn(null), telefonoVacio: ppcFn({ name: 'Kike Correo', phone: '' }), soloTelefono: ppcFn({ name: '', phone: '9611234567' }), sinFoto: ppcFn({ name: 'Kike Correo', phone: '9611234567' }), completoSinFoto: ppcFn({ name: 'Kike Correo', phone: '9611234567', face_photo: null }), completo: ppcFn({ name: 'Kike Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' }) };
+  check('v1.4.69: evaluado — perfil completo = nombre + teléfono + foto (v1.4.71: sin perfil, teléfono vacío, sin nombre o sin foto = incompleto)', ppcCases.sinPerfil === false && ppcCases.telefonoVacio === false && ppcCases.soloTelefono === false && ppcCases.sinFoto === false && ppcCases.completoSinFoto === false && ppcCases.completo === true, JSON.stringify(ppcCases));
   const pbFn = new Function('myPassenger', 'passengerProfileComplete', pbSrc + '\nreturn profileBannerHtml();');
   function runBanner69(p){ return pbFn(p, () => ppcFn(p)); }
   const pbInc69 = runBanner69({ name: 'Kike Correo', phone: '' });
   const pbNull69 = runBanner69(null);
-  const pbOk69 = runBanner69({ name: 'Kike Correo', phone: '9611234567' });
-  check('v1.4.69: evaluado — la tarjeta aparece con perfil incompleto (texto + botón Completar mi perfil) y desaparece con perfil completo', pbInc69.includes('Completa tu perfil para pedir viajes') && pbInc69.includes('Completar mi perfil') && pbInc69.includes("openRegistro('pasajero','viajes')") && pbNull69.includes('Completa tu perfil para pedir viajes') && pbOk69 === '', JSON.stringify({ inc: pbInc69.slice(0, 120), ok: pbOk69 }));
+  const pbSinFoto69 = runBanner69({ name: 'Kike Correo', phone: '9611234567', face_photo: null });
+  const pbOk69 = runBanner69({ name: 'Kike Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
+  check('v1.4.69: evaluado — la tarjeta aparece con perfil incompleto (también solo sin foto, v1.4.71) y desaparece con perfil completo', pbInc69.includes('Completa tu perfil para pedir viajes') && pbInc69.includes('Completar mi perfil') && pbInc69.includes("openRegistro('pasajero','viajes')") && pbNull69.includes('Completa tu perfil para pedir viajes') && pbSinFoto69.includes('Completa tu perfil para pedir viajes') && pbOk69 === '', JSON.stringify({ inc: pbInc69.slice(0, 120), ok: pbOk69 }));
   // Evaluado: el candado real de "Solicitar el viaje".
   async function runStart69(passenger){
     const calls = { registro: null, toast: null, rendered: false };
@@ -4075,8 +4094,9 @@ async function api(path, body) {
   }
   const gateInc69 = await runStart69({ name: 'Kike Correo', phone: '' });
   const gateNull69 = await runStart69(null);
-  const gateOk69 = await runStart69({ name: 'Kike Correo', phone: '9611234567' });
-  check('v1.4.69: evaluado — con perfil incompleto (teléfono vacío o sin perfil) "Solicitar el viaje" NO entra al flujo: avisa y abre completar perfil', gateInc69.step === 0 && !gateInc69.calls.rendered && gateInc69.calls.registro && gateInc69.calls.registro[0] === 'pasajero' && gateInc69.calls.registro[1] === 'viajes' && !!gateInc69.calls.toast && gateNull69.step === 0 && gateNull69.calls.registro && gateNull69.calls.registro[1] === 'viajes', JSON.stringify({ inc: gateInc69, nul: gateNull69 }));
+  const gateSinFoto69 = await runStart69({ name: 'Kike Correo', phone: '9611234567', face_photo: null });
+  const gateOk69 = await runStart69({ name: 'Kike Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
+  check('v1.4.69: evaluado — con perfil incompleto (teléfono vacío, sin perfil o solo sin foto) "Solicitar el viaje" NO entra al flujo: avisa y abre completar perfil', gateInc69.step === 0 && !gateInc69.calls.rendered && gateInc69.calls.registro && gateInc69.calls.registro[0] === 'pasajero' && gateInc69.calls.registro[1] === 'viajes' && !!gateInc69.calls.toast && gateNull69.step === 0 && gateNull69.calls.registro && gateNull69.calls.registro[1] === 'viajes' && gateSinFoto69.step === 0 && !gateSinFoto69.calls.rendered && gateSinFoto69.calls.registro && gateSinFoto69.calls.registro[1] === 'viajes' && !!gateSinFoto69.calls.toast, JSON.stringify({ inc: gateInc69, nul: gateNull69, sinFoto: gateSinFoto69 }));
   check('v1.4.69: evaluado — con perfil completo "Solicitar el viaje" SÍ entra al flujo (paso 1)', gateOk69.step === 1 && gateOk69.calls.rendered && !gateOk69.calls.registro, JSON.stringify(gateOk69));
   // Evaluado: la pantalla de Viajes (paso 0) con cada estado del perfil.
   const viajesFnSrc69 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('let wizMap = null;'));
@@ -4100,7 +4120,7 @@ async function api(path, body) {
   }
   const sim69inc = await runRenderViajes69({ name: 'Kike Correo', phone: '' });
   const sim69null = await runRenderViajes69(null);
-  const sim69ok = await runRenderViajes69({ name: 'Kike Correo', phone: '9611234567' });
+  const sim69ok = await runRenderViajes69({ name: 'Kike Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
   check('v1.4.69: evaluado — con perfil incompleto la pantalla de Viajes muestra ARRIBA la tarjeta "Completa tu perfil para pedir viajes" con su botón', sim69inc.includes('Completa tu perfil para pedir viajes') && sim69inc.includes('Completar mi perfil') && sim69inc.indexOf('Completa tu perfil para pedir viajes') < sim69inc.indexOf('Solicitar el viaje') && sim69null.includes('Completa tu perfil para pedir viajes'), JSON.stringify(sim69inc.slice(0, 200)));
   check('v1.4.69: evaluado — con perfil completo la pantalla de Viajes NO muestra la tarjeta y sigue igual (Solicitar + Programar + Historial)', !sim69ok.includes('Completa tu perfil para pedir viajes') && sim69ok.includes('Solicitar el viaje') && sim69ok.includes('Programar un viaje') && sim69ok.includes('Historial de viajes'), JSON.stringify(sim69ok.slice(0, 200)));
   // --- En vivo: cuenta solo-correo con pasajero de teléfono vacío ---
@@ -4110,22 +4130,31 @@ async function api(path, body) {
   check('v1.4.69: en vivo, la cuenta nace con pasajero automático de teléfono vacío (el caso del usuario)', me69a.ok && me69a.passenger && me69a.passenger.phone === '' && me69a.passenger.name === 'Lola Correo', JSON.stringify(me69a.passenger));
   const trip69bad = await api('/api/create-request', { passenger_id: me69a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.69: en vivo, con el teléfono vacío el servidor sigue rechazando publicar el viaje (400)', !trip69bad.ok && /teléfono/.test(trip69bad.error || ''), JSON.stringify(trip69bad));
-  // Completar nombre + teléfono (lo que pide el formulario de perfil).
+  // Completar nombre + teléfono SIN foto (el caso del usuario en
+  // v1.4.71): el servidor ya no guarda el perfil sin foto.
   const phone69 = '961690' + RUN.slice(0, 4);
   const set69 = await api('/api/set-account-phone', { token: acc69.li.token, phone: phone69 });
-  const upd69 = await api('/api/update-passenger', { passenger_id: me69a.passenger.id, name: 'Lola Correo', phone: phone69 });
+  const upd69noFoto = await api('/api/update-passenger', { passenger_id: me69a.passenger.id, name: 'Lola Correo', phone: phone69 });
+  check('v1.4.71: en vivo, completar nombre + teléfono SIN foto ya no guarda el perfil (400)', set69.ok && !upd69noFoto.ok && /foto/.test(upd69noFoto.error || ''), JSON.stringify(upd69noFoto));
+  // Subir la selfie: ahora sí guarda y el perfil queda completo.
+  const upd69 = await api('/api/update-passenger', { passenger_id: me69a.passenger.id, name: 'Lola Correo', phone: phone69, face_photo: PHOTO });
   const me69b = await api('/api/me?token=' + acc69.li.token);
-  check('v1.4.69: en vivo, al completar nombre + teléfono el perfil queda completo', set69.ok && upd69.ok && me69b.ok && me69b.passenger.phone === phone69 && me69b.passenger.name === 'Lola Correo', JSON.stringify(me69b.passenger));
+  check('v1.4.69: en vivo, al completar nombre + teléfono + foto el perfil queda completo', set69.ok && upd69.ok && me69b.ok && me69b.passenger.phone === phone69 && me69b.passenger.name === 'Lola Correo' && !!me69b.passenger.face_photo, JSON.stringify(me69b.passenger));
   const trip69ok = await api('/api/create-request', { passenger_id: me69a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.69: en vivo, con el perfil completo el viaje se publica normal (buscando, $25)', trip69ok.ok && trip69ok.request.status === 'buscando' && trip69ok.request.price === 25, JSON.stringify(trip69ok.request && { st: trip69ok.request.status, p: trip69ok.request.price }));
   await api('/api/cancel-request', { request_id: trip69ok.request.id });
-  // Perfil completo desde el registro: el viaje se publica sin trabas.
+  // Perfil con nombre + teléfono desde el registro, pero SIN foto: el
+  // registro crea el pasajero automático sin foto (v1.4.71: nace
+  // incompleto hasta subir la selfie).
   const acc69b = await api('/api/register-account', { name: 'Marta Completa', username: 'marta_' + RUN, phone: '961691' + RUN.slice(0, 4), password: 'secreta123' });
   const me69c = await api('/api/me?token=' + acc69b.token);
-  check('v1.4.69: en vivo, una cuenta registrada con teléfono nace con perfil completo (nombre + teléfono)', acc69b.ok && me69c.ok && me69c.passenger && me69c.passenger.phone === '961691' + RUN.slice(0, 4), JSON.stringify(me69c.passenger));
+  check('v1.4.69: en vivo, una cuenta registrada con teléfono nace con nombre + teléfono pero SIN foto (perfil incompleto, v1.4.71)', acc69b.ok && me69c.ok && me69c.passenger && me69c.passenger.phone === '961691' + RUN.slice(0, 4) && !me69c.passenger.face_photo, JSON.stringify(me69c.passenger));
   const trip69c = await api('/api/create-request', { passenger_id: me69c.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
-  check('v1.4.69: en vivo, con perfil completo desde el registro el viaje se publica sin trabas', trip69c.ok && trip69c.request.status === 'buscando', JSON.stringify(trip69c.request && { st: trip69c.request.status, p: trip69c.request.price }));
-  await api('/api/cancel-request', { request_id: trip69c.request.id });
+  check('v1.4.71: en vivo, con nombre + teléfono pero sin foto el servidor rechaza publicar el viaje (400)', !trip69c.ok && /foto/.test(trip69c.error || ''), JSON.stringify(trip69c));
+  const up69c = await api('/api/upload-passenger-photo', { passenger_id: me69c.passenger.id, photo: PHOTO });
+  const trip69d = await api('/api/create-request', { passenger_id: me69c.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.69: en vivo, con la foto subida el viaje se publica sin trabas', up69c.ok && trip69d.ok && trip69d.request.status === 'buscando', JSON.stringify(trip69d.request && { st: trip69d.request.status, p: trip69d.request.price }));
+  await api('/api/cancel-request', { request_id: trip69d.request.id });
 
   // ===== v1.4.70 (2026-11-25): perfil incompleto tampoco entra a Mandados =====
   // El usuario confirmó que Viajes ya muestra la tarjeta (v1.4.69) pero
@@ -4150,7 +4179,7 @@ async function api(path, body) {
   function runBanner70(p){ return pbmFn(p, () => ppcFn(p)); }
   const pbmInc70 = runBanner70({ name: 'Lola Correo', phone: '' });
   const pbmNull70 = runBanner70(null);
-  const pbmOk70 = runBanner70({ name: 'Lola Correo', phone: '9611234567' });
+  const pbmOk70 = runBanner70({ name: 'Lola Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
   check('v1.4.70: evaluado — la tarjeta de Mandados aparece con perfil incompleto y desaparece con perfil completo', pbmInc70.includes('Completa tu perfil para pedir mandados') && pbmInc70.includes('Completar mi perfil') && pbmInc70.includes("openRegistro('pasajero','mandados')") && pbmNull70.includes('Completa tu perfil para pedir mandados') && pbmOk70 === '', JSON.stringify({ inc: pbmInc70.slice(0, 120), ok: pbmOk70 }));
   // Evaluado: el candado real de los dos botones de Mandados.
   async function runStart70(passenger, kind){
@@ -4163,8 +4192,8 @@ async function api(path, body) {
   const gateInc70q = await runStart70({ name: 'Lola Correo', phone: '' }, 'quiero');
   const gateInc70e = await runStart70({ name: 'Lola Correo', phone: '' }, 'enviar');
   const gateNull70 = await runStart70(null, 'quiero');
-  const gateOk70q = await runStart70({ name: 'Lola Correo', phone: '9611234567' }, 'quiero');
-  const gateOk70e = await runStart70({ name: 'Lola Correo', phone: '9611234567' }, 'enviar');
+  const gateOk70q = await runStart70({ name: 'Lola Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' }, 'quiero');
+  const gateOk70e = await runStart70({ name: 'Lola Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' }, 'enviar');
   check('v1.4.70: evaluado — con perfil incompleto NINGÚN botón de Mandados entra al flujo: avisa y abre completar perfil', gateInc70q.step === 0 && !gateInc70q.calls.rendered && gateInc70q.calls.registro && gateInc70q.calls.registro[1] === 'mandados' && !!gateInc70q.calls.toast && gateInc70e.step === 0 && gateInc70e.calls.registro && gateInc70e.calls.registro[1] === 'mandados' && gateNull70.step === 0 && gateNull70.calls.registro && gateNull70.calls.registro[1] === 'mandados', JSON.stringify({ q: gateInc70q, e: gateInc70e, nul: gateNull70 }));
   check('v1.4.70: evaluado — con perfil completo los dos botones SÍ entran a su flujo (paso 1)', gateOk70q.step === 1 && gateOk70q.kind === 'quiero' && gateOk70q.calls.rendered && !gateOk70q.calls.registro && gateOk70e.step === 1 && gateOk70e.kind === 'enviar' && gateOk70e.calls.rendered && !gateOk70e.calls.registro, JSON.stringify({ q: gateOk70q, e: gateOk70e }));
   // Evaluado: la pantalla de entrada de Mandados (paso 0) con cada estado.
@@ -4189,7 +4218,7 @@ async function api(path, body) {
   }
   const sim70inc = await runRenderMandados70({ name: 'Lola Correo', phone: '' });
   const sim70null = await runRenderMandados70(null);
-  const sim70ok = await runRenderMandados70({ name: 'Lola Correo', phone: '9611234567' });
+  const sim70ok = await runRenderMandados70({ name: 'Lola Correo', phone: '9611234567', face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
   check('v1.4.70: evaluado — con perfil incompleto la entrada de Mandados muestra ARRIBA la tarjeta con su botón, antes de "¿Qué quieres hacer?"', sim70inc.includes('Completa tu perfil para pedir mandados') && sim70inc.includes('Completar mi perfil') && sim70inc.indexOf('Completa tu perfil para pedir mandados') < sim70inc.indexOf('¿Qué quieres hacer?') && sim70null.includes('Completa tu perfil para pedir mandados'), JSON.stringify(sim70inc.slice(0, 200)));
   check('v1.4.70: evaluado — con perfil completo la entrada de Mandados NO muestra la tarjeta y sigue igual (Quiero + Enviar)', !sim70ok.includes('Completa tu perfil para pedir mandados') && sim70ok.includes('Quiero un mandado') && sim70ok.includes('Enviar un mandado'), JSON.stringify(sim70ok.slice(0, 200)));
   // --- En vivo: cuenta solo-correo con pasajero de teléfono vacío ---
@@ -4198,21 +4227,28 @@ async function api(path, body) {
   check('v1.4.70: en vivo, cuenta nueva solo-correo (sin teléfono) nace con pasajero de teléfono vacío', acc70.acc.ok && me70a.ok && me70a.passenger && me70a.passenger.phone === '' && me70a.passenger.name === 'Nora Correo', JSON.stringify(me70a.passenger));
   const md70bad = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.70: en vivo, con el teléfono vacío el servidor también rechaza publicar el mandado (400)', !md70bad.ok && /teléfono/.test(md70bad.error || ''), JSON.stringify(md70bad));
-  // Completar nombre + teléfono (lo que pide el formulario de perfil).
+  // Completar nombre + teléfono SIN foto (v1.4.71): tampoco guarda.
   const phone70 = '961692' + RUN.slice(0, 4);
   const set70 = await api('/api/set-account-phone', { token: acc70.li.token, phone: phone70 });
-  const upd70 = await api('/api/update-passenger', { passenger_id: me70a.passenger.id, name: 'Nora Correo', phone: phone70 });
+  const upd70noFoto = await api('/api/update-passenger', { passenger_id: me70a.passenger.id, name: 'Nora Correo', phone: phone70 });
+  check('v1.4.71: en vivo, completar nombre + teléfono SIN foto tampoco guarda el perfil del mandado (400)', set70.ok && !upd70noFoto.ok && /foto/.test(upd70noFoto.error || ''), JSON.stringify(upd70noFoto));
+  const upd70 = await api('/api/update-passenger', { passenger_id: me70a.passenger.id, name: 'Nora Correo', phone: phone70, face_photo: PHOTO });
   const me70b = await api('/api/me?token=' + acc70.li.token);
-  check('v1.4.70: en vivo, al completar nombre + teléfono el perfil queda completo', set70.ok && upd70.ok && me70b.ok && me70b.passenger.phone === phone70 && me70b.passenger.name === 'Nora Correo', JSON.stringify(me70b.passenger));
+  check('v1.4.70: en vivo, al completar nombre + teléfono + foto el perfil queda completo', set70.ok && upd70.ok && me70b.ok && me70b.passenger.phone === phone70 && me70b.passenger.name === 'Nora Correo' && !!me70b.passenger.face_photo, JSON.stringify(me70b.passenger));
   const md70ok = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.70: en vivo, con el perfil completo el mandado se publica normal (buscando, $25)', md70ok.ok && md70ok.request.status === 'buscando' && md70ok.request.price === 25, JSON.stringify(md70ok.request && { st: md70ok.request.status, p: md70ok.request.price }));
   await api('/api/cancel-request', { request_id: md70ok.request.id });
-  // Perfil completo desde el registro: el mandado se publica sin trabas.
+  // Perfil con nombre + teléfono desde el registro, pero SIN foto: el
+  // registro crea el pasajero automático sin foto (v1.4.71: nace
+  // incompleto hasta subir la selfie).
   const acc70b = await api('/api/register-account', { name: 'Paco Completo', username: 'paco_' + RUN, phone: '961693' + RUN.slice(0, 4), password: 'secreta123' });
   const me70c = await api('/api/me?token=' + acc70b.token);
-  check('v1.4.70: en vivo, una cuenta registrada con teléfono nace con perfil completo (nombre + teléfono)', acc70b.ok && me70c.ok && me70c.passenger && me70c.passenger.phone === '961693' + RUN.slice(0, 4), JSON.stringify(me70c.passenger));
+  check('v1.4.70: en vivo, una cuenta registrada con teléfono nace con nombre + teléfono pero SIN foto (perfil incompleto, v1.4.71)', acc70b.ok && me70c.ok && me70c.passenger && me70c.passenger.phone === '961693' + RUN.slice(0, 4) && !me70c.passenger.face_photo, JSON.stringify(me70c.passenger));
+  const md70cNoFoto = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.71: en vivo, con nombre + teléfono pero sin foto el servidor también rechaza publicar el mandado (400)', !md70cNoFoto.ok && /foto/.test(md70cNoFoto.error || ''), JSON.stringify(md70cNoFoto));
+  const up70c = await api('/api/upload-passenger-photo', { passenger_id: me70c.passenger.id, photo: PHOTO });
   const md70c = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
-  check('v1.4.70: en vivo, con perfil completo desde el registro el mandado se publica sin trabas', md70c.ok && md70c.request.status === 'buscando', JSON.stringify(md70c.request && { st: md70c.request.status, p: md70c.request.price }));
+  check('v1.4.70: en vivo, con la foto subida el mandado se publica sin trabas', up70c.ok && md70c.ok && md70c.request.status === 'buscando', JSON.stringify(md70c.request && { st: md70c.request.status, p: md70c.request.price }));
   await api('/api/cancel-request', { request_id: md70c.request.id });
 
   // ===== v1.4.70 (2026-11-25): orden y diseño del panel de administrador =====
@@ -4249,6 +4285,64 @@ async function api(path, body) {
   const adm70b = await runRenderAdmin70(false, false);
   check('v1.4.70: evaluado — el panel real respeta el orden final (admin → credenciales → Negocios → retícula → promo → respaldo → Cerrar sesión)', adm70.indexOf('ADMINISTRADOR') < adm70.indexOf('Cambiar usuario y contraseña') && adm70.indexOf('Cambiar usuario y contraseña') < adm70.indexOf('Negocios bloqueado') && adm70.indexOf('Negocios bloqueado') < adm70.indexOf('Panel de administrador') && adm70.indexOf('Panel de administrador') < adm70.indexOf('Solicitudes de choferes') && adm70.indexOf('Tiendas') < adm70.indexOf('Viajes gratis por recomendación') && adm70.indexOf('Viajes gratis por recomendación') < adm70.indexOf('Respaldar base de datos') && adm70.indexOf('Respaldar base de datos') < adm70.indexOf('Cerrar sesión'), JSON.stringify(adm70.slice(0, 300)));
   check('v1.4.70: evaluado — Negocios y promo con botón a lo ancho abajo (sin fila flex) y textos según su estado', adm70.includes('<button class="btn small" onclick="toggleNegociosLock()">Abrir Negocios</button>') && adm70.includes('<button class="btn small" onclick="toggleReferralPromo()">Apagar promoción</button>') && adm70.includes('id="referral-stats-line"') && adm70b.includes('Negocios abierto') && adm70b.includes('Bloquear Negocios') && adm70b.includes('Prender promoción') && !adm70.includes('flex:none'), JSON.stringify(adm70.slice(adm70.indexOf('Negocios bloqueado'), adm70.indexOf('Negocios bloqueado') + 200)));
+
+  // ===== v1.4.71 (2026-11-25): la selfie es OBLIGATORIA para guardar el perfil =====
+  // El usuario completó su perfil poniendo SOLO su número (sin selfie) y
+  // la app lo guardó: en v1.4.69/70 la foto no se exigía. Ahora "perfil
+  // completo" = nombre + teléfono + foto de cara, el formulario no guarda
+  // sin ella, el servidor la exige al guardar el perfil y al publicar, y
+  // la tarjeta vuelve a aparecer para quien guardó solo con el número.
+  // El registro de la cuenta en sí no se toca: el pasajero automático
+  // nace sin foto y se completa en el formulario.
+  console.log('== v1.4.71: la selfie es obligatoria para guardar el perfil ==');
+  check('v1.4.71: savePassenger() no guarda sin foto: avisa y se para antes de llamar al servidor', spSrc.includes("if(!photo) return toast('Sube tu foto de cara") && spSrc.indexOf("if(!photo)") < spSrc.indexOf("register-passenger") && !spSrc.includes('Perfil guardado sin foto'), spSrc.slice(0, 300));
+  check('v1.4.71: savePassenger() manda la foto en la actualización del perfil', spSrc.includes("api('/api/update-passenger', { passenger_id: myPassenger.id, name, phone, face_photo: regPhoto1 || null })"), spSrc.slice(0, 300));
+  const or71Start = html.indexOf('function openRegistro(kind, ret){');
+  const or71End = html.indexOf('\nlet regVehicle', or71Start);
+  const or71Src = or71Start >= 0 && or71End > or71Start ? html.slice(or71Start, or71End) : '';
+  check('v1.4.71: el formulario de pasajero marca la selfie como obligatoria (sin ella no se guarda)', or71Src.includes('La foto de tu cara (selfie) es obligatoria.') && or71Src.includes('Sin esta foto no se puede guardar tu perfil.'), or71Src.slice(0, 300));
+  const pt71Start = html.indexOf('async function publishTrip(){');
+  const pt71End = html.indexOf('\n/* ===== Buscando', pt71Start);
+  const pt71Src = pt71Start >= 0 && pt71End > pt71Start ? html.slice(pt71Start, pt71End) : '';
+  check('v1.4.71: publishTrip() también exige el perfil completo (cubre "Repetir este viaje")', pt71Src.includes('passengerProfileComplete()') && pt71Src.includes("openRegistro('pasajero','viajes')"), pt71Src.slice(0, 300));
+  const pm71Start = html.indexOf('async function publishMandado(){');
+  const pm71End = html.indexOf('\nasync function renderMandadoSearching', pm71Start);
+  const pm71Src = pm71Start >= 0 && pm71End > pm71Start ? html.slice(pm71Start, pm71End) : '';
+  check('v1.4.71: publishMandado() también exige el perfil completo', pm71Src.includes('passengerProfileComplete()') && pm71Src.includes("openRegistro('pasajero','mandados')"), pm71Src.slice(0, 300));
+  // En vivo: el endpoint de guardar rechaza sin foto y acepta con foto.
+  const reg71noFoto = await api('/api/register-passenger', { name: 'Sin Foto', phone: '961695' + RUN.slice(0, 4) });
+  check('v1.4.71: en vivo, guardar un pasajero nuevo SIN foto es rechazado (400)', !reg71noFoto.ok && /foto/.test(reg71noFoto.error || ''), JSON.stringify(reg71noFoto));
+  const reg71foto = await api('/api/register-passenger', { name: 'Con Foto', phone: '961696' + RUN.slice(0, 4), face_photo: PHOTO });
+  check('v1.4.71: en vivo, guardar un pasajero nuevo CON foto sí se guarda (200)', reg71foto.ok && !!reg71foto.passenger.face_photo, JSON.stringify(reg71foto));
+  // --- En vivo: el caso exacto del usuario (cuenta solo-correo) ---
+  const acc71 = await newMailAccount('tomas');
+  const me71a = await api('/api/me?token=' + acc71.li.token);
+  check('v1.4.71: en vivo, cuenta nueva solo-correo nace con pasajero automático sin teléfono y sin foto', acc71.acc.ok && me71a.ok && me71a.passenger && me71a.passenger.phone === '' && !me71a.passenger.face_photo, JSON.stringify(me71a.passenger));
+  const trip71bad = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.71: en vivo, con el teléfono vacío el servidor rechaza publicar (400)', !trip71bad.ok && /teléfono/.test(trip71bad.error || ''), JSON.stringify(trip71bad));
+  // Solo pone el número, sin selfie (lo que hizo el usuario): el
+  // guardado es rechazado y la tarjeta sigue apareciendo.
+  const phone71 = '961694' + RUN.slice(0, 4);
+  const set71 = await api('/api/set-account-phone', { token: acc71.li.token, phone: phone71 });
+  const upd71noFoto = await api('/api/update-passenger', { passenger_id: me71a.passenger.id, name: 'Tomas Correo', phone: phone71 });
+  check('v1.4.71: en vivo, completar nombre + teléfono SIN foto NO guarda el perfil (400, el caso del usuario)', set71.ok && !upd71noFoto.ok && /foto/.test(upd71noFoto.error || ''), JSON.stringify(upd71noFoto));
+  const pb71sinFoto = runBanner69({ name: 'Tomas Correo', phone: phone71, face_photo: null });
+  check('v1.4.71: evaluado — con nombre + teléfono pero sin foto la tarjeta SIGUE apareciendo', pb71sinFoto.includes('Completa tu perfil para pedir viajes') && pb71sinFoto.includes('Completar mi perfil'), JSON.stringify(pb71sinFoto.slice(0, 120)));
+  const gate71sinFoto = await runStart69({ name: 'Tomas Correo', phone: phone71, face_photo: null });
+  check('v1.4.71: evaluado — con nombre + teléfono pero sin foto "Solicitar el viaje" sigue sin entrar al flujo', gate71sinFoto.step === 0 && !gate71sinFoto.calls.rendered && gate71sinFoto.calls.registro && gate71sinFoto.calls.registro[1] === 'viajes' && !!gate71sinFoto.calls.toast, JSON.stringify(gate71sinFoto));
+  // Sube la selfie y guarda: ahora sí queda completo, la tarjeta se va
+  // y se publica normal.
+  const upd71 = await api('/api/update-passenger', { passenger_id: me71a.passenger.id, name: 'Tomas Correo', phone: phone71, face_photo: PHOTO });
+  const me71b = await api('/api/me?token=' + acc71.li.token);
+  check('v1.4.71: en vivo, con nombre + teléfono + foto el perfil sí se guarda y queda completo', upd71.ok && me71b.ok && me71b.passenger.phone === phone71 && !!me71b.passenger.face_photo, JSON.stringify(me71b.passenger));
+  const pb71ok = runBanner69({ name: 'Tomas Correo', phone: phone71, face_photo: 'data:image/jpeg;base64,/9j/4AAQ' });
+  check('v1.4.71: evaluado — con la foto subida la tarjeta ya no aparece', pb71ok === '', JSON.stringify(pb71ok));
+  const trip71ok = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.71: en vivo, con el perfil completo el viaje se publica normal (buscando, $25)', trip71ok.ok && trip71ok.request.status === 'buscando' && trip71ok.request.price === 25, JSON.stringify(trip71ok.request && { st: trip71ok.request.status, p: trip71ok.request.price }));
+  await api('/api/cancel-request', { request_id: trip71ok.request.id });
+  const md71ok = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.71: en vivo, con el perfil completo el mandado también se publica normal (buscando, $25)', md71ok.ok && md71ok.request.status === 'buscando' && md71ok.request.price === 25, JSON.stringify(md71ok.request && { st: md71ok.request.status, p: md71ok.request.price }));
+  await api('/api/cancel-request', { request_id: md71ok.request.id });
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
