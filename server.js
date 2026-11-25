@@ -139,6 +139,8 @@ CREATE TABLE IF NOT EXISTS driver_dismissed (
 -- v1.4.67: viajes gratis por recomendación — una fila por cuenta
 -- referida (un solo referidor por cuenta: el primero que se registra);
 -- 'earned' cuando el referido termina su primer viaje pagado.
+-- v1.4.68: 'capped' cuando el referido termina su primer viaje pero su
+-- referidor ya ganó su único viaje gratis (TOPE de 1 por referidor).
 CREATE TABLE IF NOT EXISTS referrals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   referrer_account_id INTEGER NOT NULL, referred_account_id INTEGER NOT NULL UNIQUE,
@@ -672,7 +674,8 @@ function maybeEarnReferral(r){
   // referidor gana 1 viaje gratis. Solo viajes (no mandados), solo con
   // la promo prendida, y solo el primer viaje terminado cuenta (al
   // ganar, la fila pasa a 'earned' y ya no vuelve a dar nada). Un viaje
-  // gratis nunca gana otro viaje gratis.
+  // gratis nunca gana otro viaje gratis. v1.4.68: TOPE — solo se gana 1
+  // en total por referidor; los demás referidos pasan a 'capped'.
   if (!r || r.kind !== 'viaje' || r.is_free_trip) return;
   if (!referralPromoEnabled()) return;
   const price = Number(r.final_price || r.price) || 0;
@@ -683,6 +686,16 @@ function maybeEarnReferral(r){
   if (!ref) return;
   const finished = db.prepare(`SELECT COUNT(*) c FROM requests WHERE passenger_id=? AND kind='viaje' AND status='finalizado' AND COALESCE(is_free_trip,0)=0`).get(r.passenger_id).c;
   if (finished !== 1) return;
+  // v1.4.68: TOPE — un referidor solo puede GANAR 1 viaje gratis en
+  // total, aunque recomiende a cinco amigos y los cinco hagan su primer
+  // viaje. Si ya ganó 1 antes (aunque ya lo haya usado y su saldo esté
+  // en 0), este referido queda anotado pero sin ganar: su fila pasa a
+  // 'capped' (ni pendiente ni ganada) y no se acredita nada.
+  const alreadyEarned = db.prepare(`SELECT COUNT(*) c FROM referrals WHERE referrer_account_id=? AND status='earned'`).get(ref.referrer_account_id).c;
+  if (alreadyEarned >= 1) {
+    db.prepare(`UPDATE referrals SET status='capped' WHERE id=?`).run(ref.id);
+    return;
+  }
   db.prepare(`UPDATE referrals SET status='earned', earned_at=datetime('now') WHERE id=?`).run(ref.id);
   const referrer = db.prepare('SELECT * FROM accounts WHERE id=?').get(ref.referrer_account_id);
   if (referrer && referrer.passenger_id) db.prepare(`UPDATE passengers SET free_trips = COALESCE(free_trips,0)+1 WHERE id=?`).run(referrer.passenger_id);
@@ -833,7 +846,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.67' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.68' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.

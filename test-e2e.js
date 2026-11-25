@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.67 en /api/health', h.ok && h.version === '1.4.67', JSON.stringify(h));
+  check('versión 1.4.68 en /api/health', h.ok && h.version === '1.4.68', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.67', h134.ok && h134.version === '1.4.67', JSON.stringify(h134));
+  check('versión 1.4.68', h134.ok && h134.version === '1.4.68', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.67)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.67';") && h.version === '1.4.67', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.68)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.68';") && h.version === '1.4.68', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.67 en /api/health (sección)', h27.ok && h27.version === '1.4.67', JSON.stringify(h27));
+  check('versión 1.4.68 en /api/health (sección)', h27.ok && h27.version === '1.4.68', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.67 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.67', JSON.stringify(h28));
+  check('versión 1.4.68 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.68', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.67 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.67', JSON.stringify(h29));
+  check('versión 1.4.68 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.68', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.67 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.67', JSON.stringify(h30));
+  check('versión 1.4.68 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.68', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -3864,9 +3864,16 @@ async function api(path, body) {
   // chofer del dueño (Josué); a los demás choferes ni les aparecen en
   // Recibir Viajes. El viaje gratis se gasta solo al terminarlo y no
   // cuenta para el límite gratis de 5 servicios al día.
+  // v1.4.68 (2026-11-24): TOPE — un referidor solo puede GANAR 1 viaje
+  // gratis en total, aunque recomiende a cinco amigos y los cinco hagan
+  // su primer viaje. Al acreditar, si el referidor YA ganó 1 antes
+  // (aunque ya lo haya usado y su saldo esté en 0), no se acredita nada
+  // más: el referido de más queda anotado pero su fila pasa a 'capped'
+  // (ni pendiente ni ganada).
   check('v1.4.67: el servidor tiene la tabla referrals, el saldo free_trips y la marca is_free_trip', srv.includes('CREATE TABLE IF NOT EXISTS referrals') && srv.includes("addCol('passengers', 'free_trips'") && srv.includes("addCol('requests', 'is_free_trip'") && srv.includes('const FREE_TRIP_COVER = 30;') && srv.includes("const OWNER_USERNAME = 'thegrafferz10';"));
   check('v1.4.67: /api/register-account anota la recomendación y /api/me devuelve referral_enabled', srv.includes('recordReferral(body.referral_code, account)') && srv.includes('referral_enabled: referralPromoEnabled()'));
   check('v1.4.67: el interruptor del admin existe (set-referral-enabled + referral-stats, solo admin)', srv.includes("'/api/admin/set-referral-enabled'") && srv.includes("'/api/admin/referral-stats'") && srv.includes("INSERT OR REPLACE INTO admin_state (key, value) VALUES ('referral_enabled', ?)") && srv.includes('function referralStats(){'));
+  check('v1.4.68: TOPE de 1 viaje gratis por referidor (si ya ganó 1, los demás referidos pasan a capped sin acreditar)', srv.includes("status='capped'") && srv.includes("WHERE referrer_account_id=? AND status='earned'"));
   check('v1.4.67: el registro tiene el campo Código de referido prellenado desde ?ref=', html.includes('id="rc-ref"') && html.includes("value=\"'+esc(refCodeFromUrl)+'\"") && html.includes("new URLSearchParams(location.search).get('ref')") && html.includes('referral_code: refCode || undefined'));
   check('v1.4.67: el inicio de Viajes muestra el saldo y la tarjeta para compartir (se esconde con la promo apagada)', html.includes('function referralHomeHtml(){') && html.includes('Gana un viaje gratis') && html.includes('Compartir por WhatsApp') && html.includes('Copiar enlace') && html.includes('if(referralEnabled && myAccount){'));
   check('v1.4.67: el paso de precio tiene "Usar mi viaje gratis" y publicar manda is_free_trip', html.includes('Usar mi viaje gratis') && html.includes('priceToggleFreeTrip()') && html.includes('is_free_trip: wiz.useFreeTrip ? 1 : 0'));
@@ -3886,12 +3893,12 @@ async function api(path, body) {
   check('v1.4.67: la cuenta del tope de $30 (paga $0 a $25, $0 a $30, $5 a $35; cubierto $25 y $30)', !!cap67 && cap67[0] === 0 && cap67[1] === 0 && cap67[2] === 5 && cap67[3] === 25 && cap67[4] === 30, JSON.stringify(cap67));
   // --- En vivo: el chofer del dueño (el de @thegrafferz10, own64) ---
   const ownDrv67 = await api('/api/register-driver', { name: 'Josué Dueño', phone: '961641' + RUN.slice(0, 4), vehicle: 'mototaxi', unit: 'D-67', selfie: PHOTO, vehicle_photo: PHOTO });
-  check('v1.4.67: en vivo, chofer del dueño registrado', ownDrv67.ok && ownDrv67.driver.id, JSON.stringify(ownDrv67));
+  check('v1.4.68: en vivo, chofer del dueño registrado', ownDrv67.ok && ownDrv67.driver.id, JSON.stringify(ownDrv67));
   await approveDriver(ownDrv67.driver.id);
   const ownLink67 = await api('/api/link-profiles', { token: own64.token, driver_id: ownDrv67.driver.id });
-  check('v1.4.67: en vivo, chofer del dueño enlazado a @thegrafferz10', ownLink67.ok && ownLink67.account.driver_id === ownDrv67.driver.id, JSON.stringify(ownLink67));
+  check('v1.4.68: en vivo, chofer del dueño enlazado a @thegrafferz10', ownLink67.ok && ownLink67.account.driver_id === ownDrv67.driver.id, JSON.stringify(ownLink67));
   const ownOn67 = await api('/api/set-driver-online', { driver_id: ownDrv67.driver.id, online: true });
-  check('v1.4.67: en vivo, chofer del dueño en línea', ownOn67.ok && ownOn67.driver.online === 1, JSON.stringify(ownOn67));
+  check('v1.4.68: en vivo, chofer del dueño en línea', ownOn67.ok && ownOn67.driver.online === 1, JSON.stringify(ownOn67));
   async function finishTrip67(driverId, reqId){
     await api('/api/advance-stage', { driver_id: driverId, request_id: reqId, stage: 'llego' });
     await api('/api/advance-stage', { driver_id: driverId, request_id: reqId, stage: 'en_viaje' });
@@ -3907,36 +3914,36 @@ async function api(path, body) {
   }
   // --- En vivo: registro de la recomendación y ganancia ---
   const accA67 = await api('/api/register-account', { name: 'Ana Refiere', username: 'refa_' + RUN, phone: '961670' + RUN.slice(0, 4), password: 'secreta123' });
-  check('v1.4.67: en vivo, referidora registrada', accA67.ok && accA67.account.id && accA67.passenger.id, JSON.stringify(accA67));
+  check('v1.4.68: en vivo, referidora registrada', accA67.ok && accA67.account.id && accA67.passenger.id, JSON.stringify(accA67));
   const stats0 = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, stats de referidos empiezan en cero y la promo está prendida por defecto', stats0.ok && stats0.stats.enabled === true && stats0.stats.total === 0 && stats0.stats.pending === 0 && stats0.stats.earned === 0 && stats0.stats.free_trips_earned === 0 && stats0.stats.free_trips_used === 0 && stats0.stats.free_trips_outstanding === 0, JSON.stringify(stats0.stats));
+  check('v1.4.68: en vivo, stats de referidos empiezan en cero y la promo está prendida por defecto', stats0.ok && stats0.stats.enabled === true && stats0.stats.total === 0 && stats0.stats.pending === 0 && stats0.stats.earned === 0 && stats0.stats.free_trips_earned === 0 && stats0.stats.free_trips_used === 0 && stats0.stats.free_trips_outstanding === 0, JSON.stringify(stats0.stats));
   const accB67 = await api('/api/register-account', { name: 'Beto Referido', username: 'refb_' + RUN, phone: '961671' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
   const statsB = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, el referido con código queda anotado (pendiente)', accB67.ok && statsB.stats.total === 1 && statsB.stats.pending === 1 && statsB.stats.earned === 0, JSON.stringify(statsB.stats));
+  check('v1.4.68: en vivo, el referido con código queda anotado (pendiente)', accB67.ok && statsB.stats.total === 1 && statsB.stats.pending === 1 && statsB.stats.earned === 0, JSON.stringify(statsB.stats));
   const accC67 = await api('/api/register-account', { name: 'Celia Sola', username: 'refc_' + RUN, phone: '961672' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refc_' + RUN });
   const accD67 = await api('/api/register-account', { name: 'Dana Nadie', username: 'refd_' + RUN, phone: '961673' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'nadie_' + RUN });
   const statsCD = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, autorreferencia y código inválido no se anotan', accC67.ok && accD67.ok && statsCD.stats.total === 1, JSON.stringify(statsCD.stats));
+  check('v1.4.68: en vivo, autorreferencia y código inválido no se anotan', accC67.ok && accD67.ok && statsCD.stats.total === 1, JSON.stringify(statsCD.stats));
   const tripB1 = await trip67(accB67.passenger.id, 25);
   const driveB1 = await driveTrip67(drv.driver.id, tripB1.request.id, 25);
   const statsE1 = await api('/api/admin/referral-stats?token=' + ADM.token);
   const meA1 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, al terminar el PRIMER viaje del referido, el referidor gana 1 viaje gratis', driveB1.ok && statsE1.stats.earned === 1 && statsE1.stats.pending === 0 && statsE1.stats.free_trips_earned === 1 && statsE1.stats.free_trips_outstanding === 1 && meA1.passenger.free_trips === 1, JSON.stringify({ st: statsE1.stats, free: meA1.passenger && meA1.passenger.free_trips }));
+  check('v1.4.68: en vivo, al terminar el PRIMER viaje del referido, el referidor gana 1 viaje gratis', driveB1.ok && statsE1.stats.earned === 1 && statsE1.stats.pending === 0 && statsE1.stats.free_trips_earned === 1 && statsE1.stats.free_trips_outstanding === 1 && meA1.passenger.free_trips === 1, JSON.stringify({ st: statsE1.stats, free: meA1.passenger && meA1.passenger.free_trips }));
   const tripB2 = await trip67(accB67.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripB2.request.id, 25);
   const statsE2 = await api('/api/admin/referral-stats?token=' + ADM.token);
   const meA2 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, el SEGUNDO viaje del referido ya no gana nada (solo el primero)', statsE2.stats.earned === 1 && statsE2.stats.free_trips_outstanding === 1 && meA2.passenger.free_trips === 1, JSON.stringify(statsE2.stats));
+  check('v1.4.68: en vivo, el SEGUNDO viaje del referido ya no gana nada (solo el primero)', statsE2.stats.earned === 1 && statsE2.stats.free_trips_outstanding === 1 && meA2.passenger.free_trips === 1, JSON.stringify(statsE2.stats));
   const accE67 = await api('/api/register-account', { name: 'Ema Referida', username: 'refe_' + RUN, phone: '961674' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
   const tripE1 = await trip67(accE67.passenger.id, 25);
   const canE1 = await api('/api/cancel-request', { request_id: tripE1.request.id });
   const statsCan = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, un viaje CANCELADO no gana nada (sigue pendiente)', canE1.ok && statsCan.stats.total === 2 && statsCan.stats.pending === 1 && statsCan.stats.earned === 1, JSON.stringify(statsCan.stats));
+  check('v1.4.68: en vivo, un viaje CANCELADO no gana nada (sigue pendiente)', canE1.ok && statsCan.stats.total === 2 && statsCan.stats.pending === 1 && statsCan.stats.earned === 1, JSON.stringify(statsCan.stats));
   const tripE2 = await trip67(accE67.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripE2.request.id, 25);
   const statsE3 = await api('/api/admin/referral-stats?token=' + ADM.token);
   const meA3 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, al terminarlo después, sí gana (ganados 2, saldo 2)', statsE3.stats.earned === 2 && statsE3.stats.free_trips_outstanding === 2 && meA3.passenger.free_trips === 2, JSON.stringify({ st: statsE3.stats, free: meA3.passenger.free_trips }));
+  check('v1.4.68: en vivo, TOPE: el SEGUNDO amigo referido que termina su primer viaje NO gana nada más (ganados 1, saldo 1, ya no pendiente)', statsE3.stats.total === 2 && statsE3.stats.pending === 0 && statsE3.stats.earned === 1 && statsE3.stats.free_trips_earned === 1 && statsE3.stats.free_trips_outstanding === 1 && meA3.passenger.free_trips === 1, JSON.stringify({ st: statsE3.stats, free: meA3.passenger.free_trips }));
   const accF67 = await api('/api/register-account', { name: 'Fer Referido', username: 'reff_' + RUN, phone: '961675' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
   const manF = await api('/api/create-request', { passenger_id: accF67.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete' });
   const manAcc = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: manF.request.id, kind: 'acepta', price: 30 });
@@ -3944,76 +3951,86 @@ async function api(path, body) {
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: manF.request.id, stage: 'en_viaje' });
   const manFin = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: manF.request.id, stage: 'entregado' });
   const statsMan = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, un mandado terminado NO gana viaje gratis (solo viajes)', manAcc.ok && manFin.ok && statsMan.stats.earned === 2 && statsMan.stats.pending === 1, JSON.stringify(statsMan.stats));
+  check('v1.4.68: en vivo, un mandado terminado NO gana viaje gratis (solo viajes)', manAcc.ok && manFin.ok && statsMan.stats.earned === 1 && statsMan.stats.pending === 1, JSON.stringify(statsMan.stats));
+  // v1.4.68: el primer VIAJE de Fer (tercer amigo) se prueba DESPUÉS de
+  // usar el viaje gratis (check 3 del TOPE): si ganara, sería el 2.º.
+  // --- En vivo: usar un viaje gratis (solo el chofer del dueño lo ve) ---
+  // v1.4.68: con el TOPE, Ana solo tiene 1 viaje gratis en total: primero
+  // se prueba que cancelar no lo gasta y luego se usa (a $35, para probar
+  // el tope de $30) y se gasta. El tercer amigo (Fer) se prueba después.
+  const free2 = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
+  const canF2 = await api('/api/cancel-request', { request_id: free2.request.id });
+  const meA6 = await api('/api/me?token=' + accA67.token);
+  check('v1.4.68: en vivo, CANCELAR el viaje gratis NO lo gasta (saldo sigue 1)', free2.ok && canF2.ok && meA6.passenger.free_trips === 1, JSON.stringify({ free: meA6.passenger.free_trips }));
+  const free1 = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 35, payment_method: 'efectivo', is_free_trip: 1 });
+  check('v1.4.68: en vivo, la referidora publica su viaje gratis a $35', free1.ok && free1.request.is_free_trip === 1 && free1.request.status === 'buscando', JSON.stringify(free1.request));
+  const openOther = await api('/api/requests?open=1&light=1&dismissed_for=' + drv.driver.id);
+  const openOwner = await api('/api/requests?open=1&light=1&dismissed_for=' + ownDrv67.driver.id);
+  const openAnon = await api('/api/requests?open=1&light=1');
+  check('v1.4.68: en vivo, el viaje gratis SOLO lo ve el chofer del dueño en Recibir Viajes (ni otro chofer ni la lista sin chofer lo traen)', openOther.ok && !openOther.requests.some(r=>r.id===free1.request.id) && openOwner.ok && openOwner.requests.some(r=>r.id===free1.request.id) && openAnon.ok && !openAnon.requests.some(r=>r.id===free1.request.id), JSON.stringify({ other: openOther.requests.map(r=>r.id), owner: openOwner.requests.map(r=>r.id) }));
+  const otherTry = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: free1.request.id, kind: 'acepta', price: 35 });
+  check('v1.4.68: en vivo, otro chofer NO puede tomar el viaje gratis (403)', !otherTry.ok && /solo para el chofer/.test(otherTry.error || ''), JSON.stringify(otherTry));
+  const ownAcc = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: free1.request.id, kind: 'acepta', price: 35 });
+  check('v1.4.68: en vivo, el chofer del dueño acepta el viaje gratis', ownAcc.ok && ownAcc.request.status === 'aceptado', JSON.stringify(ownAcc));
+  await finishTrip67(ownDrv67.driver.id, free1.request.id);
+  const meA5 = await api('/api/me?token=' + accA67.token);
+  const statsU1 = await api('/api/admin/referral-stats?token=' + ADM.token);
+  check('v1.4.68: en vivo, al TERMINAR el viaje gratis a $35 se gasta 1 (saldo 0, usados 1)', meA5.passenger.free_trips === 0 && statsU1.stats.free_trips_used === 1 && statsU1.stats.free_trips_outstanding === 0, JSON.stringify({ free: meA5.passenger.free_trips, st: statsU1.stats }));
+  // --- v1.4.68, check 3 del TOPE: el tercer amigo, después de usarlo ---
   const tripF1 = await trip67(accF67.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripF1.request.id, 25);
   const statsE4 = await api('/api/admin/referral-stats?token=' + ADM.token);
   const meA4 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, el primer VIAJE de ese mismo referido sí gana (ganados 3, saldo 3)', statsE4.stats.earned === 3 && statsE4.stats.free_trips_outstanding === 3 && meA4.passenger.free_trips === 3, JSON.stringify({ st: statsE4.stats, free: meA4.passenger.free_trips }));
-  // --- En vivo: usar un viaje gratis (solo el chofer del dueño lo ve) ---
-  const free1 = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
-  check('v1.4.67: en vivo, la referidora publica su viaje gratis a $25', free1.ok && free1.request.is_free_trip === 1 && free1.request.status === 'buscando', JSON.stringify(free1.request));
-  const openOther = await api('/api/requests?open=1&light=1&dismissed_for=' + drv.driver.id);
-  const openOwner = await api('/api/requests?open=1&light=1&dismissed_for=' + ownDrv67.driver.id);
-  const openAnon = await api('/api/requests?open=1&light=1');
-  check('v1.4.67: en vivo, el viaje gratis SOLO lo ve el chofer del dueño en Recibir Viajes (ni otro chofer ni la lista sin chofer lo traen)', openOther.ok && !openOther.requests.some(r=>r.id===free1.request.id) && openOwner.ok && openOwner.requests.some(r=>r.id===free1.request.id) && openAnon.ok && !openAnon.requests.some(r=>r.id===free1.request.id), JSON.stringify({ other: openOther.requests.map(r=>r.id), owner: openOwner.requests.map(r=>r.id) }));
-  const otherTry = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: free1.request.id, kind: 'acepta', price: 25 });
-  check('v1.4.67: en vivo, otro chofer NO puede tomar el viaje gratis (403)', !otherTry.ok && /solo para el chofer/.test(otherTry.error || ''), JSON.stringify(otherTry));
-  const ownAcc = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: free1.request.id, kind: 'acepta', price: 25 });
-  check('v1.4.67: en vivo, el chofer del dueño acepta el viaje gratis', ownAcc.ok && ownAcc.request.status === 'aceptado', JSON.stringify(ownAcc));
-  await finishTrip67(ownDrv67.driver.id, free1.request.id);
-  const meA5 = await api('/api/me?token=' + accA67.token);
-  const statsU1 = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, al TERMINAR el viaje gratis se gasta 1 (saldo 2, usados 1)', meA5.passenger.free_trips === 2 && statsU1.stats.free_trips_used === 1 && statsU1.stats.free_trips_outstanding === 2, JSON.stringify({ free: meA5.passenger.free_trips, st: statsU1.stats }));
-  const free2 = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
-  const canF2 = await api('/api/cancel-request', { request_id: free2.request.id });
-  const meA6 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, CANCELAR el viaje gratis NO lo gasta (saldo sigue 2)', free2.ok && canF2.ok && meA6.passenger.free_trips === 2, JSON.stringify({ free: meA6.passenger.free_trips }));
-  const free3 = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 35, payment_method: 'efectivo', is_free_trip: 1 });
-  const ownAcc3 = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: free3.request.id, kind: 'acepta', price: 35 });
-  await finishTrip67(ownDrv67.driver.id, free3.request.id);
-  const meA7 = await api('/api/me?token=' + accA67.token);
-  const statsU2 = await api('/api/admin/referral-stats?token=' + ADM.token);
-  check('v1.4.67: en vivo, viaje gratis a $35 también se publica, se hace y se gasta (saldo 1, usados 2)', free3.ok && ownAcc3.ok && meA7.passenger.free_trips === 1 && statsU2.stats.free_trips_used === 2, JSON.stringify({ free: meA7.passenger.free_trips, st: statsU2.stats }));
+  check('v1.4.68: en vivo, TOPE: después de USAR el viaje gratis, el TERCER amigo referido que termina su primer viaje TAMPOCO gana nada (total ganado sigue 1, saldo 0)', statsE4.stats.total === 3 && statsE4.stats.pending === 0 && statsE4.stats.earned === 1 && statsE4.stats.free_trips_earned === 1 && statsE4.stats.free_trips_used === 1 && statsE4.stats.free_trips_outstanding === 0 && meA4.passenger.free_trips === 0, JSON.stringify({ st: statsE4.stats, free: meA4.passenger.free_trips }));
   const accZ67 = await api('/api/register-account', { name: 'Zed Sin Saldo', username: 'refz_' + RUN, phone: '961676' + RUN.slice(0, 4), password: 'secreta123' });
   const freeNo = await api('/api/create-request', { passenger_id: accZ67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
-  check('v1.4.67: en vivo, sin viajes gratis el servidor rechaza publicar uno gratis', !freeNo.ok && /No tienes viajes gratis/.test(freeNo.error || ''), JSON.stringify(freeNo));
+  check('v1.4.68: en vivo, sin viajes gratis el servidor rechaza publicar uno gratis', !freeNo.ok && /No tienes viajes gratis/.test(freeNo.error || ''), JSON.stringify(freeNo));
   const freeMan = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete', is_free_trip: 1 });
-  check('v1.4.67: en vivo, un mandado NO se puede publicar como viaje gratis', !freeMan.ok && /solo para viajes/.test(freeMan.error || ''), JSON.stringify(freeMan));
+  check('v1.4.68: en vivo, un mandado NO se puede publicar como viaje gratis', !freeMan.ok && /solo para viajes/.test(freeMan.error || ''), JSON.stringify(freeMan));
   // --- En vivo: el viaje gratis no cuenta para el límite gratis de 5/día ---
   // El chofer del dueño está en plan gratis: 5 servicios pagados lo
   // dejan en el límite; el 6.º pagado se rechaza, pero el viaje gratis
   // entra igual (no cuenta) y tampoco suma al conteo (el siguiente
   // pagado sigue rechazado).
+  // v1.4.68: Ana ya usó su único viaje gratis, así que el viaje gratis
+  // del límite lo aporta OTRO referidor (Gus), que gana el suyo con su
+  // primer referido — el tope es por persona, no global.
+  const accG68 = await api('/api/register-account', { name: 'Gus Refiere', username: 'refg_' + RUN, phone: '961678' + RUN.slice(0, 4), password: 'secreta123' });
+  const accH2 = await api('/api/register-account', { name: 'Hugo Dos', username: 'refh2_' + RUN, phone: '961679' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refg_' + RUN });
+  const tripH2 = await trip67(accH2.passenger.id, 25);
+  await driveTrip67(drv.driver.id, tripH2.request.id, 25);
+  const statsG = await api('/api/admin/referral-stats?token=' + ADM.token);
+  const meG = await api('/api/me?token=' + accG68.token);
+  check('v1.4.68: en vivo, otro referidor distinto sí gana su primer (y único) viaje gratis (ganados 2, saldo de Gus 1)', statsG.stats.total === 4 && statsG.stats.pending === 0 && statsG.stats.earned === 2 && statsG.stats.free_trips_outstanding === 1 && meG.passenger.free_trips === 1, JSON.stringify({ st: statsG.stats, free: meG.passenger && meG.passenger.free_trips }));
   for (let i = 0; i < 5; i++) {
     const t = await trip67(accB67.passenger.id, 25);
     await driveTrip67(ownDrv67.driver.id, t.request.id, 25);
   }
   const t6f = await trip67(accB67.passenger.id, 25);
   const a6f = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: t6f.request.id, kind: 'acepta', price: 25 });
-  check('v1.4.67: en vivo, con 5 servicios el 6.º PAGADO se rechaza (límite gratis de 5)', !a6f.ok && /5 servicios gratis/.test(a6f.error || ''), JSON.stringify(a6f));
-  const freeLim = await api('/api/create-request', { passenger_id: accA67.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
+  check('v1.4.68: en vivo, con 5 servicios el 6.º PAGADO se rechaza (límite gratis de 5)', !a6f.ok && /5 servicios gratis/.test(a6f.error || ''), JSON.stringify(a6f));
+  const freeLim = await api('/api/create-request', { passenger_id: accG68.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo', is_free_trip: 1 });
   const aFreeLim = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: freeLim.request.id, kind: 'acepta', price: 25 });
   await finishTrip67(ownDrv67.driver.id, freeLim.request.id);
-  const meA8 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, el viaje gratis SÍ entra con el límite lleno (no cuenta) y se gasta (saldo 0)', freeLim.ok && aFreeLim.ok && meA8.passenger.free_trips === 0, JSON.stringify({ free: meA8.passenger.free_trips }));
+  const meG2 = await api('/api/me?token=' + accG68.token);
+  check('v1.4.68: en vivo, el viaje gratis SÍ entra con el límite lleno (no cuenta) y se gasta (saldo de Gus 0)', freeLim.ok && aFreeLim.ok && meG2.passenger.free_trips === 0, JSON.stringify({ free: meG2.passenger.free_trips }));
   const t7f = await trip67(accB67.passenger.id, 25);
   const a7f = await api('/api/driver-respond', { driver_id: ownDrv67.driver.id, request_id: t7f.request.id, kind: 'acepta', price: 25 });
-  check('v1.4.67: en vivo, tras el viaje gratis el siguiente pagado SIGUE rechazado (el gratis no sumó al conteo)', !a7f.ok && /5 servicios gratis/.test(a7f.error || ''), JSON.stringify(a7f));
+  check('v1.4.68: en vivo, tras el viaje gratis el siguiente pagado SIGUE rechazado (el gratis no sumó al conteo)', !a7f.ok && /5 servicios gratis/.test(a7f.error || ''), JSON.stringify(a7f));
   // --- En vivo: el interruptor del admin ---
   const togNo = await api('/api/admin/set-referral-enabled', { token: accA67.token, enabled: false });
-  check('v1.4.67: en vivo, una cuenta que no es admin NO puede apagar la promo (403)', !togNo.ok && /Solo el administrador/.test(togNo.error || ''), JSON.stringify(togNo));
+  check('v1.4.68: en vivo, una cuenta que no es admin NO puede apagar la promo (403)', !togNo.ok && /Solo el administrador/.test(togNo.error || ''), JSON.stringify(togNo));
   const togOff = await api('/api/admin/set-referral-enabled', { token: ADM.token, enabled: false });
   const meOff = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, el admin apaga la promo y /api/me lo refleja', togOff.ok && togOff.referral_enabled === false && meOff.referral_enabled === false, JSON.stringify({ tog: togOff.referral_enabled, me: meOff.referral_enabled }));
+  check('v1.4.68: en vivo, el admin apaga la promo y /api/me lo refleja', togOff.ok && togOff.referral_enabled === false && meOff.referral_enabled === false, JSON.stringify({ tog: togOff.referral_enabled, me: meOff.referral_enabled }));
   const accH67 = await api('/api/register-account', { name: 'Hugo Referido', username: 'refh_' + RUN, phone: '961677' + RUN.slice(0, 4), password: 'secreta123', referral_code: 'refa_' + RUN });
   const tripH1 = await trip67(accH67.passenger.id, 25);
   await driveTrip67(drv.driver.id, tripH1.request.id, 25);
   const statsOff = await api('/api/admin/referral-stats?token=' + ADM.token);
   const meA9 = await api('/api/me?token=' + accA67.token);
-  check('v1.4.67: en vivo, con la promo APAGADA el primer viaje del referido NO gana nada', statsOff.stats.enabled === false && statsOff.stats.earned === 3 && statsOff.stats.free_trips_outstanding === 0 && meA9.passenger.free_trips === 0, JSON.stringify({ st: statsOff.stats, free: meA9.passenger.free_trips }));
+  check('v1.4.68: en vivo, con la promo APAGADA el primer viaje del referido NO gana nada', statsOff.stats.enabled === false && statsOff.stats.earned === 2 && statsOff.stats.free_trips_outstanding === 0 && meA9.passenger.free_trips === 0, JSON.stringify({ st: statsOff.stats, free: meA9.passenger.free_trips }));
   const togOn = await api('/api/admin/set-referral-enabled', { token: ADM.token, enabled: true });
-  check('v1.4.67: en vivo, el admin vuelve a prender la promo (queda prendida)', togOn.ok && togOn.referral_enabled === true, JSON.stringify(togOn));
+  check('v1.4.68: en vivo, el admin vuelve a prender la promo (queda prendida)', togOn.ok && togOn.referral_enabled === true, JSON.stringify(togOn));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
