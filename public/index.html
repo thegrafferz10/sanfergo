@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.70'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.71'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1308,19 +1308,20 @@ function openRegistro(kind, ret){
   regKind = kind; regPhoto1 = null; regPhoto2 = null; regReturn = ret || 'home';
   const p = $('#registro-page');
   if(kind==='pasajero'){
-    // Registro de pasajero (app real): se PUEDE guardar sin foto (queda
-    // incompleto y se sube después aquí mismo); sin bloqueo con toast.
+    // Registro de pasajero (v1.4.71): la foto de cara (selfie) es
+    // OBLIGATORIA para guardar el perfil: sin ella no se guarda nada
+    // (antes se podía guardar sin foto y el perfil quedaba incompleto).
     const hasPhoto = myPassenger && myPassenger.face_photo;
-    const pill = myPassenger ? (hasPhoto ? '<span class="chip">PERFIL COMPLETO</span>' : '<span class="chip amber">REGISTRO INCOMPLETO: FALTA TU FOTO</span>') : '';
+    const pill = myPassenger ? (passengerProfileComplete() ? '<span class="chip">PERFIL COMPLETO</span>' : '<span class="chip amber">REGISTRO INCOMPLETO</span>') : '';
     p.innerHTML = backPill('Regresar', "go('"+regReturn+"')")
     + '<h2>Mi perfil de pasajero</h2> ' + pill
     + '<p class="muted mt">Regístrate como pasajero con tu nombre, tu teléfono y una foto de tu cara, por cualquier aclaración. El conductor verá tu foto cuando acepte tu viaje o mandado, para saber quién lo pidió.</p>'
     + '<label class="mt">Nombre completo</label><input id="rp-name" value="'+(myPassenger?esc(myPassenger.name):'')+'" placeholder="Ej. María Hernández">'
     + '<label class="mt">Teléfono / WhatsApp</label><input id="rp-phone" value="'+(myPassenger?esc(myPassenger.phone):'')+'" placeholder="Ej. 961 000 0000" inputmode="tel">'
-    + '<div class="photobox"><b>Foto de tu cara (selfie)</b><div class="muted">Tómala con la cámara o súbela de tu galería. Sin esta foto tu registro queda incompleto.</div>'
+    + '<div class="photobox"><b>Foto de tu cara (selfie)</b><div class="muted">Tómala con la cámara o súbela de tu galería. Sin esta foto no se puede guardar tu perfil.</div>'
     + '<div id="rp-prev">'+(hasPhoto?'<img src="'+myPassenger.face_photo+'">':'')+'</div>'
     + '<input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rp-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
-    + '<div class="card warn"><b>Aviso: si guardas sin la foto de tu cara, tu registro queda incompleto.</b><p class="muted mt">Podrás subirla después aquí mismo.</p></div>'
+    + '<div class="card warn"><b>La foto de tu cara (selfie) es obligatoria.</b><p class="muted mt">Sin ella no se puede guardar tu perfil: el conductor te reconoce por tu foto cuando acepta tu viaje o mandado.</p></div>'
     + '<button class="btn" onclick="savePassenger()">Guardar mi perfil de pasajero</button>';
   } else {
     // Registro de conductor (app real): dos botones de vehículo, unidad
@@ -1424,7 +1425,10 @@ async function savePassenger(){
   const name = $('#rp-name').value.trim(), phone = $('#rp-phone').value.trim();
   if(!name || !phone) return toast('Pon tu nombre y tu teléfono.');
   const photo = regPhoto1 || (myPassenger && myPassenger.face_photo);
-  // Se puede guardar SIN foto: el registro queda incompleto (app real).
+  // v1.4.71: la foto de cara (selfie) es obligatoria para guardar el
+  // perfil: sin ella no se guarda nada (el usuario guardó solo con el
+  // número y el registro quedó incompleto sin avisarle).
+  if(!photo) return toast('Sube tu foto de cara (selfie): es obligatoria para guardar tu perfil.');
   try {
     // v1.4.23: cuenta solo-correo (Google, sin teléfono): el enlace de
     // abajo rechaza 400 sin teléfono (v1.4.21) y el error se tragaba en
@@ -1437,14 +1441,16 @@ async function savePassenger(){
       myAccount = acc.account;
     }
     if (myPassenger) {
-      await api('/api/update-passenger', { passenger_id: myPassenger.id, name, phone });
-      if(regPhoto1) await api('/api/upload-passenger-photo', { passenger_id: myPassenger.id, photo: regPhoto1 });
+      // v1.4.71: la foto va en la misma actualización (el servidor la
+      // exige: sin foto efectiva no guarda); ya no hace falta la subida
+      // separada de antes.
+      await api('/api/update-passenger', { passenger_id: myPassenger.id, name, phone, face_photo: regPhoto1 || null });
       const j = await api('/api/passengers'); myPassenger = j.passengers.find(p=>p.id==myPassenger.id);
       toast('Perfil actualizado.');
     } else {
-      const j = await api('/api/register-passenger', { name, phone, face_photo: photo || null });
+      const j = await api('/api/register-passenger', { name, phone, face_photo: photo });
       store.pid = j.passenger.id; myPassenger = j.passenger;
-      toast(photo ? '¡Listo! Ya puedes pedir viajes.' : 'Perfil guardado sin foto: súbela aquí mismo para completarlo.');
+      toast('¡Listo! Ya puedes pedir viajes.');
     }
     if (myAccount && myPassenger) { try { const l = await api('/api/link-profiles', { token: store.token, passenger_id: myPassenger.id }); myAccount = l.account; } catch(e){} }
     go(regReturn);
@@ -1862,7 +1868,7 @@ function renderCuenta(){
   if(!a.phone && a.email){
     html += '<div class="card warn"><b>Tu cuenta se creó solo con correo.</b><p class="muted mt">Agrega tu número para crear tu perfil de pasajero y que el conductor pueda marcarte.</p>'
       + '<label class="mt">Tu número de teléfono / WhatsApp</label><input id="acc-phone" placeholder="Ej. 961 000 0000" inputmode="tel">'
-      + '<button class="btn small" onclick="saveAccountPhone()">Guardar mi número y crear mi perfil</button></div>';
+      + '<button class="btn small" onclick="saveAccountPhone()">Guardar mi número y completar mi perfil</button></div>';
   }
   html += '<button class="btn ghost" onclick="doLogout()">Cerrar sesión</button>'
     + '<p class="muted center mt">Al cerrar sesión, este teléfono deja de usar tu perfil. Para volver a entrar —aquí o en otro teléfono— solo escribe tu usuario, tu número o tu correo y tu contraseña.</p>';
@@ -1876,13 +1882,16 @@ async function saveAccountPhone(){
     // sin teléfono (v1.4.21): primero se registra el número en la cuenta;
     // si eso falla, se para aquí y NO se crea un pasajero que quedaría
     // huérfano (sin enlace a la cuenta).
+    // v1.4.71: el pasajero YA NO se crea aquí sin foto (el servidor lo
+    // rechaza): guardado el número, se abre el formulario de perfil con
+    // nombre y número ya puestos, para que el usuario suba su selfie y
+    // lo guarde completo.
     const acc = await api('/api/set-account-phone', { token: store.token, phone: ph });
     myAccount = acc.account;
-    const j = await api('/api/register-passenger', { name: myAccount.name, phone: ph, face_photo: null });
-    store.pid = j.passenger.id; myPassenger = j.passenger;
-    await api('/api/link-profiles', { token: store.token, passenger_id: j.passenger.id });
-    await loadMe(); renderCuenta();
-    toast('Número guardado y perfil creado.');
+    toast('Número guardado. Ahora completa tu perfil con tu foto de cara.');
+    openRegistro('pasajero','cuenta');
+    const nm = document.getElementById('rp-name'); if(nm) nm.value = myAccount.name || '';
+    const tl = document.getElementById('rp-phone'); if(tl) tl.value = ph;
   } catch(e){ toast(e.message); }
 }
 
@@ -1930,27 +1939,30 @@ async function ensureNoProfilePassenger(){
   } catch(e){ toast(e.message); return false; }
 }
 function passengerProfileComplete(){
-  // v1.4.69: "perfil completo" = lo mismo que exige publicar un viaje (el
-  // servidor rechaza publicar sin teléfono y ensureNoProfilePassenger pide
-  // nombre + teléfono). La foto NO se exige para pedir el viaje: el perfil
-  // se puede guardar sin foto. OJO: registrarse solo con correo crea un
-  // pasajero automático con el teléfono VACÍO, así que no basta con que
-  // exista el perfil.
-  return !!(myPassenger && (myPassenger.name||'').trim() && (myPassenger.phone||'').trim());
+  // v1.4.71: "perfil completo" = nombre + teléfono + FOTO DE CARA
+  // (selfie). En v1.4.69/70 la foto NO se exigía y el usuario guardó su
+  // perfil solo con el número: ahora sin selfie el perfil está incompleto
+  // (la tarjeta vuelve a aparecer en Viajes y Mandados y no se entra a
+  // pedir hasta subirla) y el servidor también la exige al guardar el
+  // perfil y al publicar. OJO: registrarse solo con correo crea un
+  // pasajero automático con el teléfono VACÍO y sin foto, así que no
+  // basta con que exista el perfil.
+  return !!(myPassenger && (myPassenger.name||'').trim() && (myPassenger.phone||'').trim() && myPassenger.face_photo);
 }
 function profileBannerHtml(){
   // v1.4.69: en la parte de arriba de Viajes, si el perfil está incompleto
   // aparece la opción de completarlo; con el perfil completo no se pinta
-  // nada.
+  // nada. v1.4.71: también falta la foto si no está subida.
   if(passengerProfileComplete()) return '';
-  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir viajes</b><p class="muted mt">Falta tu nombre y tu número de teléfono: el conductor necesita poder marcarte cuando llegue por ti.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'viajes\')">Completar mi perfil</button></div>';
+  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir viajes</b><p class="muted mt">Falta tu nombre, tu número de teléfono o tu foto de cara (selfie): el conductor necesita poder reconocerte y marcarte cuando llegue por ti.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'viajes\')">Completar mi perfil</button></div>';
 }
 function profileBannerHtmlMandados(){
   // v1.4.70: la misma tarjeta ámbar de v1.4.69 (Viajes), arriba de la
   // pantalla de entrada de Mandados cuando el perfil está incompleto;
-  // con el perfil completo no se pinta nada.
+  // con el perfil completo no se pinta nada. v1.4.71: también falta la
+  // foto si no está subida.
   if(passengerProfileComplete()) return '';
-  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir mandados</b><p class="muted mt">Falta tu nombre y tu número de teléfono: el conductor necesita poder marcarte para tu mandado.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'mandados\')">Completar mi perfil</button></div>';
+  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir mandados</b><p class="muted mt">Falta tu nombre, tu número de teléfono o tu foto de cara (selfie): el conductor necesita poder reconocerte y marcarte para tu mandado.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'mandados\')">Completar mi perfil</button></div>';
 }
 async function renderViajes(){
   const page = $('#viajes-page');
@@ -2123,13 +2135,13 @@ function drawWizMap(){
   setTimeout(()=>wizMap.resize(), 100);
 }
 async function startTripRequest(){
-  // v1.4.69: sin perfil completo (nombre + teléfono, lo mismo que exige
-  // publicar) no se entra al flujo del viaje: se lleva al usuario a
+  // v1.4.69: sin perfil completo (nombre + teléfono + foto, lo mismo que
+  // exige publicar) no se entra al flujo del viaje: se lleva al usuario a
   // completar su perfil. Antes se podían hacer todos los pasos y solo al
   // publicar salía que faltaba el teléfono (la cuenta solo-correo nace
   // con pasajero y teléfono vacío).
   if(!passengerProfileComplete()){
-    toast('Completa tu perfil para pedir viajes: tu nombre y tu número.');
+    toast('Completa tu perfil para pedir viajes: tu nombre, tu número y tu foto de cara.');
     openRegistro('pasajero','viajes');
     return;
   }
@@ -2568,6 +2580,10 @@ function priceSetPax(kind, n){
 }
 async function publishTrip(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','viajes'); return; }
+  // v1.4.71: candado también al publicar (cubre "Repetir este viaje",
+  // que entra al paso de precio sin pasar por startTripRequest): sin
+  // perfil completo no se publica nada.
+  if(!passengerProfileComplete()){ toast('Completa tu perfil para pedir viajes: falta tu foto de cara (selfie).'); openRegistro('pasajero','viajes'); return; }
   const price = wiz.price;
   // v1.4.48: el precio no puede bajar del mínimo por personas
   // (1=$20, 2=$25, 3=$30) y sigue de cinco en cinco.
@@ -4487,12 +4503,12 @@ async function renderMandados(){
 }
 function startMandado(kind){
   // v1.4.70: igual que startTripRequest() (v1.4.69): sin perfil completo
-  // (nombre + teléfono, lo mismo que exige publicar) no se entra a
+  // (nombre + teléfono + foto, lo mismo que exige publicar) no se entra a
   // ningún flujo de mandado: se avisa y se lleva al usuario a completar
   // su perfil. Con el perfil completo entra normal al paso 1 del tipo
   // elegido ('quiero' o 'enviar').
   if(!passengerProfileComplete()){
-    toast('Completa tu perfil para pedir mandados: tu nombre y tu número.');
+    toast('Completa tu perfil para pedir mandados: tu nombre, tu número y tu foto de cara.');
     openRegistro('pasajero','mandados');
     return;
   }
@@ -4747,6 +4763,8 @@ function mandadoPickDone(which, pos, label){
 }
 async function publishMandado(){
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','mandados'); return; }
+  // v1.4.71: candado también al publicar, igual que en publishTrip().
+  if(!passengerProfileComplete()){ toast('Completa tu perfil para pedir mandados: falta tu foto de cara (selfie).'); openRegistro('pasajero','mandados'); return; }
   // Sin punto de entrega marcado no se publica nada (nunca se inventa Centro).
   if(!md.dest || md.dest.lat==null){ toast('Marca el punto de entrega en el mapa.'); return; }
   const price = md.price;
