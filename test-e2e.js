@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.68 en /api/health', h.ok && h.version === '1.4.68', JSON.stringify(h));
+  check('versión 1.4.69 en /api/health', h.ok && h.version === '1.4.69', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.68', h134.ok && h134.version === '1.4.68', JSON.stringify(h134));
+  check('versión 1.4.69', h134.ok && h134.version === '1.4.69', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.68)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.68';") && h.version === '1.4.68', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.69)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.69';") && h.version === '1.4.69', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.68 en /api/health (sección)', h27.ok && h27.version === '1.4.68', JSON.stringify(h27));
+  check('versión 1.4.69 en /api/health (sección)', h27.ok && h27.version === '1.4.69', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.68 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.68', JSON.stringify(h28));
+  check('versión 1.4.69 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.69', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.68 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.68', JSON.stringify(h29));
+  check('versión 1.4.69 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.69', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.68 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.68', JSON.stringify(h30));
+  check('versión 1.4.69 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.69', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4031,6 +4031,101 @@ async function api(path, body) {
   check('v1.4.68: en vivo, con la promo APAGADA el primer viaje del referido NO gana nada', statsOff.stats.enabled === false && statsOff.stats.earned === 2 && statsOff.stats.free_trips_outstanding === 0 && meA9.passenger.free_trips === 0, JSON.stringify({ st: statsOff.stats, free: meA9.passenger.free_trips }));
   const togOn = await api('/api/admin/set-referral-enabled', { token: ADM.token, enabled: true });
   check('v1.4.68: en vivo, el admin vuelve a prender la promo (queda prendida)', togOn.ok && togOn.referral_enabled === true, JSON.stringify(togOn));
+
+  // ===== v1.4.69 (2026-11-25): perfil incompleto no entra a pedir viaje =====
+  // Causa: registrarse solo con correo crea un pasajero automático con el
+  // teléfono VACÍO (ver Kike en v1.4.23): whoStrip no se pintaba (ya había
+  // perfil), ensureNoProfilePassenger no corría (myPassenger existía) y el
+  // usuario hacía TODOS los pasos hasta que el servidor rechazaba publicar
+  // sin teléfono. Ahora Viajes muestra arriba la tarjeta de completar
+  // perfil y "Solicitar el viaje" no entra al flujo hasta completarlo.
+  // "Perfil completo" = lo mismo que exige publicar: nombre + teléfono.
+  // La foto NO se exige para pedir el viaje (el perfil se puede guardar
+  // sin foto).
+  console.log('== v1.4.69: perfil incompleto no entra a pedir viaje ==');
+  const ppcStart = html.indexOf('function passengerProfileComplete(){');
+  const ppcEnd = html.indexOf('\nfunction profileBannerHtml(){', ppcStart);
+  const ppcSrc = ppcStart >= 0 && ppcEnd > ppcStart ? html.slice(ppcStart, ppcEnd) : '';
+  check('v1.4.69: "perfil completo" = nombre + teléfono del pasajero (la foto NO se exige)', ppcSrc.includes('myPassenger.name') && ppcSrc.includes('myPassenger.phone') && !ppcSrc.includes('face_photo'), ppcSrc.slice(0, 300));
+  const pbStart = html.indexOf('function profileBannerHtml(){');
+  const pbEnd = html.indexOf('\nasync function renderViajes(){', pbStart);
+  const pbSrc = pbStart >= 0 && pbEnd > pbStart ? html.slice(pbStart, pbEnd) : '';
+  check('v1.4.69: la tarjeta "Completa tu perfil para pedir viajes" existe con su botón al formulario de perfil', pbSrc.includes('Completa tu perfil para pedir viajes') && pbSrc.includes('Completar mi perfil') && pbSrc.includes("openRegistro(\\'pasajero\\',\\'viajes\\')"), pbSrc.slice(0, 300));
+  const viaSec69 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
+  check('v1.4.69: Viajes pinta la tarjeta arriba (en vez del formulario "Sin perfil" de whoStrip)', viaSec69.includes('profileBannerHtml()') && !viaSec69.includes('whoStrip()'));
+  const stSrc69 = html.slice(html.indexOf('async function startTripRequest(){'), html.indexOf('/* Repetir un viaje'));
+  check('v1.4.69: "Solicitar el viaje" no entra al flujo con perfil incompleto: avisa y lleva a completar el perfil', stSrc69.includes('passengerProfileComplete()') && stSrc69.includes("openRegistro('pasajero','viajes')") && stSrc69.indexOf('passengerProfileComplete()') < stSrc69.indexOf('wiz.step = 1'), stSrc69.slice(0, 300));
+  // Evaluado: la definición real de perfil completo y la tarjeta real.
+  const ppcFn = new Function('myPassenger', ppcSrc + '\nreturn passengerProfileComplete();');
+  const ppcCases = { sinPerfil: ppcFn(null), telefonoVacio: ppcFn({ name: 'Kike Correo', phone: '' }), soloTelefono: ppcFn({ name: '', phone: '9611234567' }), completo: ppcFn({ name: 'Kike Correo', phone: '9611234567' }), completoSinFoto: ppcFn({ name: 'Kike Correo', phone: '9611234567', face_photo: null }) };
+  check('v1.4.69: evaluado — perfil completo solo con nombre + teléfono (sin perfil, teléfono vacío o sin nombre = incompleto; sin foto = completo)', ppcCases.sinPerfil === false && ppcCases.telefonoVacio === false && ppcCases.soloTelefono === false && ppcCases.completo === true && ppcCases.completoSinFoto === true, JSON.stringify(ppcCases));
+  const pbFn = new Function('myPassenger', 'passengerProfileComplete', pbSrc + '\nreturn profileBannerHtml();');
+  function runBanner69(p){ return pbFn(p, () => ppcFn(p)); }
+  const pbInc69 = runBanner69({ name: 'Kike Correo', phone: '' });
+  const pbNull69 = runBanner69(null);
+  const pbOk69 = runBanner69({ name: 'Kike Correo', phone: '9611234567' });
+  check('v1.4.69: evaluado — la tarjeta aparece con perfil incompleto (texto + botón Completar mi perfil) y desaparece con perfil completo', pbInc69.includes('Completa tu perfil para pedir viajes') && pbInc69.includes('Completar mi perfil') && pbInc69.includes("openRegistro('pasajero','viajes')") && pbNull69.includes('Completa tu perfil para pedir viajes') && pbOk69 === '', JSON.stringify({ inc: pbInc69.slice(0, 120), ok: pbOk69 }));
+  // Evaluado: el candado real de "Solicitar el viaje".
+  async function runStart69(passenger){
+    const calls = { registro: null, toast: null, rendered: false };
+    const wizObj = { step: 0 };
+    const fn = new Function('myPassenger', 'passengerProfileComplete', 'toast', 'openRegistro', 'wiz', 'renderViajes', stSrc69 + '\nreturn startTripRequest;')(passenger, () => ppcFn(passenger), (m) => { calls.toast = m; }, (k, r) => { calls.registro = [k, r]; }, wizObj, () => { calls.rendered = true; });
+    await fn();
+    return { calls, step: wizObj.step };
+  }
+  const gateInc69 = await runStart69({ name: 'Kike Correo', phone: '' });
+  const gateNull69 = await runStart69(null);
+  const gateOk69 = await runStart69({ name: 'Kike Correo', phone: '9611234567' });
+  check('v1.4.69: evaluado — con perfil incompleto (teléfono vacío o sin perfil) "Solicitar el viaje" NO entra al flujo: avisa y abre completar perfil', gateInc69.step === 0 && !gateInc69.calls.rendered && gateInc69.calls.registro && gateInc69.calls.registro[0] === 'pasajero' && gateInc69.calls.registro[1] === 'viajes' && !!gateInc69.calls.toast && gateNull69.step === 0 && gateNull69.calls.registro && gateNull69.calls.registro[1] === 'viajes', JSON.stringify({ inc: gateInc69, nul: gateNull69 }));
+  check('v1.4.69: evaluado — con perfil completo "Solicitar el viaje" SÍ entra al flujo (paso 1)', gateOk69.step === 1 && gateOk69.calls.rendered && !gateOk69.calls.registro, JSON.stringify(gateOk69));
+  // Evaluado: la pantalla de Viajes (paso 0) con cada estado del perfil.
+  const viajesFnSrc69 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('let wizMap = null;'));
+  async function runRenderViajes69(passenger){
+    const pageStub = { innerHTML: '' };
+    const wizObj = { step: 0, requestId: null };
+    const mdObj = { step: 0, requestId: null, kind: null };
+    const stubs = {
+      $: (sel) => sel === '#viajes-page' ? pageStub : null,
+      wizMap: null, wiz: wizObj, newWizard: () => wizObj, setPageNoScroll: () => {},
+      myActiveRequest: async () => null,
+      goLive: () => {}, md: null, newMandado: () => mdObj,
+      backPill: (label) => '<button>' + label + '</button>',
+      renderMandadoSearching: () => {}, renderSearching: () => {},
+      whoStrip: () => '<div>who</div>', renderLastTripCard: () => {},
+      profileBannerHtml: () => runBanner69(passenger),
+    };
+    const fn = new Function(...Object.keys(stubs), viajesFnSrc69 + '; return renderViajes;')(...Object.values(stubs));
+    await fn();
+    return pageStub.innerHTML;
+  }
+  const sim69inc = await runRenderViajes69({ name: 'Kike Correo', phone: '' });
+  const sim69null = await runRenderViajes69(null);
+  const sim69ok = await runRenderViajes69({ name: 'Kike Correo', phone: '9611234567' });
+  check('v1.4.69: evaluado — con perfil incompleto la pantalla de Viajes muestra ARRIBA la tarjeta "Completa tu perfil para pedir viajes" con su botón', sim69inc.includes('Completa tu perfil para pedir viajes') && sim69inc.includes('Completar mi perfil') && sim69inc.indexOf('Completa tu perfil para pedir viajes') < sim69inc.indexOf('Solicitar el viaje') && sim69null.includes('Completa tu perfil para pedir viajes'), JSON.stringify(sim69inc.slice(0, 200)));
+  check('v1.4.69: evaluado — con perfil completo la pantalla de Viajes NO muestra la tarjeta y sigue igual (Solicitar + Programar + Historial)', !sim69ok.includes('Completa tu perfil para pedir viajes') && sim69ok.includes('Solicitar el viaje') && sim69ok.includes('Programar un viaje') && sim69ok.includes('Historial de viajes'), JSON.stringify(sim69ok.slice(0, 200)));
+  // --- En vivo: cuenta solo-correo con pasajero de teléfono vacío ---
+  const acc69 = await newMailAccount('lola');
+  check('v1.4.69: en vivo, cuenta nueva solo-correo (sin teléfono)', acc69.acc.ok && !acc69.acc.account.phone, JSON.stringify(acc69.acc));
+  const me69a = await api('/api/me?token=' + acc69.li.token);
+  check('v1.4.69: en vivo, la cuenta nace con pasajero automático de teléfono vacío (el caso del usuario)', me69a.ok && me69a.passenger && me69a.passenger.phone === '' && me69a.passenger.name === 'Lola Correo', JSON.stringify(me69a.passenger));
+  const trip69bad = await api('/api/create-request', { passenger_id: me69a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.69: en vivo, con el teléfono vacío el servidor sigue rechazando publicar el viaje (400)', !trip69bad.ok && /teléfono/.test(trip69bad.error || ''), JSON.stringify(trip69bad));
+  // Completar nombre + teléfono (lo que pide el formulario de perfil).
+  const phone69 = '961690' + RUN.slice(0, 4);
+  const set69 = await api('/api/set-account-phone', { token: acc69.li.token, phone: phone69 });
+  const upd69 = await api('/api/update-passenger', { passenger_id: me69a.passenger.id, name: 'Lola Correo', phone: phone69 });
+  const me69b = await api('/api/me?token=' + acc69.li.token);
+  check('v1.4.69: en vivo, al completar nombre + teléfono el perfil queda completo', set69.ok && upd69.ok && me69b.ok && me69b.passenger.phone === phone69 && me69b.passenger.name === 'Lola Correo', JSON.stringify(me69b.passenger));
+  const trip69ok = await api('/api/create-request', { passenger_id: me69a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.69: en vivo, con el perfil completo el viaje se publica normal (buscando, $25)', trip69ok.ok && trip69ok.request.status === 'buscando' && trip69ok.request.price === 25, JSON.stringify(trip69ok.request && { st: trip69ok.request.status, p: trip69ok.request.price }));
+  await api('/api/cancel-request', { request_id: trip69ok.request.id });
+  // Perfil completo desde el registro: el viaje se publica sin trabas.
+  const acc69b = await api('/api/register-account', { name: 'Marta Completa', username: 'marta_' + RUN, phone: '961691' + RUN.slice(0, 4), password: 'secreta123' });
+  const me69c = await api('/api/me?token=' + acc69b.token);
+  check('v1.4.69: en vivo, una cuenta registrada con teléfono nace con perfil completo (nombre + teléfono)', acc69b.ok && me69c.ok && me69c.passenger && me69c.passenger.phone === '961691' + RUN.slice(0, 4), JSON.stringify(me69c.passenger));
+  const trip69c = await api('/api/create-request', { passenger_id: me69c.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.69: en vivo, con perfil completo desde el registro el viaje se publica sin trabas', trip69c.ok && trip69c.request.status === 'buscando', JSON.stringify(trip69c.request && { st: trip69c.request.status, p: trip69c.request.price }));
+  await api('/api/cancel-request', { request_id: trip69c.request.id });
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
