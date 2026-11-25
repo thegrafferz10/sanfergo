@@ -846,7 +846,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.74' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.75' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1016,6 +1016,32 @@ async function api(req, res, pathname) {
     const a = accountFromToken(q.get('token') || body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
     return send(res, 200, { ok: true, stats: referralStats() });
+  }
+
+  // ---- Viajes (v1.4.75, solo admin): panel para revisar los viajes —
+  // cuántos se solicitaron, cuántos aceptó un chofer, y la lista con
+  // quién lo pidió y qué chofer lo tomó. Solo viajes (kind='viaje'); los
+  // mandados no entran. Definiciones: Solicitados = todos los viajes
+  // publicados alguna vez (incluye cancelados). Aceptados = viajes con
+  // chofer asignado, o sea con estado 'aceptado' o 'finalizado' (la misma
+  // definición que usa el conteo de servicios del chofer). Los nombres
+  // de pasajero y chofer se resuelven aquí, en el servidor.
+  if (pathname === '/api/admin/trips') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const rows = db.prepare(`SELECT id, kind, passenger_id, passenger_name, passenger_phone,
+      origin_zone, origin_detail, dest_zone, dest_detail, distance_km, eta_minutes,
+      price, final_price, payment_method, status, trip_stage, trip_started_at, finished_at,
+      driver_id, driver_name, driver_phone, driver_unit, driver_vehicle, is_free_trip, created_at
+      FROM requests WHERE kind='viaje' ORDER BY created_at DESC, id DESC`).all();
+    const trips = rows.map(r => ({
+      ...r,
+      passenger_name: r.passenger_name || (r.passenger_id ? (db.prepare('SELECT name FROM passengers WHERE id=?').get(r.passenger_id) || {}).name : null) || 'Pasajero',
+      driver_name: r.driver_name || (r.driver_id ? (db.prepare('SELECT name FROM drivers WHERE id=?').get(r.driver_id) || {}).name : null) || null,
+    }));
+    const requested = db.prepare(`SELECT COUNT(*) c FROM requests WHERE kind='viaje'`).get().c;
+    const accepted = db.prepare(`SELECT COUNT(*) c FROM requests WHERE kind='viaje' AND status IN ('aceptado','finalizado')`).get().c;
+    return send(res, 200, { ok: true, requested, accepted, trips });
   }
 
   // ---- Cuentas e inicio de sesión ----

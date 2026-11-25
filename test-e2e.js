@@ -371,7 +371,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.74 en /api/health', h.ok && h.version === '1.4.74', JSON.stringify(h));
+  check('versión 1.4.75 en /api/health', h.ok && h.version === '1.4.75', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -472,7 +472,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.74', h134.ok && h134.version === '1.4.74', JSON.stringify(h134));
+  check('versión 1.4.75', h134.ok && h134.version === '1.4.75', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -634,7 +634,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.74)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.74';") && h.version === '1.4.74', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.75)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.75';") && h.version === '1.4.75', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1428,7 +1428,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.74 en /api/health (sección)', h27.ok && h27.version === '1.4.74', JSON.stringify(h27));
+  check('versión 1.4.75 en /api/health (sección)', h27.ok && h27.version === '1.4.75', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1473,7 +1473,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.74 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.74', JSON.stringify(h28));
+  check('versión 1.4.75 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.75', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1487,7 +1487,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.74 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.74', JSON.stringify(h29));
+  check('versión 1.4.75 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.75', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1496,7 +1496,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.74 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.74', JSON.stringify(h30));
+  check('versión 1.4.75 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.75', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4263,7 +4263,7 @@ async function api(path, body) {
   // estadísticas, misma descarga y mismo cierre de sesión.
   console.log('== v1.4.70: orden y diseño del panel de administrador ==');
   const rag70 = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('async function loadReferralStats(){'));
-  check('v1.4.70: orden del panel — Negocios arriba de la retícula, promo y respaldo abajo, Cerrar sesión al final', rag70.indexOf('Cambiar usuario y contraseña') < rag70.indexOf('🔒 Negocios ') && rag70.indexOf('🔒 Negocios ') < rag70.indexOf('Panel de administrador') && rag70.indexOf('Panel de administrador') < rag70.indexOf('Viajes gratis por recomendación') && rag70.indexOf('Viajes gratis por recomendación') < rag70.indexOf('Respaldar base de datos') && rag70.indexOf('Respaldar base de datos') < rag70.indexOf('‹ Cerrar sesión</button>'), JSON.stringify({ cred: rag70.indexOf('Cambiar usuario y contraseña'), neg: rag70.indexOf('🔒 Negocios '), grid: rag70.indexOf('Panel de administrador'), promo: rag70.indexOf('Viajes gratis por recomendación'), back: rag70.indexOf('Respaldar base de datos'), out: rag70.indexOf('‹ Cerrar sesión</button>') }));
+  check('v1.4.70 (actualizado en v1.4.75): orden del panel — retícula, promo y respaldo arriba, Negocios abajo, Cerrar sesión al final', rag70.indexOf('Cambiar usuario y contraseña') < rag70.indexOf('Panel de administrador') && rag70.indexOf('Panel de administrador') < rag70.indexOf('Viajes gratis por recomendación') && rag70.indexOf('Viajes gratis por recomendación') < rag70.indexOf('Respaldar base de datos') && rag70.indexOf('Respaldar base de datos') < rag70.indexOf('🔒 Negocios ') && rag70.indexOf('🔒 Negocios ') < rag70.indexOf('‹ Cerrar sesión</button>'), JSON.stringify({ cred: rag70.indexOf('Cambiar usuario y contraseña'), neg: rag70.indexOf('🔒 Negocios '), grid: rag70.indexOf('Panel de administrador'), promo: rag70.indexOf('Viajes gratis por recomendación'), back: rag70.indexOf('Respaldar base de datos'), out: rag70.indexOf('‹ Cerrar sesión</button>') }));
   check('v1.4.70: Negocios y promo ya no usan la fila flex con el botón encogido (nada se corta por la derecha)', !rag70.includes('flex:none;align-self:center') && rag70.includes('<button class="btn small" onclick="toggleNegociosLock()">') && rag70.includes('<button class="btn small" onclick="toggleReferralPromo()">') && rag70.includes('id="referral-stats-line"'), rag70.slice(rag70.indexOf('Negocios '), rag70.indexOf('Negocios ') + 200));
   check('v1.4.70: la tarjeta de credenciales y los interruptores siguen iguales (mismos textos y handlers)', rag70.includes('Cambiar usuario y contraseña') && rag70.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag70.includes('toggleNegociosLock()') && rag70.includes('toggleReferralPromo()') && rag70.includes('downloadBackup()') && rag70.includes('doLogout()') && rag70.includes('Apagar promoción') && rag70.includes('Abrir Negocios'), rag70.slice(0, 200));
   // Evaluado: el panel real con cada estado de los interruptores.
@@ -4284,7 +4284,7 @@ async function api(path, body) {
   }
   const adm70 = await runRenderAdmin70(true, true);
   const adm70b = await runRenderAdmin70(false, false);
-  check('v1.4.70: evaluado — el panel real respeta el orden final (admin → credenciales → Negocios → retícula → promo → respaldo → Cerrar sesión)', adm70.indexOf('ADMINISTRADOR') < adm70.indexOf('Cambiar usuario y contraseña') && adm70.indexOf('Cambiar usuario y contraseña') < adm70.indexOf('Negocios bloqueado') && adm70.indexOf('Negocios bloqueado') < adm70.indexOf('Panel de administrador') && adm70.indexOf('Panel de administrador') < adm70.indexOf('Solicitudes de choferes') && adm70.indexOf('Tiendas') < adm70.indexOf('Viajes gratis por recomendación') && adm70.indexOf('Viajes gratis por recomendación') < adm70.indexOf('Respaldar base de datos') && adm70.indexOf('Respaldar base de datos') < adm70.indexOf('Cerrar sesión'), JSON.stringify(adm70.slice(0, 300)));
+  check('v1.4.70 (actualizado en v1.4.75): evaluado — el panel real respeta el orden final (admin → credenciales → retícula → promo → respaldo → Negocios → Cerrar sesión)', adm70.indexOf('ADMINISTRADOR') < adm70.indexOf('Cambiar usuario y contraseña') && adm70.indexOf('Cambiar usuario y contraseña') < adm70.indexOf('Panel de administrador') && adm70.indexOf('Panel de administrador') < adm70.indexOf('Solicitudes de choferes') && adm70.indexOf('Tiendas') < adm70.indexOf('Viajes gratis por recomendación') && adm70.indexOf('Viajes gratis por recomendación') < adm70.indexOf('Respaldar base de datos') && adm70.indexOf('Respaldar base de datos') < adm70.indexOf('Negocios bloqueado') && adm70.indexOf('Negocios bloqueado') < adm70.indexOf('Cerrar sesión'), JSON.stringify(adm70.slice(0, 300)));
   check('v1.4.70: evaluado — Negocios y promo con botón a lo ancho abajo (sin fila flex) y textos según su estado', adm70.includes('<button class="btn small" onclick="toggleNegociosLock()">Abrir Negocios</button>') && adm70.includes('<button class="btn small" onclick="toggleReferralPromo()">Apagar promoción</button>') && adm70.includes('id="referral-stats-line"') && adm70b.includes('Negocios abierto') && adm70b.includes('Bloquear Negocios') && adm70b.includes('Prender promoción') && !adm70.includes('flex:none'), JSON.stringify(adm70.slice(adm70.indexOf('Negocios bloqueado'), adm70.indexOf('Negocios bloqueado') + 200)));
 
   // ===== v1.4.71 (2026-11-25): la selfie es OBLIGATORIA para guardar el perfil =====
@@ -4415,6 +4415,35 @@ async function api(path, body) {
   check('v1.4.74: el aviso de privacidad ya no trae el 9614868605', !priv74Text.includes('9614868605'), priv74Text.slice(priv74Text.indexOf('Tus derechos'), priv74Text.indexOf('Tus derechos') + 200));
   check('v1.4.74: los derechos se ejercen por correo (no por WhatsApp)', priv74Text.includes('escribiéndonos a') && priv74Text.includes('contacto@sanfernandogo.com') && !priv74Text.includes('por WhatsApp al'), '');
   check('v1.4.74: la sección Contacto muestra el correo (no el WhatsApp)', priv74Text.includes('Correo:') && priv74Text.includes('contacto@sanfernandogo.com') && !priv74Text.includes('WhatsApp:'), '');
+
+  // ===== v1.4.75 (2026-11-25): panel de Viajes en el área de admin —
+  // tarjeta "📊 Viajes" en la retícula, pantalla propia con dos
+  // estadísticas (Solicitados / Aceptados) y la lista de viajes con
+  // quién lo pidió y qué chofer lo tomó. Solo viajes (kind='viaje').
+  // Además: las tarjetas del panel son botones verdes y naranjas
+  // (tono alterno) y la tarjeta del candado de Negocios bajó hasta
+  // abajo, arriba de Cerrar sesión.
+  console.log('== v1.4.75: panel de Viajes en el admin ==');
+  const tripsNoAuth = await api('/api/admin/trips');
+  check('v1.4.75: GET /api/admin/trips sin token es 403', !tripsNoAuth.ok && /administrador/.test(tripsNoAuth.error || ''), JSON.stringify(tripsNoAuth));
+  const usr75 = await api('/api/register-account', { name: 'No Admin 75', username: 'noadmin75_' + RUN, phone: '9610000075', password: 'secreta123' });
+  const tripsNoAdmin = await api('/api/admin/trips?token=' + encodeURIComponent(usr75.token || ''));
+  check('v1.4.75: GET /api/admin/trips con token no-admin es 403', !tripsNoAdmin.ok && /administrador/.test(tripsNoAdmin.error || ''), JSON.stringify(tripsNoAdmin));
+  const tripsAdm = await api('/api/admin/trips?token=' + encodeURIComponent(ADM.token));
+  check('v1.4.75: GET /api/admin/trips con token admin devuelve solicitados/aceptados y la lista', tripsAdm.ok && typeof tripsAdm.requested === 'number' && typeof tripsAdm.accepted === 'number' && Array.isArray(tripsAdm.trips), JSON.stringify({ requested: tripsAdm.requested, accepted: tripsAdm.accepted, n: tripsAdm.trips && tripsAdm.trips.length }));
+  check('v1.4.75: solicitados > 0, aceptados > 0 y aceptados <= solicitados (la suite ya publicó y aceptó viajes)', tripsAdm.ok && tripsAdm.requested > 0 && tripsAdm.accepted > 0 && tripsAdm.accepted <= tripsAdm.requested, JSON.stringify({ requested: tripsAdm.requested, accepted: tripsAdm.accepted }));
+  check('v1.4.75: la lista es SOLO viajes (kind=viaje, ningún mandado)', tripsAdm.ok && tripsAdm.trips.length > 0 && tripsAdm.trips.every(t => t.kind === 'viaje'), JSON.stringify(tripsAdm.trips && tripsAdm.trips.slice(0, 2).map(t => ({ id: t.id, kind: t.kind }))));
+  check('v1.4.75: cada viaje trae pasajero y, si tiene chofer, su nombre', tripsAdm.ok && tripsAdm.trips.every(t => t.passenger_name) && tripsAdm.trips.filter(t => t.driver_id).every(t => t.driver_name), JSON.stringify(tripsAdm.trips && tripsAdm.trips.slice(0, 3).map(t => ({ id: t.id, pax: t.passenger_name, drv: t.driver_name }))));
+  check('v1.4.75: hay al menos un viaje con chofer y uno sin chofer', tripsAdm.ok && tripsAdm.trips.some(t => t.driver_id && t.driver_name) && tripsAdm.trips.some(t => !t.driver_id), JSON.stringify({ conChofer: tripsAdm.trips.filter(t => t.driver_id).length, sinChofer: tripsAdm.trips.filter(t => !t.driver_id).length }));
+  // Cliente: retícula, ruta y pantalla.
+  const gridSec = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('async function loadReferralStats(){'));
+  check('v1.4.75: la retícula del admin tiene la tarjeta Viajes (tono naranja) junto a las demás', gridSec.includes("card('viajes','📊','Viajes'") && gridSec.includes("card('sol-choferes'") && gridSec.includes("card('tiendas'"), gridSec.slice(gridSec.indexOf("card('viajes'"), gridSec.indexOf("card('viajes'") + 120));
+  check('v1.4.75: las tarjetas del panel alternan verde y naranja (4 y 4)', (gridSec.match(/,'green'\)/g) || []).length === 4 && (gridSec.match(/,'amber'\)/g) || []).length === 4, '');
+  check('v1.4.75: el router del admin abre la pantalla de Viajes', html.includes("if(adminScreen==='viajes') return renderAdminTrips();"), '');
+  const tripsSec = html.slice(html.indexOf('async function renderAdminTrips(){'), html.indexOf('/* --- Administrar pasajeros --- */'));
+  check('v1.4.75: la pantalla de Viajes muestra Solicitados y Aceptados con su definición', tripsSec.includes('Solicitados') && tripsSec.includes('Aceptados') && tripsSec.includes('/api/admin/trips') && tripsSec.includes('incluye los cancelados') && tripsSec.includes('aceptados o terminados'), tripsSec.slice(0, 200));
+  check('v1.4.75: cada fila trae pasajero, chofer (o "Sin chofer"), ruta, precio, fecha y estado', tripsSec.includes('Chofer: ') && tripsSec.includes('Sin chofer') && tripsSec.includes('origin_zone') && tripsSec.includes('fmt$(r.final_price || r.price)') && tripsSec.includes('fmtDateTime(r.created_at)') && tripsSec.includes('adminTripStatusLabel'), '');
+  check('v1.4.75: la tarjeta del candado de Negocios está abajo, después del respaldo y antes de Cerrar sesión', gridSec.indexOf('🔒 Negocios') > gridSec.indexOf('Respaldar base de datos') && gridSec.indexOf('🔒 Negocios') < gridSec.indexOf('‹ Cerrar sesión'), '');
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
