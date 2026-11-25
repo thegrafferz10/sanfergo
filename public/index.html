@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.69'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.70'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1944,6 +1944,13 @@ function profileBannerHtml(){
   // nada.
   if(passengerProfileComplete()) return '';
   return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir viajes</b><p class="muted mt">Falta tu nombre y tu número de teléfono: el conductor necesita poder marcarte cuando llegue por ti.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'viajes\')">Completar mi perfil</button></div>';
+}
+function profileBannerHtmlMandados(){
+  // v1.4.70: la misma tarjeta ámbar de v1.4.69 (Viajes), arriba de la
+  // pantalla de entrada de Mandados cuando el perfil está incompleto;
+  // con el perfil completo no se pinta nada.
+  if(passengerProfileComplete()) return '';
+  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir mandados</b><p class="muted mt">Falta tu nombre y tu número de teléfono: el conductor necesita poder marcarte para tu mandado.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'mandados\')">Completar mi perfil</button></div>';
 }
 async function renderViajes(){
   const page = $('#viajes-page');
@@ -4464,15 +4471,32 @@ async function renderMandados(){
   }
   if(md.step===0){
     setPageNoScroll('mandados-page', true);
+    // v1.4.70: igual que Viajes (v1.4.69): si el perfil está incompleto,
+    // arriba va la tarjeta para completarlo y los dos botones no entran
+    // a ningún flujo hasta completarlo (startMandado).
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
+      + (typeof profileBannerHtmlMandados === 'function' ? profileBannerHtmlMandados() : '')
       + '<h2>¿Qué quieres hacer?</h2>'
       + '<p class="muted mt">Elige cómo es tu mandado: que te traigan algo a ti, o mandar algo tuyo a otra persona.</p>'
-      + '<button class="bigopt" style="height:96px;background:#14532d;color:#fff;border-color:#14532d" onclick="md.kind=\'quiero\';md.step=1;renderMandados()"><span class="row"><span style="font-size:30px">🛒</span><span class="tx"><b>Quiero un mandado</b><div style="opacity:.9">Que me traigan algo a mí</div></span></span></button>'
-      + '<button class="bigopt" style="height:96px" onclick="md.kind=\'enviar\';md.step=1;renderMandados()"><span class="row"><span style="font-size:30px">📦</span><span class="tx"><b>Enviar un mandado</b><div class="muted">Mandar algo mío a otra persona</div></span></span></button>';
+      + '<button class="bigopt" style="height:96px;background:#14532d;color:#fff;border-color:#14532d" onclick="startMandado(\'quiero\')"><span class="row"><span style="font-size:30px">🛒</span><span class="tx"><b>Quiero un mandado</b><div style="opacity:.9">Que me traigan algo a mí</div></span></span></button>'
+      + '<button class="bigopt" style="height:96px" onclick="startMandado(\'enviar\')"><span class="row"><span style="font-size:30px">📦</span><span class="tx"><b>Enviar un mandado</b><div class="muted">Mandar algo mío a otra persona</div></span></span></button>';
     return;
   }
   if(md.kind==='quiero') renderMandadoQuiero();
   else renderMandadoEnviar();
+}
+function startMandado(kind){
+  // v1.4.70: igual que startTripRequest() (v1.4.69): sin perfil completo
+  // (nombre + teléfono, lo mismo que exige publicar) no se entra a
+  // ningún flujo de mandado: se avisa y se lleva al usuario a completar
+  // su perfil. Con el perfil completo entra normal al paso 1 del tipo
+  // elegido ('quiero' o 'enviar').
+  if(!passengerProfileComplete()){
+    toast('Completa tu perfil para pedir mandados: tu nombre y tu número.');
+    openRegistro('pasajero','mandados');
+    return;
+  }
+  md.kind = kind; md.step = 1; renderMandados();
 }
 function mdBack(step){ md.step = step; renderMandados(); }
 function mdItemsHtml(){
@@ -5633,8 +5657,6 @@ function renderAdminGrid(){
     + '<div style="width:56px;height:56px;border-radius:50%;background:#14532d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0">'+initial+'</div>'
     + '<div class="flex1"><b style="font-size:18px">'+esc(a.name)+'</b><div class="muted">Usuario: @'+esc(a.username)+'</div><div class="muted">Teléfono: '+esc(a.phone||a.email||'—')+'</div></div>'
     + '<span class="chip" style="background:#991b1b;color:#fff">ADMINISTRADOR</span></div></div>'
-    + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
-    + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
     + '<div class="card white mt" style="padding:10px 12px">'
     + '<button style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:none;border:none;padding:2px 0;cursor:pointer;text-align:left" onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()">'
     + '<span style="font-size:14px"><b>🔐 Administrador</b> <span class="muted">· Cambiar usuario y contraseña</span></span>'
@@ -5648,9 +5670,8 @@ function renderAdminGrid(){
     + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>' : '')
     + '</div>'
     // v1.4.64: interruptor del candado de Negocios (solo lo ve el admin, que es el único que entra al panel). El perfil del dueño (@thegrafferz10) sigue exento aunque el candado esté puesto.
-    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div></div>'
-    // v1.4.67: interruptor de la promo de viajes gratis por recomendación + estadísticas (recomendaciones, pendientes, ganados, usados, por usar).
-    + '<div class="card white mt" style="padding:12px"><div class="flex"><div class="flex1"><b>🎁 Viajes gratis por recomendación ' + (referralEnabled ? '· prendida' : '· apagada') + '</b><div class="muted" style="font-size:12px">Solo se gana 1 viaje gratis por persona.</div><div class="muted" style="font-size:12px;line-height:1.4" id="referral-stats-line">Cargando…</div></div><button class="btn small" style="flex:none;align-self:center" onclick="toggleReferralPromo()">' + (referralEnabled ? 'Apagar promoción' : 'Prender promoción') + '</button></div></div>'
+    // v1.4.70: apilado en vertical (título y descripción arriba, botón a lo ancho abajo): en la fila flex el texto quedaba estrecho y el botón se salía y se cortaba por la derecha.
+    + '<div class="card white mt" style="padding:12px"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div><button class="btn small" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
@@ -5662,6 +5683,12 @@ function renderAdminGrid(){
     + card('anuncios','📣','Anuncios','El flotante que sale al entrar a Viajes, Negocios o Mandados.')
     + card('tiendas','🛒','Tiendas','El catálogo de tiendas de SanFerGo.')
     + '</div>'
+    // v1.4.67: interruptor de la promo de viajes gratis por recomendación + estadísticas (recomendaciones, pendientes, ganados, usados, por usar).
+    // v1.4.70: la tarjeta se movió abajo de la retícula y se apiló en vertical (título y estadísticas arriba, botón a lo ancho abajo): en la fila flex el botón se salía y se cortaba por la derecha.
+    + '<div class="card white mt" style="padding:12px"><b>🎁 Viajes gratis por recomendación ' + (referralEnabled ? '· prendida' : '· apagada') + '</b><div class="muted" style="font-size:12px">Solo se gana 1 viaje gratis por persona.</div><div class="muted" style="font-size:12px;line-height:1.4" id="referral-stats-line">Cargando…</div><button class="btn small" onclick="toggleReferralPromo()">' + (referralEnabled ? 'Apagar promoción' : 'Prender promoción') + '</button></div>'
+    // v1.4.70: el respaldo se movió hasta abajo del panel, justo antes de Cerrar sesión.
+    + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
+    + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
     + '<button class="btn" style="border:2px solid #374151;color:#374151;background:#fff" onclick="doLogout()">‹ Cerrar sesión</button>';
   loadAdminOverview();
   loadReferralStats(); // v1.4.67: estadísticas de la promo de viajes gratis
