@@ -367,7 +367,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.69 en /api/health', h.ok && h.version === '1.4.69', JSON.stringify(h));
+  check('versión 1.4.70 en /api/health', h.ok && h.version === '1.4.70', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -468,7 +468,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.69', h134.ok && h134.version === '1.4.69', JSON.stringify(h134));
+  check('versión 1.4.70', h134.ok && h134.version === '1.4.70', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -630,7 +630,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.69)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.69';") && h.version === '1.4.69', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.70)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.70';") && h.version === '1.4.70', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1422,7 +1422,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.69 en /api/health (sección)', h27.ok && h27.version === '1.4.69', JSON.stringify(h27));
+  check('versión 1.4.70 en /api/health (sección)', h27.ok && h27.version === '1.4.70', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1467,7 +1467,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.69 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.69', JSON.stringify(h28));
+  check('versión 1.4.70 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.70', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1481,7 +1481,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.69 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.69', JSON.stringify(h29));
+  check('versión 1.4.70 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.70', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1490,7 +1490,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.69 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.69', JSON.stringify(h30));
+  check('versión 1.4.70 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.70', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2094,7 +2094,7 @@ async function api(path, body) {
   const tripLock50 = mdSec50.slice(mdSec50.indexOf('// v1.4.50:'), mdSec50.indexOf("const active = await myActiveRequest('mandado');"));
   check('v1.4.50: con viaje aceptado, entrar a Mandados va al mapa en vivo (goLive) en vez del formulario', tripLock50.includes("if(trip50.status==='aceptado'){ goLive(trip50.id, false); return; }"));
   check('v1.4.50: con viaje buscando, entrar a Mandados muestra la misma pantalla de espera del viaje (wiz.step=5, <div id="searching">, renderSearching)', tripLock50.includes('wiz.requestId = trip50.id; wiz.step = 5;') && tripLock50.includes("backPill('Volver al inicio'") && tripLock50.includes("'<div id=\"searching\"></div>'") && tripLock50.includes('renderSearching();'));
-  check('v1.4.50: el formulario del mandado sigue intacto detrás del candado ("¿Qué quieres hacer?", Quiero/Enviar)', mdSec50.includes('¿Qué quieres hacer?') && mdSec50.includes("md.kind=\\'quiero\\'") && mdSec50.includes("md.kind=\\'enviar\\'"));
+  check('v1.4.50: el formulario del mandado sigue intacto detrás del candado ("¿Qué quieres hacer?", Quiero/Enviar)', mdSec50.includes('¿Qué quieres hacer?') && mdSec50.includes("startMandado(\\'quiero\\')") && mdSec50.includes("startMandado(\\'enviar\\')")); // v1.4.70: la entrada ya no es directa (md.kind/md.step en el onclick) sino por startMandado, que es el candado de perfil incompleto; el formulario detrás del candado sigue igual
   const tripSec50 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
   check('v1.4.50: el candado inverso NO existía en v1.4.50; en v1.4.55 el usuario lo pidió (reporte 23:16, ver sección v1.4.55): Viajes SÍ consulta el mandado pendiente', tripSec50.includes("myActiveRequest('mandado')"));
   check('v1.4.50: el sondeo refresca la pantalla de espera del viaje también cuando se ve desde Mandados', html.includes("(currentView==='viajes' || currentView==='mandados') && wiz && wiz.step===5) renderSearching();"));
@@ -4126,6 +4126,129 @@ async function api(path, body) {
   const trip69c = await api('/api/create-request', { passenger_id: me69c.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.69: en vivo, con perfil completo desde el registro el viaje se publica sin trabas', trip69c.ok && trip69c.request.status === 'buscando', JSON.stringify(trip69c.request && { st: trip69c.request.status, p: trip69c.request.price }));
   await api('/api/cancel-request', { request_id: trip69c.request.id });
+
+  // ===== v1.4.70 (2026-11-25): perfil incompleto tampoco entra a Mandados =====
+  // El usuario confirmó que Viajes ya muestra la tarjeta (v1.4.69) pero
+  // Mandados dejaba entrar a los dos flujos con el perfil incompleto.
+  // Ahora la entrada de Mandados ("¿Qué quieres hacer?") muestra arriba
+  // la misma tarjeta ámbar y los dos botones no entran al flujo hasta
+  // completar nombre + teléfono. El servidor ya rechazaba publicar el
+  // mandado sin teléfono (mismo /api/create-request, 400), así que no
+  // hubo cambio de servidor: solo la puerta en la pantalla.
+  console.log('== v1.4.70: perfil incompleto tampoco entra a Mandados ==');
+  const pbmStart = html.indexOf('function profileBannerHtmlMandados(){');
+  const pbmEnd = html.indexOf('\nasync function renderViajes(){', pbmStart);
+  const pbmSrc = pbmStart >= 0 && pbmEnd > pbmStart ? html.slice(pbmStart, pbmEnd) : '';
+  check('v1.4.70: la tarjeta "Completa tu perfil para pedir mandados" existe con su botón al formulario de perfil', pbmSrc.includes('Completa tu perfil para pedir mandados') && pbmSrc.includes('Completar mi perfil') && pbmSrc.includes("openRegistro(\\'pasajero\\',\\'mandados\\')"), pbmSrc.slice(0, 300));
+  const mdSec70 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step){'));
+  check('v1.4.70: Mandados pinta la tarjeta arriba de "¿Qué quieres hacer?"', mdSec70.includes('profileBannerHtmlMandados()') && mdSec70.indexOf('profileBannerHtmlMandados()') < mdSec70.indexOf('¿Qué quieres hacer?'), mdSec70.slice(0, 200));
+  check('v1.4.70: los dos botones de entrada pasan por startMandado (no entran directo al flujo)', mdSec70.includes("startMandado(\\'quiero\\')") && mdSec70.includes("startMandado(\\'enviar\\')") && !mdSec70.includes("md.kind=\\'quiero\\';md.step=1") && !mdSec70.includes("md.kind=\\'enviar\\';md.step=1"), mdSec70.slice(0, 300));
+  const smSrc70 = html.slice(html.indexOf('function startMandado(kind){'), html.indexOf('function mdBack(step){'));
+  check('v1.4.70: startMandado no entra al flujo con perfil incompleto: avisa y lleva a completar el perfil', smSrc70.includes('passengerProfileComplete()') && smSrc70.includes("openRegistro('pasajero','mandados')") && smSrc70.indexOf('passengerProfileComplete()') < smSrc70.indexOf('md.step = 1'), smSrc70.slice(0, 300));
+  // Evaluado: la tarjeta real de Mandados.
+  const pbmFn = new Function('myPassenger', 'passengerProfileComplete', pbmSrc + '\nreturn profileBannerHtmlMandados();');
+  function runBanner70(p){ return pbmFn(p, () => ppcFn(p)); }
+  const pbmInc70 = runBanner70({ name: 'Lola Correo', phone: '' });
+  const pbmNull70 = runBanner70(null);
+  const pbmOk70 = runBanner70({ name: 'Lola Correo', phone: '9611234567' });
+  check('v1.4.70: evaluado — la tarjeta de Mandados aparece con perfil incompleto y desaparece con perfil completo', pbmInc70.includes('Completa tu perfil para pedir mandados') && pbmInc70.includes('Completar mi perfil') && pbmInc70.includes("openRegistro('pasajero','mandados')") && pbmNull70.includes('Completa tu perfil para pedir mandados') && pbmOk70 === '', JSON.stringify({ inc: pbmInc70.slice(0, 120), ok: pbmOk70 }));
+  // Evaluado: el candado real de los dos botones de Mandados.
+  async function runStart70(passenger, kind){
+    const calls = { registro: null, toast: null, rendered: false };
+    const mdObj = { step: 0, kind: null };
+    const fn = new Function('myPassenger', 'passengerProfileComplete', 'toast', 'openRegistro', 'md', 'renderMandados', smSrc70 + '\nreturn startMandado;')(passenger, () => ppcFn(passenger), (m) => { calls.toast = m; }, (k, r) => { calls.registro = [k, r]; }, mdObj, () => { calls.rendered = true; });
+    await fn(kind);
+    return { calls, step: mdObj.step, kind: mdObj.kind };
+  }
+  const gateInc70q = await runStart70({ name: 'Lola Correo', phone: '' }, 'quiero');
+  const gateInc70e = await runStart70({ name: 'Lola Correo', phone: '' }, 'enviar');
+  const gateNull70 = await runStart70(null, 'quiero');
+  const gateOk70q = await runStart70({ name: 'Lola Correo', phone: '9611234567' }, 'quiero');
+  const gateOk70e = await runStart70({ name: 'Lola Correo', phone: '9611234567' }, 'enviar');
+  check('v1.4.70: evaluado — con perfil incompleto NINGÚN botón de Mandados entra al flujo: avisa y abre completar perfil', gateInc70q.step === 0 && !gateInc70q.calls.rendered && gateInc70q.calls.registro && gateInc70q.calls.registro[1] === 'mandados' && !!gateInc70q.calls.toast && gateInc70e.step === 0 && gateInc70e.calls.registro && gateInc70e.calls.registro[1] === 'mandados' && gateNull70.step === 0 && gateNull70.calls.registro && gateNull70.calls.registro[1] === 'mandados', JSON.stringify({ q: gateInc70q, e: gateInc70e, nul: gateNull70 }));
+  check('v1.4.70: evaluado — con perfil completo los dos botones SÍ entran a su flujo (paso 1)', gateOk70q.step === 1 && gateOk70q.kind === 'quiero' && gateOk70q.calls.rendered && !gateOk70q.calls.registro && gateOk70e.step === 1 && gateOk70e.kind === 'enviar' && gateOk70e.calls.rendered && !gateOk70e.calls.registro, JSON.stringify({ q: gateOk70q, e: gateOk70e }));
+  // Evaluado: la pantalla de entrada de Mandados (paso 0) con cada estado.
+  const mdFnSrc70 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdBack(step){'));
+  async function runRenderMandados70(passenger){
+    const pageStub = { innerHTML: '' };
+    const mdObj = { step: 0, requestId: null, kind: null };
+    const wizObj = { step: 0, requestId: null };
+    const stubs = {
+      $: (sel) => sel === '#mandados-page' ? pageStub : null,
+      mdMap: null, md: mdObj, newMandado: () => mdObj, setPageNoScroll: () => {},
+      myActiveRequest: async () => null,
+      goLive: () => {}, wiz: wizObj, newWizard: () => wizObj, go: () => {},
+      backPill: (label) => '<button>' + label + '</button>',
+      renderMandadoSearching: () => {}, renderSearching: () => {},
+      profileBannerHtmlMandados: () => runBanner70(passenger),
+      renderMandadoQuiero: () => {}, renderMandadoEnviar: () => {},
+    };
+    const fn = new Function(...Object.keys(stubs), mdFnSrc70 + '; return renderMandados;')(...Object.values(stubs));
+    await fn();
+    return pageStub.innerHTML;
+  }
+  const sim70inc = await runRenderMandados70({ name: 'Lola Correo', phone: '' });
+  const sim70null = await runRenderMandados70(null);
+  const sim70ok = await runRenderMandados70({ name: 'Lola Correo', phone: '9611234567' });
+  check('v1.4.70: evaluado — con perfil incompleto la entrada de Mandados muestra ARRIBA la tarjeta con su botón, antes de "¿Qué quieres hacer?"', sim70inc.includes('Completa tu perfil para pedir mandados') && sim70inc.includes('Completar mi perfil') && sim70inc.indexOf('Completa tu perfil para pedir mandados') < sim70inc.indexOf('¿Qué quieres hacer?') && sim70null.includes('Completa tu perfil para pedir mandados'), JSON.stringify(sim70inc.slice(0, 200)));
+  check('v1.4.70: evaluado — con perfil completo la entrada de Mandados NO muestra la tarjeta y sigue igual (Quiero + Enviar)', !sim70ok.includes('Completa tu perfil para pedir mandados') && sim70ok.includes('Quiero un mandado') && sim70ok.includes('Enviar un mandado'), JSON.stringify(sim70ok.slice(0, 200)));
+  // --- En vivo: cuenta solo-correo con pasajero de teléfono vacío ---
+  const acc70 = await newMailAccount('nora');
+  const me70a = await api('/api/me?token=' + acc70.li.token);
+  check('v1.4.70: en vivo, cuenta nueva solo-correo (sin teléfono) nace con pasajero de teléfono vacío', acc70.acc.ok && me70a.ok && me70a.passenger && me70a.passenger.phone === '' && me70a.passenger.name === 'Nora Correo', JSON.stringify(me70a.passenger));
+  const md70bad = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.70: en vivo, con el teléfono vacío el servidor también rechaza publicar el mandado (400)', !md70bad.ok && /teléfono/.test(md70bad.error || ''), JSON.stringify(md70bad));
+  // Completar nombre + teléfono (lo que pide el formulario de perfil).
+  const phone70 = '961692' + RUN.slice(0, 4);
+  const set70 = await api('/api/set-account-phone', { token: acc70.li.token, phone: phone70 });
+  const upd70 = await api('/api/update-passenger', { passenger_id: me70a.passenger.id, name: 'Nora Correo', phone: phone70 });
+  const me70b = await api('/api/me?token=' + acc70.li.token);
+  check('v1.4.70: en vivo, al completar nombre + teléfono el perfil queda completo', set70.ok && upd70.ok && me70b.ok && me70b.passenger.phone === phone70 && me70b.passenger.name === 'Nora Correo', JSON.stringify(me70b.passenger));
+  const md70ok = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.70: en vivo, con el perfil completo el mandado se publica normal (buscando, $25)', md70ok.ok && md70ok.request.status === 'buscando' && md70ok.request.price === 25, JSON.stringify(md70ok.request && { st: md70ok.request.status, p: md70ok.request.price }));
+  await api('/api/cancel-request', { request_id: md70ok.request.id });
+  // Perfil completo desde el registro: el mandado se publica sin trabas.
+  const acc70b = await api('/api/register-account', { name: 'Paco Completo', username: 'paco_' + RUN, phone: '961693' + RUN.slice(0, 4), password: 'secreta123' });
+  const me70c = await api('/api/me?token=' + acc70b.token);
+  check('v1.4.70: en vivo, una cuenta registrada con teléfono nace con perfil completo (nombre + teléfono)', acc70b.ok && me70c.ok && me70c.passenger && me70c.passenger.phone === '961693' + RUN.slice(0, 4), JSON.stringify(me70c.passenger));
+  const md70c = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  check('v1.4.70: en vivo, con perfil completo desde el registro el mandado se publica sin trabas', md70c.ok && md70c.request.status === 'buscando', JSON.stringify(md70c.request && { st: md70c.request.status, p: md70c.request.price }));
+  await api('/api/cancel-request', { request_id: md70c.request.id });
+
+  // ===== v1.4.70 (2026-11-25): orden y diseño del panel de administrador =====
+  // La captura del usuario mostró el panel desordenado: el respaldo arriba,
+  // la promo en medio, y las tarjetas de Negocios y de la promo en fila flex
+  // donde el texto quedaba estrecho y el botón se salía y se cortaba por la
+  // derecha. Orden final: tarjeta del admin → credenciales → Negocios →
+  // retícula de 7 → promo → respaldo → Cerrar sesión. Negocios y promo
+  // apilados en vertical (título y descripción arriba, botón a lo ancho
+  // abajo). Sin cambios de comportamiento: mismos interruptores, mismas
+  // estadísticas, misma descarga y mismo cierre de sesión.
+  console.log('== v1.4.70: orden y diseño del panel de administrador ==');
+  const rag70 = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('async function loadReferralStats(){'));
+  check('v1.4.70: orden del panel — Negocios arriba de la retícula, promo y respaldo abajo, Cerrar sesión al final', rag70.indexOf('Cambiar usuario y contraseña') < rag70.indexOf('🔒 Negocios ') && rag70.indexOf('🔒 Negocios ') < rag70.indexOf('Panel de administrador') && rag70.indexOf('Panel de administrador') < rag70.indexOf('Viajes gratis por recomendación') && rag70.indexOf('Viajes gratis por recomendación') < rag70.indexOf('Respaldar base de datos') && rag70.indexOf('Respaldar base de datos') < rag70.indexOf('‹ Cerrar sesión</button>'), JSON.stringify({ cred: rag70.indexOf('Cambiar usuario y contraseña'), neg: rag70.indexOf('🔒 Negocios '), grid: rag70.indexOf('Panel de administrador'), promo: rag70.indexOf('Viajes gratis por recomendación'), back: rag70.indexOf('Respaldar base de datos'), out: rag70.indexOf('‹ Cerrar sesión</button>') }));
+  check('v1.4.70: Negocios y promo ya no usan la fila flex con el botón encogido (nada se corta por la derecha)', !rag70.includes('flex:none;align-self:center') && rag70.includes('<button class="btn small" onclick="toggleNegociosLock()">') && rag70.includes('<button class="btn small" onclick="toggleReferralPromo()">') && rag70.includes('id="referral-stats-line"'), rag70.slice(rag70.indexOf('Negocios '), rag70.indexOf('Negocios ') + 200));
+  check('v1.4.70: la tarjeta de credenciales y los interruptores siguen iguales (mismos textos y handlers)', rag70.includes('Cambiar usuario y contraseña') && rag70.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag70.includes('toggleNegociosLock()') && rag70.includes('toggleReferralPromo()') && rag70.includes('downloadBackup()') && rag70.includes('doLogout()') && rag70.includes('Apagar promoción') && rag70.includes('Abrir Negocios'), rag70.slice(0, 200));
+  // Evaluado: el panel real con cada estado de los interruptores.
+  async function runRenderAdmin70(locked, enabled){
+    const pageStub = { innerHTML: '' };
+    const stubs = {
+      $: (sel) => sel === '#admin-page' ? pageStub : null,
+      myAccount: { name: 'Admin', username: 'admin', phone: '9614868605' },
+      esc: (s) => String(s == null ? '' : s),
+      pwInput: () => '',
+      adminCredsOpen: false, negociosLocked: locked, referralEnabled: enabled,
+      loadAdminOverview: () => {}, loadReferralStats: () => {},
+      adminPoll: null, setInterval: () => 1, clearInterval: () => {},
+    };
+    const fn = new Function(...Object.keys(stubs), rag70 + '; return renderAdminGrid;')(...Object.values(stubs));
+    fn();
+    return pageStub.innerHTML;
+  }
+  const adm70 = await runRenderAdmin70(true, true);
+  const adm70b = await runRenderAdmin70(false, false);
+  check('v1.4.70: evaluado — el panel real respeta el orden final (admin → credenciales → Negocios → retícula → promo → respaldo → Cerrar sesión)', adm70.indexOf('ADMINISTRADOR') < adm70.indexOf('Cambiar usuario y contraseña') && adm70.indexOf('Cambiar usuario y contraseña') < adm70.indexOf('Negocios bloqueado') && adm70.indexOf('Negocios bloqueado') < adm70.indexOf('Panel de administrador') && adm70.indexOf('Panel de administrador') < adm70.indexOf('Solicitudes de choferes') && adm70.indexOf('Tiendas') < adm70.indexOf('Viajes gratis por recomendación') && adm70.indexOf('Viajes gratis por recomendación') < adm70.indexOf('Respaldar base de datos') && adm70.indexOf('Respaldar base de datos') < adm70.indexOf('Cerrar sesión'), JSON.stringify(adm70.slice(0, 300)));
+  check('v1.4.70: evaluado — Negocios y promo con botón a lo ancho abajo (sin fila flex) y textos según su estado', adm70.includes('<button class="btn small" onclick="toggleNegociosLock()">Abrir Negocios</button>') && adm70.includes('<button class="btn small" onclick="toggleReferralPromo()">Apagar promoción</button>') && adm70.includes('id="referral-stats-line"') && adm70b.includes('Negocios abierto') && adm70b.includes('Bloquear Negocios') && adm70b.includes('Prender promoción') && !adm70.includes('flex:none'), JSON.stringify(adm70.slice(adm70.indexOf('Negocios bloqueado'), adm70.indexOf('Negocios bloqueado') + 200)));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
