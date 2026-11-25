@@ -841,12 +841,26 @@ async function resolveLocationText(text) {
   return { ok: false, error: 'No se entendió la ubicación. Pega el enlace de Google Maps o las coordenadas.' };
 }
 
+// v1.4.76 (arreglo del crash de Railway 2026-11-25): los ids que llegan
+// del cliente (query o body) se validan ANTES de atarlos a un `?` de
+// SQLite. node:sqlite tira un TypeError no atrapado ("Provided value
+// cannot be bound to SQLite parameter 1") si el valor es undefined (o un
+// objeto), y eso mataba el proceso entero. Un id válido es un entero
+// positivo (número, o texto numérico como llega por query); todo lo demás
+// es 400 'id inválido' y nunca llega a la base.
+function validId(v) {
+  if (typeof v === 'number') return Number.isInteger(v) && v > 0;
+  if (typeof v === 'string') { const t = v.trim(); return t !== '' && /^\d+$/.test(t); }
+  return false;
+}
+function badId(res) { return send(res, 400, { ok: false, error: 'id inválido' }); }
+
 // ---- API ----
 async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.75' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.76' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -891,18 +905,19 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/upload-driver-photo') {
     const { driver_id, kind, photo } = body;
-    if (!driver_id || !photo || (kind !== 'selfie' && kind !== 'vehicle')) return send(res, 400, { ok: false, error: 'Datos incompletos.' });
+    if (!driver_id || !validId(driver_id) || !photo || (kind !== 'selfie' && kind !== 'vehicle')) return send(res, 400, { ok: false, error: 'Datos incompletos.' });
     db.prepare(`UPDATE drivers SET ${kind === 'selfie' ? 'selfie' : 'vehicle_photo'}=? WHERE id=?`).run(photo, driver_id);
     return send(res, 200, { ok: true, driver: publicDriver(db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id)) });
   }
   if (pathname === '/api/upload-passenger-photo') {
     const { passenger_id, photo } = body;
-    if (!passenger_id || !photo) return send(res, 400, { ok: false, error: 'Datos incompletos.' });
+    if (!passenger_id || !validId(passenger_id) || !photo) return send(res, 400, { ok: false, error: 'Datos incompletos.' });
     db.prepare('UPDATE passengers SET face_photo=? WHERE id=?').run(photo, passenger_id);
     return send(res, 200, { ok: true, passenger: db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id) });
   }
   if (pathname === '/api/update-passenger') {
     const { passenger_id, name, phone, face_photo } = body;
+    if (!validId(passenger_id)) return badId(res);
     const p = db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id);
     if (!p) return send(res, 404, { ok: false, error: 'Pasajero no encontrado.' });
     // v1.4.71: la foto de cara es obligatoria: la foto efectiva es la que
@@ -915,6 +930,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/update-driver') {
     const { driver_id, name, phone, vehicle, unit } = body;
+    if (!validId(driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.is_blocked) return send(res, 403, { ok: false, error: blockedMsg(d) });
@@ -930,6 +946,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/set-driver-online') {
     const { driver_id, online } = body;
+    if (!validId(driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.is_blocked) return send(res, 403, { ok: false, error: blockedMsg(d) });
@@ -954,6 +971,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/subscribe-driver') {
     const { driver_id, plan } = body;
+    if (!validId(driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.is_blocked) return send(res, 403, { ok: false, error: blockedMsg(d) });
@@ -978,6 +996,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/admin/set-subscription') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     const key = String(body.plan || '');
@@ -1266,6 +1285,7 @@ async function api(req, res, pathname) {
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
     const { passenger_id, driver_id } = body;
     if (passenger_id) {
+      if (!validId(passenger_id)) return badId(res);
       const p = db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id);
       if (!p) return send(res, 404, { ok: false, error: 'Pasajero no encontrado.' });
       // v1.4.21: sin teléfono en la cuenta no se puede comprobar que el
@@ -1279,6 +1299,7 @@ async function api(req, res, pathname) {
       db.prepare('UPDATE accounts SET passenger_id=? WHERE id=?').run(passenger_id, a.id);
     }
     if (driver_id) {
+      if (!validId(driver_id)) return badId(res);
       const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
       if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
       if (!a.phone) return send(res, 400, { ok: false, error: 'Tu cuenta no tiene teléfono registrado: no se puede enlazar este perfil.' });
@@ -1402,12 +1423,14 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-ad-active') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.ad_id)) return badId(res);
     db.prepare('UPDATE ads SET active=? WHERE id=?').run(body.active ? 1 : 0, body.ad_id);
     return send(res, 200, { ok: true });
   }
   if (pathname === '/api/delete-ad') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.ad_id)) return badId(res);
     db.prepare('DELETE FROM ads WHERE id=?').run(body.ad_id);
     return send(res, 200, { ok: true });
   }
@@ -1450,7 +1473,9 @@ async function api(req, res, pathname) {
   if (pathname === '/api/business') {
     const a = accountFromToken(q.get('token') || body.token);
     if (negociosLocked() && !negociosExempt(a)) return send(res, 403, negociosLockError());
-    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('id'));
+    const bid = q.get('id');
+    if (!validId(bid)) return badId(res);
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(bid);
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     try { db.prepare('UPDATE businesses SET views = COALESCE(views,0)+1 WHERE id=?').run(b.id); } catch (e) {}
     return send(res, 200, { ok: true, business: publicBusiness(db.prepare('SELECT * FROM businesses WHERE id=?').get(b.id)) });
@@ -1500,6 +1525,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/approve-business') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     db.prepare(`UPDATE businesses SET status='activo' WHERE id=?`).run(body.business_id);
@@ -1508,6 +1534,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/reject-business') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (b.status === 'activo') return send(res, 400, { ok: false, error: 'Ese negocio ya está activo.' });
@@ -1524,6 +1551,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/admin/suspend-business') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (b.status !== 'activo' && b.status !== 'suspendido') return send(res, 400, { ok: false, error: 'Solo se puede suspender o reactivar un negocio activo.' });
@@ -1534,6 +1562,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/admin/delete-business') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     db.prepare(`DELETE FROM business_products WHERE business_id=?`).run(b.id);
@@ -1549,6 +1578,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/update-business') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden editarlo.' });
@@ -1570,6 +1600,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/add-product') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden agregar productos.' });
@@ -1584,6 +1615,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-product-available') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.product_id)) return badId(res);
     const pr = db.prepare('SELECT * FROM business_products WHERE id=?').get(body.product_id);
     if (!pr) return send(res, 404, { ok: false, error: 'Producto no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(pr.business_id);
@@ -1594,6 +1626,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-service-available') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.service_id)) return badId(res);
     const sv = db.prepare('SELECT * FROM business_services WHERE id=?').get(body.service_id);
     if (!sv) return send(res, 404, { ok: false, error: 'Servicio no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(sv.business_id);
@@ -1604,6 +1637,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/delete-product') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.product_id)) return badId(res);
     const pr = db.prepare('SELECT * FROM business_products WHERE id=?').get(body.product_id);
     if (!pr) return send(res, 404, { ok: false, error: 'Producto no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(pr.business_id);
@@ -1614,6 +1648,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/add-service') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden agregar servicios.' });
@@ -1629,6 +1664,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/delete-service') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.service_id)) return badId(res);
     const sv = db.prepare('SELECT * FROM business_services WHERE id=?').get(body.service_id);
     if (!sv) return send(res, 404, { ok: false, error: 'Servicio no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(sv.business_id);
@@ -1642,6 +1678,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/create-order') {
     const a = accountFromToken(body.token);
     if (!a && !String(body.customer_phone || '').trim()) return send(res, 401, { ok: false, error: 'Inicia sesión primero o escribe tu número de teléfono.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado o no activo.' });
     if (b.type !== 'entrega') return send(res, 400, { ok: false, error: 'Este negocio no vende por entrega.' });
@@ -1652,6 +1689,7 @@ async function api(req, res, pathname) {
     let productsTotal = 0;
     const cleanItems = [];
     for (const it of items) {
+      if (!validId(it.product_id)) return send(res, 400, { ok: false, error: 'Un producto del carrito no es válido.' });
       const pr = db.prepare('SELECT * FROM business_products WHERE id=? AND business_id=?').get(it.product_id, b.id);
       if (!pr) return send(res, 400, { ok: false, error: 'Un producto del carrito no es de este negocio.' });
       const qty = Math.max(1, Math.min(99, parseInt(it.qty, 10) || 1));
@@ -1682,6 +1720,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/cancel-order') {
     const ph = cleanPhone(body.phone || '');
+    if (!validId(body.order_id)) return badId(res);
     const o = db.prepare('SELECT * FROM business_orders WHERE id=?').get(body.order_id);
     if (!o) return send(res, 404, { ok: false, error: 'Pedido no encontrado.' });
     const a = accountFromToken(body.token);
@@ -1701,7 +1740,9 @@ async function api(req, res, pathname) {
   if (pathname === '/api/business-orders') {
     const a = accountFromToken(body.token || q.get('token'));
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
-    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('business_id') || body.business_id);
+    const bid = q.get('business_id') || body.business_id;
+    if (!validId(bid)) return badId(res);
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(bid);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden ver sus pedidos.' });
     const list = db.prepare('SELECT * FROM business_orders WHERE business_id=? ORDER BY id DESC LIMIT 100').all(b.id);
@@ -1710,6 +1751,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/set-order-status') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.order_id)) return badId(res);
     const o = db.prepare('SELECT * FROM business_orders WHERE id=?').get(body.order_id);
     if (!o) return send(res, 404, { ok: false, error: 'Pedido no encontrado.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(o.business_id);
@@ -1722,11 +1764,13 @@ async function api(req, res, pathname) {
   if (pathname === '/api/create-appointment') {
     const a = accountFromToken(body.token);
     if (!a && !String(body.client_phone || '').trim()) return send(res, 401, { ok: false, error: 'Inicia sesión primero o escribe tu número de WhatsApp.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b || b.status !== 'activo') return send(res, 404, { ok: false, error: 'Negocio no encontrado o no activo.' });
     if (b.type !== 'citas') return send(res, 400, { ok: false, error: 'Este negocio no agenda citas.' });
     if (!b.open) return send(res, 400, { ok: false, error: 'El negocio está cerrado por ahora.' });
     if (!businessIsPremium(b) && businessMonthCount(b.id) >= FREE_BIZ_MAX_MONTHLY) return send(res, 400, { ok: false, error: `Este negocio llegó a sus ${FREE_BIZ_MAX_MONTHLY} pedidos/citas gratis del mes. Activa el paquete Premium ($100 al mes) para citas ilimitadas.` });
+    if (!validId(body.service_id)) return badId(res);
     const sv = db.prepare('SELECT * FROM business_services WHERE id=? AND business_id=?').get(body.service_id, b.id);
     if (!sv) return send(res, 400, { ok: false, error: 'Servicio no encontrado en este negocio.' });
     const date = String(body.date || '').trim(), time = String(body.time || '').trim();
@@ -1768,7 +1812,9 @@ async function api(req, res, pathname) {
   if (pathname === '/api/business-appointments') {
     const a = accountFromToken(body.token || q.get('token'));
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
-    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('business_id') || body.business_id);
+    const bid = q.get('business_id') || body.business_id;
+    if (!validId(bid)) return badId(res);
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(bid);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden ver su agenda.' });
     const list = db.prepare(`SELECT ap.*, s.name AS service_name FROM business_appointments ap
@@ -1777,6 +1823,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/cancel-appointment') {
     const a = accountFromToken(body.token);
+    if (!validId(body.appointment_id)) return badId(res);
     const ap = db.prepare('SELECT * FROM business_appointments WHERE id=?').get(body.appointment_id);
     if (!ap) return send(res, 404, { ok: false, error: 'Cita no encontrada.' });
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(ap.business_id);
@@ -1792,6 +1839,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/subscribe-business') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    if (!validId(body.business_id)) return badId(res);
     const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(body.business_id);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden activar el Premium.' });
@@ -1806,7 +1854,9 @@ async function api(req, res, pathname) {
   if (pathname === '/api/business-stats') {
     const a = accountFromToken(body.token || q.get('token'));
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
-    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(q.get('business_id') || body.business_id);
+    const bid = q.get('business_id') || body.business_id;
+    if (!validId(bid)) return badId(res);
+    const b = db.prepare('SELECT * FROM businesses WHERE id=?').get(bid);
     if (!b) return send(res, 404, { ok: false, error: 'Negocio no encontrado.' });
     if (!canManageBusiness(a, b)) return send(res, 403, { ok: false, error: 'Solo la dueña del negocio o el administrador pueden ver las estadísticas.' });
     if (!businessIsPremium(b)) return send(res, 403, { ok: false, error: 'Las estadísticas son del paquete Premium ($100 al mes).' });
@@ -1839,6 +1889,7 @@ async function api(req, res, pathname) {
   // desde aquí — así la fila del propio usuario (Josué Eduardo, que
   // también es chofer) nunca es accionable.
   function adminPassengerTarget(a, accountId) {
+    if (!validId(accountId)) return { error: 'id inválido', code: 400 };
     const t = db.prepare('SELECT * FROM accounts WHERE id=?').get(accountId);
     if (!t) return { error: 'Cuenta no encontrada.', code: 404 };
     if (t.role === 'admin' || t.id === a.id) return { error: 'La cuenta del administrador no se puede suspender, bloquear ni eliminar.', code: 400 };
@@ -1883,6 +1934,7 @@ async function api(req, res, pathname) {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
     const { driver_id, reason } = body;
+    if (!validId(driver_id)) return badId(res);
     if (!reason || String(reason).trim().length < 3 || String(reason).trim().length > 300) return send(res, 400, { ok: false, error: 'Escribe el motivo del bloqueo (infracción, delito…), entre 3 y 300 caracteres.' });
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
@@ -1892,6 +1944,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/unblock-driver') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     db.prepare(`UPDATE drivers SET is_blocked=0, block_reason=NULL, blocked_at=NULL WHERE id=?`).run(body.driver_id);
@@ -1910,6 +1963,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/approve-driver') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.status === 'aprobado') return send(res, 200, { ok: true, driver: publicDriver(d), already: true });
@@ -1923,6 +1977,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/reject-driver') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     if (d.status === 'aprobado') return send(res, 400, { ok: false, error: 'Ese conductor ya está aprobado; para sacarlo usa el bloqueo con motivo.' });
@@ -1932,6 +1987,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/delete-driver') {
     const a = accountFromToken(body.token);
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    if (!validId(body.driver_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(body.driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     db.prepare(`DELETE FROM drivers WHERE id=?`).run(body.driver_id);
@@ -2006,6 +2062,7 @@ async function api(req, res, pathname) {
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
     const { account_id, kind } = body;
     if (kind !== 'driver' && kind !== 'passenger') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
+    if (!validId(account_id)) return badId(res);
     const target = db.prepare('SELECT * FROM accounts WHERE id=?').get(account_id);
     if (!target) return send(res, 404, { ok: false, error: 'Cuenta no encontrada.' });
     if (kind === 'driver') db.prepare('UPDATE accounts SET driver_id=NULL WHERE id=?').run(target.id);
@@ -2025,6 +2082,7 @@ async function api(req, res, pathname) {
     if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
     const { account_id, kind, profile_id } = body;
     if (kind !== 'driver' && kind !== 'passenger') return send(res, 400, { ok: false, error: 'Tipo no válido.' });
+    if (!validId(account_id) || !validId(profile_id)) return badId(res);
     const target = db.prepare('SELECT * FROM accounts WHERE id=?').get(account_id);
     if (!target) return send(res, 404, { ok: false, error: 'Cuenta no encontrada.' });
     if (kind === 'driver') {
@@ -2075,6 +2133,7 @@ async function api(req, res, pathname) {
     if (!dest_zone && !dest_detail) return send(res, 400, { ok: false, error: 'Falta el destino.' });
     // No se publica sin número de teléfono del pasajero: el conductor
     // necesita poder marcarle. Si no hay perfil, vienen nombre + teléfono.
+    if (passenger_id != null && !validId(passenger_id)) return badId(res);
     const p = passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(passenger_id) : null;
     const pName = p ? p.name : (passenger_name || '').trim();
     const pPhone = p ? p.phone : (passenger_phone || '').trim();
@@ -2151,6 +2210,10 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/requests') {
     let rows;
+    // Los filtros por id son opcionales, pero si vienen con un valor que
+    // no es un id válido (vacío, texto, objeto) es 400, no una lista
+    // entera ni un crash de SQLite.
+    for (const k of ['id', 'passenger_id', 'driver_id', 'dismissed_for']) { const v = q.get(k); if (v !== null && !validId(v)) return badId(res); }
     if (q.get('id')) { const one = db.prepare('SELECT * FROM requests WHERE id=?').get(q.get('id')); rows = one ? [one] : []; }
     else if (q.get('passenger_id')) rows = db.prepare('SELECT * FROM requests WHERE passenger_id=? ORDER BY id DESC LIMIT 50').all(q.get('passenger_id'));
     else if (q.get('driver_id')) rows = db.prepare('SELECT * FROM requests WHERE driver_id=? ORDER BY id DESC LIMIT 50').all(q.get('driver_id'));
@@ -2186,6 +2249,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/driver-respond') {
     const { driver_id, request_id, price, eta_minutes } = body;
+    if (!validId(driver_id) || !validId(request_id)) return badId(res);
     // kind (o action): 'aceptar_precio' y 'acepta' confirman AL INSTANTE
     // (la aceptación del chofer confirma directo, sin segundo paso del
     // pasajero); 'contraoferta' deja la oferta pendiente del pasajero;
@@ -2289,6 +2353,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/respond-offer') {
     const { passenger_id, request_id, offer_id, price } = body;
+    if (!validId(request_id) || !validId(offer_id)) return badId(res);
     // La acción puede venir como `action` ('acepta'/'rechaza'/'contraoferta',
     // compatibilidad v1.2.0) o como `response` ('aceptar'/'rechazar',
     // contrato de la app real v1.3.0); 'aceptar_contraoferta_pasajero' y
@@ -2336,6 +2401,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/raise-price') {
     const { passenger_id, request_id, price } = body;
+    if (!validId(request_id)) return badId(res);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.status !== 'buscando') return send(res, 400, { ok: false, error: 'Ya no está buscando conductor.' });
@@ -2370,6 +2436,7 @@ async function api(req, res, pathname) {
     // sigue 'buscando' para los demás choferes; solo se oculta para este
     // chofer y el descarte sobrevive al refresco (tabla driver_dismissed).
     const { driver_id, request_id } = body;
+    if (!validId(driver_id) || !validId(request_id)) return badId(res);
     const d = db.prepare('SELECT * FROM drivers WHERE id=?').get(driver_id);
     if (!d) return send(res, 404, { ok: false, error: 'Conductor no encontrado.' });
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
@@ -2379,6 +2446,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/cancel-request') {
     const { request_id } = body;
+    if (!validId(request_id)) return badId(res);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.status === 'finalizado' || r.status === 'cancelado') return send(res, 400, { ok: false, error: 'Este servicio ya terminó.' });
@@ -2395,6 +2463,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/advance-stage') {
     const { driver_id, request_id, stage } = body;
+    if (!validId(request_id)) return badId(res);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.driver_id !== driver_id) return send(res, 403, { ok: false, error: 'Solo el conductor asignado puede avanzar el viaje.' });
@@ -2438,6 +2507,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/update-driver-location') {
     const { driver_id, request_id, lat, lng } = body;
+    if (!validId(request_id)) return badId(res);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.driver_id !== driver_id) return send(res, 403, { ok: false, error: 'Solo el conductor asignado.' });
@@ -2448,6 +2518,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/update-delivery-point') {
     // El chofer pega una ubicación de WhatsApp en un mandado en curso.
     const { driver_id, request_id, lat, lng, detail } = body;
+    if (!validId(request_id)) return badId(res);
     const r = db.prepare('SELECT * FROM requests WHERE id=?').get(request_id);
     if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
     if (r.driver_id !== driver_id) return send(res, 403, { ok: false, error: 'Solo el conductor asignado.' });
@@ -2460,6 +2531,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/set-payment-method') {
     const { request_id, method } = body;
+    if (!validId(request_id)) return badId(res);
     if (method !== 'efectivo' && method !== 'transferencia') return send(res, 400, { ok: false, error: 'Método no válido.' });
     // El pago se elige ANTES de publicar y es el final del servicio: se
     // puede cambiar mientras sigue buscando o mientras el viaje está
@@ -2486,6 +2558,7 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/set-lost-item-status') {
     const { id, status } = body;
+    if (!validId(id)) return badId(res);
     if (!['perdido', 'encontrado', 'devuelto'].includes(status)) return send(res, 400, { ok: false, error: 'Estado no válido.' });
     db.prepare('UPDATE lost_items SET status=? WHERE id=?').run(status, id);
     return send(res, 200, { ok: true });
@@ -2500,7 +2573,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     let pathname = decodeURIComponent(url.pathname);
     if (req.method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }); return res.end(); }
-    if (pathname.startsWith('/api/')) return api(req, res, pathname);
+    if (pathname.startsWith('/api/')) return await api(req, res, pathname);
     if (pathname === '/') pathname = '/index.html';
     if (pathname === '/privacidad') pathname = '/privacidad.html';
     const file = path.join(PUBLIC_DIR, pathname);
@@ -2516,7 +2589,13 @@ const server = http.createServer(async (req, res) => {
     fs.createReadStream(file).pipe(res);
   } catch (e) {
     console.error(e);
-    send(res, 500, { ok: false, error: String(e && e.message || e) });
+    // Red de seguridad (v1.4.76): ningún error inesperado dentro de api()
+    // puede matar el proceso — llega aquí como 500 JSON. Sin el `await`
+    // de arriba este catch no veía los rechazos de api() y el proceso
+    // moría (crash de Railway 2026-11-25). Si la respuesta ya salió, no
+    // se vuelve a escribir (eso también tiraba).
+    if (!res.headersSent) { try { send(res, 500, { ok: false, error: String(e && e.message || e) }); } catch (e2) { console.error(e2); } }
+    else { try { res.end(); } catch (e2) {} }
   }
 });
 server.listen(PORT, () => console.log(`SanFerGo público en http://localhost:${PORT}`));
