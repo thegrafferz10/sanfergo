@@ -402,6 +402,15 @@ input[type=file]{padding:8px}
 .admingrid button .icbox{width:44px;height:44px;border-radius:12px;background:#14532d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 8px}
 .admingrid button .icbox.amber{background:#f59e0b}
 .admingrid button .help{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:4px;line-height:1.35}
+/* v1.4.75: las tarjetas del panel son botones verdes y naranjas como los
+   demás botones de la app (verde el principal, naranja el alterno), todos
+   del mismo tamaño y con el mismo acomodo. */
+.admingrid button.green{background:var(--green);color:#fff;border-color:var(--green)}
+.admingrid button.amber{background:var(--amber);color:#111;border-color:var(--amber)}
+.admingrid button .icbox{background:rgba(255,255,255,.25);margin:0}
+.admingrid button .icbox.amber{background:rgba(255,255,255,.25)}
+.admingrid button.green .help,.admingrid button.amber .help{color:inherit;opacity:.85}
+.admingrid button.amber .count{background:#14532d;color:#fff}
 .home-top{position:sticky;top:0;z-index:20;background:#fff;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 2px 10px;border-bottom:1px solid var(--line);margin:0 -2px}
 .home-top .logo{font-size:30px;font-weight:800;color:#14532d;line-height:1}
 .home-top .logo span{color:#f59e0b}
@@ -607,7 +616,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.74'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.75'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -5697,6 +5706,7 @@ async function renderAdmin(){
   if(adminScreen==='choferes') return renderAdminDrivers();
   if(adminScreen==='pasajeros') return renderAdminPassengers();
   if(adminScreen==='cuentas') return renderAdminAccounts();
+  if(adminScreen==='viajes') return renderAdminTrips(); // v1.4.75: panel de revisión de viajes
   if(adminScreen==='anuncios'){ adScreen='menu'; return renderAdminAds(); }
   return renderAdminStores();
 }
@@ -5704,10 +5714,13 @@ function renderAdminGrid(){
   const page = $('#admin-page');
   const a = myAccount;
   const initial = (a.name||'A').trim().charAt(0).toUpperCase();
-  const card = (key, icon, title, help, cntId) => '<button style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;min-height:128px;text-align:left;position:relative" onclick="adminScreen=\''+key+'\';renderAdmin()">'
-    + '<span style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:#14532d;color:#fff;font-size:20px" id="ic-'+key+'">'+icon+'</span>'
-    + '<b style="font-size:15px">'+title+'</b><span class="muted" style="font-size:12px;line-height:1.4">'+help+'</span>'
-    + (cntId ? '<span class="count hidden" id="'+cntId+'" style="position:absolute;top:10px;right:10px;background:#f59e0b;color:#fff;border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:0 6px">0</span>' : '')
+  // v1.4.75: las tarjetas son botones verdes y naranjas como los demás
+  // botones de la app (verde el principal, naranja el alterno), todos del
+  // mismo tamaño y acomodo; el tono se alterna por fila.
+  const card = (key, icon, title, help, cntId, tone) => '<button class="'+tone+'" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;min-height:132px;text-align:left;position:relative" onclick="adminScreen=\''+key+'\';renderAdmin()">'
+    + '<span class="icbox" id="ic-'+key+'">'+icon+'</span>'
+    + '<b style="font-size:15px">'+title+'</b><span class="help">'+help+'</span>'
+    + (cntId ? '<span class="count hidden" id="'+cntId+'">0</span>' : '')
     + '</button>';
   page.innerHTML = '<div class="card white"><div class="flex">'
     + '<div style="width:56px;height:56px;border-radius:50%;background:#14532d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0">'+initial+'</div>'
@@ -5725,19 +5738,17 @@ function renderAdminGrid(){
     + '<label class="mt">Confirmar nueva contraseña</label>' + pwInput('adm-new-pass2', 'Repite la contraseña nueva', 'new-password')
     + '<button class="btn mt" onclick="saveAdminCredentials()">Guardar cambios</button></div>' : '')
     + '</div>'
-    // v1.4.64: interruptor del candado de Negocios (solo lo ve el admin, que es el único que entra al panel). El perfil del dueño (@thegrafferz10) sigue exento aunque el candado esté puesto.
-    // v1.4.70: apilado en vertical (título y descripción arriba, botón a lo ancho abajo): en la fila flex el texto quedaba estrecho y el botón se salía y se cortaba por la derecha.
-    + '<div class="card white mt" style="padding:12px"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div><button class="btn small" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div>'
     + '<h2 class="mt">Panel de administrador</h2>'
     + '<div id="admin-notice"></div>'
     + '<div class="admingrid">'
-    + card('sol-choferes','🛺','Solicitudes de choferes','Choferes nuevos por revisar y aceptar.','cnt-sol-choferes')
-    + card('sol-negocios','🏪','Solicitudes de negocio','Negocios nuevos por revisar y activar.','cnt-sol-negocios')
-    + card('choferes','👤','Administrar choferes','Su ficha: viajes, suscripción, bloquear o eliminar.')
-    + card('pasajeros','🧑‍🤝‍🧑','Administrar pasajeros','Pasajeros registrados en SanFerGo.','cnt-pasajeros')
-    + card('cuentas','🔑','Cuentas','Cuentas de acceso de la app.')
-    + card('anuncios','📣','Anuncios','El flotante que sale al entrar a Viajes, Negocios o Mandados.')
-    + card('tiendas','🛒','Tiendas','El catálogo de tiendas de SanFerGo.')
+    + card('sol-choferes','🛺','Solicitudes de choferes','Choferes nuevos por revisar y aceptar.','cnt-sol-choferes','green')
+    + card('sol-negocios','🏪','Solicitudes de negocio','Negocios nuevos por revisar y activar.','cnt-sol-negocios','amber')
+    + card('choferes','👤','Administrar choferes','Su ficha: viajes, suscripción, bloquear o eliminar.','','green')
+    + card('pasajeros','🧑‍🤝‍🧑','Administrar pasajeros','Pasajeros registrados en SanFerGo.','cnt-pasajeros','amber')
+    + card('cuentas','🔑','Cuentas','Cuentas de acceso de la app.','','green')
+    + card('anuncios','📣','Anuncios','El flotante que sale al entrar a Viajes, Negocios o Mandados.','','amber')
+    + card('tiendas','🛒','Tiendas','El catálogo de tiendas de SanFerGo.','','green')
+    + card('viajes','📊','Viajes','Cuántos viajes se pidieron y cuántos aceptó un chofer.','','amber')
     + '</div>'
     // v1.4.67: interruptor de la promo de viajes gratis por recomendación + estadísticas (recomendaciones, pendientes, ganados, usados, por usar).
     // v1.4.70: la tarjeta se movió abajo de la retícula y se apiló en vertical (título y estadísticas arriba, botón a lo ancho abajo): en la fila flex el botón se salía y se cortaba por la derecha.
@@ -5745,6 +5756,8 @@ function renderAdminGrid(){
     // v1.4.70: el respaldo se movió hasta abajo del panel, justo antes de Cerrar sesión.
     + '<button class="btn" onclick="downloadBackup()">💾 Respaldar base de datos</button>'
     + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
+    // v1.4.75: el candado de Negocios bajó hasta abajo, junto con las otras tarjetas de abajo (promo de viajes gratis y respaldo), arriba de Cerrar sesión. El contenido y el botón no cambian. (Antes estaba arriba, bajo la tarjeta de credenciales; v1.4.64 lo creó y v1.4.70 lo apiló en vertical.)
+    + '<div class="card white mt" style="padding:12px"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div><button class="btn small" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div>'
     + '<button class="btn" style="border:2px solid #374151;color:#374151;background:#fff" onclick="doLogout()">‹ Cerrar sesión</button>';
   loadAdminOverview();
   loadReferralStats(); // v1.4.67: estadísticas de la promo de viajes gratis
@@ -5818,8 +5831,11 @@ async function loadAdminOverview(){
     const setCnt = (id, v)=>{
       const e = document.getElementById(id);
       if(e){ e.textContent = v; e.classList.toggle('hidden', !v); }
+      // v1.4.75: con las tarjetas verdes/naranjas, el cuadrito del icono
+      // se pone blanco sólido cuando hay algo por revisar (antes era
+      // verde y se ponía naranja); sin pendientes vuelve al translúcido.
       const ic = document.getElementById('ic-'+(id==='cnt-sol-choferes'?'sol-choferes':(id==='cnt-pasajeros'?'pasajeros':'sol-negocios')));
-      if(ic) ic.style.background = v ? '#f59e0b' : '#14532d';
+      if(ic) ic.style.background = v ? '#fff' : '';
     };
     setCnt('cnt-sol-choferes', j.pending_drivers);
     setCnt('cnt-sol-negocios', j.pending_businesses);
@@ -6057,6 +6073,42 @@ async function adminDriverTrips(did, name){
     box.innerHTML = list.length ? list.map(r=>'<div class="card white"><b>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+'</b><div class="muted">'+fmtDateTime(r.created_at)+' · '+fmt$(r.final_price||r.price)+' · '+stageLabel(r)+'</div></div>').join('')
       : '<p class="muted center mt">Sin viajes ni mandados.</p>';
   } catch(e){ box.innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
+}
+/* --- Viajes (v1.4.75): panel solo para el admin — cuántos viajes se
+   pidieron, cuántos aceptó un chofer, y la lista con quién lo pidió y
+   qué chofer lo tomó. Solo viajes (kind='viaje'); los mandados no entran.
+   Es solo para revisar: no se puede aceptar, cancelar ni borrar nada
+   desde aquí. Definiciones: Solicitados = todos los viajes publicados
+   alguna vez (incluye los cancelados). Aceptados = viajes con chofer
+   asignado, o sea con estado 'aceptado' o 'finalizado' (la misma
+   definición que usa el conteo de servicios del chofer). */
+function adminTripStatusLabel(st){
+  return { buscando:'Buscando chofer', aceptado:'Aceptado', finalizado:'Terminado', cancelado:'Cancelado' }[st] || st || '';
+}
+async function renderAdminTrips(){
+  const page = $('#admin-page');
+  page.innerHTML = adminBack('Viajes') + '<div id="admin-body"><p class="muted mt">Cargando…</p></div>';
+  try {
+    const j = await api('/api/admin/trips?token=' + encodeURIComponent(store.token));
+    const list = j.trips || [];
+    const stats = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'
+      + '<div class="card white center" style="padding:14px 8px"><div style="font-size:26px;font-weight:800;color:#14532d">'+j.requested+'</div><b>Solicitados</b><div class="muted" style="font-size:12px">Viajes publicados</div></div>'
+      + '<div class="card white center" style="padding:14px 8px"><div style="font-size:26px;font-weight:800;color:#b45309">'+j.accepted+'</div><b>Aceptados</b><div class="muted" style="font-size:12px">Con chofer asignado</div></div></div>'
+      + '<p class="muted" style="font-size:12px;margin-top:8px">Solicitados: todos los viajes publicados alguna vez (incluye los cancelados). Aceptados: viajes que un chofer aceptó (aceptados o terminados).</p>';
+    $('#admin-body').innerHTML = stats + (list.length ? list.map(r=>{
+      const price = fmt$(r.final_price || r.price);
+      const who = esc(r.passenger_name || 'Pasajero');
+      const drv = r.driver_name ? esc(r.driver_name) : 'Sin chofer';
+      const route = esc(r.origin_zone||'') + ' → ' + esc(r.dest_zone||'');
+      const refs = [r.origin_detail, r.dest_detail].filter(Boolean).map(esc).join(' → ');
+      const chip = r.status==='cancelado' ? 'chip red' : r.status==='buscando' ? 'chip amber' : 'chip';
+      return '<div class="card white"><div class="flex"><div class="flex1"><b>'+who+'</b><div class="muted">Chofer: '+drv+'</div>'
+        + '<div><b>'+route+'</b></div>'
+        + (refs ? '<div class="muted">'+refs+'</div>' : '')
+        + '<div class="muted">'+fmtDateTime(r.created_at)+' · '+price+(r.is_free_trip ? ' · 🎁 Viaje gratis' : '')+'</div></div>'
+        + '<span class="'+chip+'">'+adminTripStatusLabel(r.status)+'</span></div></div>';
+    }).join('') : '<p class="muted center mt">Todavía no hay viajes.</p>');
+  } catch(e){ $('#admin-body').innerHTML = '<p class="muted">No se pudo cargar.</p>'; }
 }
 /* --- Administrar pasajeros --- */
 /* --- Administrar pasajeros: buscar por nombre y suspender / bloquear /
