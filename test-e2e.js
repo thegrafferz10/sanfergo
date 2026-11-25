@@ -371,7 +371,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.72 en /api/health', h.ok && h.version === '1.4.72', JSON.stringify(h));
+  check('versión 1.4.73 en /api/health', h.ok && h.version === '1.4.73', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -472,7 +472,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.72', h134.ok && h134.version === '1.4.72', JSON.stringify(h134));
+  check('versión 1.4.73', h134.ok && h134.version === '1.4.73', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -634,7 +634,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.72)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.72';") && h.version === '1.4.72', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.73)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.73';") && h.version === '1.4.73', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1428,7 +1428,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.72 en /api/health (sección)', h27.ok && h27.version === '1.4.72', JSON.stringify(h27));
+  check('versión 1.4.73 en /api/health (sección)', h27.ok && h27.version === '1.4.73', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1473,7 +1473,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.72 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.72', JSON.stringify(h28));
+  check('versión 1.4.73 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.73', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1487,7 +1487,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.72 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.72', JSON.stringify(h29));
+  check('versión 1.4.73 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.73', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1496,7 +1496,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.72 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.72', JSON.stringify(h30));
+  check('versión 1.4.73 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.73', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -3824,7 +3824,7 @@ async function api(path, body) {
   check('v1.4.66: la ficha del chofer tiene fila Taxímetro (total · hoy) bajo Servicios', detSec66.includes("<span>Taxímetro</span><b>'+(d.taxi_runs_total||0)+' en total · '+(d.taxi_runs_today||0)+' hoy</b>"));
   check('v1.4.66: SUSCRIPCIÓN gratis cuenta los recorridos de taxímetro de hoy junto a los servicios', detSec66.includes("'+(d.taxi_runs_today||0)+' de '+FREE_DAILY_LIMIT+' recorridos de taxímetro de hoy · '"));
   check('v1.4.66: SUSCRIPCIÓN de paga dice Taxímetro ilimitado + recorridos de hoy (sin marco de 5)', detSec66.includes("Taxímetro ilimitado · '+(d.taxi_runs_today||0)+' recorridos de taxímetro hoy · vence el '"));
-  const stopSec66 = html.slice(html.indexOf('function stopTaxi()'), html.indexOf('function taxiReceipt()'));
+  const stopSec66 = html.slice(html.indexOf('function stopTaxi()'), html.indexOf('function startTaxiTick()'));
   check('v1.4.66: al terminar el recorrido se registra en el servidor (POST /api/taxi-run, sin bloquear si falla)', stopSec66.includes("api('/api/taxi-run'") && stopSec66.includes('taxiSaveHist(hist)') && stopSec66.includes('.catch(()=>{})'));
   check('v1.4.66: el límite gratis del taxímetro sigue contándose en el teléfono (taxiRunsToday >= FREE_DAILY_LIMIT; el servidor solo guarda)', html.includes('taxiRunsToday() >= FREE_DAILY_LIMIT') && html.includes('function taxiRunsToday(){') && srv.includes('CREATE TABLE IF NOT EXISTS taxi_runs'));
   const taxiRunSec66 = srv.slice(srv.indexOf("'/api/taxi-run'"), srv.indexOf("'/api/subscribe-driver'"));
@@ -4374,6 +4374,34 @@ async function api(path, body) {
   check('v1.4.72: en vivo, registro de chofer con fotos de galería se crea (200)', drv72.ok && drv72.driver && drv72.driver.id && !!drv72.driver.selfie && !!drv72.driver.vehicle_photo, JSON.stringify(drv72.driver && { id: drv72.driver.id, s: !!drv72.driver.selfie, v: !!drv72.driver.vehicle_photo }));
   const ap72 = await approveDriver(drv72.driver.id);
   check('v1.4.72: en vivo, el chofer de galería se aprueba (200)', ap72.ok && ap72.driver && ap72.driver.status === 'aprobado', JSON.stringify(ap72.driver && { id: ap72.driver.id, st: ap72.driver.status }));
+
+  // ===== v1.4.73 (2026-11-25): resumen del taxímetro al finalizar IGUAL
+  // que la app real (captura del usuario): cabecera oscura con flecha
+  // atrás + "Resumen del viaje" + papelera, fecha larga, Tiempo de viaje
+  // / Distancia / precio grande, desglose "Salida + distancia + espera =
+  // total · A cobrar", botón naranja "Nuevo recorrido". Sin "Generar
+  // recibo" en el taxímetro (los recibos de viaje/mandado no cambian).
+  console.log('== v1.4.73: resumen del taxímetro como la app real ==');
+  const rtsStart = html.indexOf('function renderTaxiStrips(){');
+  const rtsEnd = html.indexOf('\nfunction taxiBack()', rtsStart);
+  const rtsSrc = rtsStart >= 0 && rtsEnd > rtsStart ? html.slice(rtsStart, rtsEnd) : '';
+  // La rama de "done" es el último else de renderTaxiStrips.
+  const doneStart = rtsSrc.lastIndexOf('} else {');
+  const doneSrc = doneStart >= 0 ? rtsSrc.slice(doneStart) : '';
+  check('v1.4.73: el resumen al finalizar es cabecera oscura con flecha atrás + "Resumen del viaje" + papelera', doneSrc.includes('Resumen del viaje') && doneSrc.includes('onclick="taxiBack()"') && doneSrc.includes('onclick="taxiDeleteRun()"') && doneSrc.includes('td-sumhead'), doneSrc.slice(0, 300));
+  check('v1.4.73: el resumen muestra fecha larga, Tiempo de viaje en HMS, Distancia en Km y precio grande exacto', doneSrc.includes('fmtTaxiDate(s.endAt)') && doneSrc.includes('Tiempo de viaje') && doneSrc.includes('fmtHMS(s.totalSecs||0)') && doneSrc.includes("toFixed(2)+' Km") && doneSrc.includes("$'+price.toFixed(2)"), doneSrc.slice(0, 300));
+  check('v1.4.73: el resumen trae el desglose Salida + distancia + espera = total · A cobrar (redondeo intacto)', doneSrc.includes("Salida $'") && doneSrc.includes("distancia $'") && doneSrc.includes("espera $'") && doneSrc.includes('A cobrar: ') && doneSrc.includes('fmt$(price)'), doneSrc.slice(0, 300));
+  check('v1.4.73: el resumen termina con botón naranja "Nuevo recorrido" y NO tiene "Generar recibo", "Nuevo viaje" ni "Volver"', doneSrc.includes('Nuevo recorrido') && doneSrc.includes('onclick="taxiReset()"') && !doneSrc.includes('Generar recibo') && !doneSrc.includes('taxiReceipt') && !doneSrc.includes('Nuevo viaje') && !doneSrc.includes('Volver'), doneSrc.slice(0, 400));
+  check('v1.4.73: fmtTaxiDate() existe y usa día de semana + mes largos (fecha como la app real)', html.includes('function fmtTaxiDate(ts)') && html.includes("weekday:'long'") && html.includes("month:'long'"), '');
+  check('v1.4.73: taxiDeleteRun() pide confirmar, borra el recorrido del historial y vuelve al inicio', html.includes('function taxiDeleteRun(){') && html.includes("confirm('¿Borrar este recorrido del taxímetro?')") && html.includes('taxiSaveHist(taxiLoadHist().filter(r => r.endAt !== s.endAt))') && html.includes('taxiReset()'), '');
+  check('v1.4.73: taxiReceipt() ya no existe en ningún lado', !html.includes('function taxiReceipt()') && !html.includes('taxiReceipt()'), '');
+  // El diálogo del historial del taxímetro tampoco ofrece recibo.
+  const strStart = html.indexOf('function showTaxiRun(idx){');
+  const strEnd = html.indexOf('\nfunction ', strStart + 10);
+  const strSrc = strStart >= 0 && strEnd > strStart ? html.slice(strStart, strEnd) : '';
+  check('v1.4.73: el detalle del historial del taxímetro ya no tiene "Generar recibo" (sigue con mapa, tabla y Cerrar)', strSrc.includes('Resumen del viaje') && strSrc.includes('Cerrar</button>') && !strSrc.includes('Generar recibo') && !strSrc.includes('downloadReceipt'), strSrc.slice(0, 300));
+  // Los recibos de viaje/mandado siguen intactos.
+  check('v1.4.73: los recibos de viaje/mandado conservan su "Generar recibo" (solo el taxímetro lo pierde)', html.includes('onclick="downloadReceipt()">Generar recibo</button>'), '');
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
