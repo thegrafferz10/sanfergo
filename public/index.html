@@ -213,6 +213,18 @@ input[type=file]{padding:8px}
 .taxidark .td-bar{flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
 .taxidark .td-bar i{display:block;height:100%;background:#f2a81d;border-radius:99px}
 .taxidark .td-wait{margin-left:auto;font-size:14px;white-space:nowrap}
+/* Resumen del taxímetro al finalizar (v1.4.73, igual que la app real):
+   cabecera oscura con flecha + título + papelera, fecha larga, fila
+   Tiempo de viaje / Distancia / precio grande y desglose. */
+.taxidark .td-sumhead{display:flex;align-items:center;gap:8px}
+.taxidark .td-sumhead b{flex:1;text-align:center;font-size:17px}
+.taxidark .td-iconbtn{background:none;border:none;color:#fff;font-size:24px;line-height:1;padding:2px 6px;cursor:pointer}
+.taxidark .td-date{margin-top:6px;font-size:16px;font-weight:700}
+.taxidark .td-sumrow{display:flex;align-items:flex-end;gap:14px;margin-top:10px}
+.taxidark .td-sumrow span{display:block;color:#f2a81d;font-weight:700;font-size:14px}
+.taxidark .td-sumrow b{font-size:19px;white-space:nowrap}
+.taxidark .td-bigprice{margin-left:auto;font-size:26px !important}
+.taxidark .td-break{margin-top:10px;font-size:14px;line-height:1.45}
 /* Precio final como píldora flotante compacta y centrada (app real, v1.4.7):
    ~60% de ancho, no tarjeta a todo lo ancho. */
 .taxidark.taxprice{display:flex;justify-content:center;align-items:center;gap:12px;width:max-content;max-width:75%;margin-left:auto;margin-right:auto;padding:10px 20px}
@@ -595,7 +607,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.72'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.73'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -638,6 +650,9 @@ function fmtHMS(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600), m=M
 function fmtTaxiSecs(s){ s=Math.max(0,Math.floor(s)); if(s<60) return s+' seg'; return fmtTime(s); }
 function fmtTaxiDist(km){ km=km||0; if(km<1) return Math.round(km*1000)+' m'; return km.toFixed(2)+' km'; }
 function fmtDateTime(iso){ try { return new Date((iso||'').replace(' ','T').replace(/Z$/,'')+'Z').toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; } }
+// v1.4.73: fecha larga del resumen del taxímetro, igual que la app real:
+// "Miércoles, 25 De Noviembre De 2026 10:08".
+function fmtTaxiDate(ts){ const d = new Date(ts); const cap = s => s.replace(/\b[a-záéíóúñ]/g, c => c.toUpperCase()); return cap(d.toLocaleDateString('es-MX',{weekday:'long'}))+', '+cap(d.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}))+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 async function api(path, body){
   // v1.4.42: tiempo límite de 20 s. Sin él, una llamada lenta (por ejemplo
   // una lista de 2 MB con las fotos base64 en el móvil) se quedaba colgada
@@ -4158,14 +4173,22 @@ function renderTaxiStrips(){
       + '<button class="amber" onclick="stopTaxi()">FINALIZAR</button></div>';
     zoom.classList.add('hidden'); compass.classList.add('hidden'); // sin brújula corriendo (app real, v1.4.7)
   } else {
+    // v1.4.73: resumen al finalizar IGUAL que la app real: cabecera
+    // oscura con flecha atrás + "Resumen del viaje" + papelera, fecha
+    // larga, Tiempo de viaje / Distancia / precio grande, desglose
+    // "Salida + distancia + espera = total · A cobrar", mapa con la ruta
+    // y botón naranja "Nuevo recorrido". Sin botón de recibo (la tarifa
+    // y el redondeo de "A cobrar" NO cambian).
     const price = taxiPrice(s);
-    top.classList.remove('taxitop'); bot.classList.remove('taxibot');
-    top.innerHTML = '<div class="row"><b>Resumen del viaje</b><span>'+fmtDateTime(new Date(s.endAt).toISOString())+'</span></div>';
-    bot.innerHTML = '<div class="row"><span>Tiempo</span><b>'+fmtTime(s.totalSecs||0)+'</b><span>Distancia</span><b>'+(s.km||0).toFixed(2)+' km</b></div>'
-      + '<div class="row"><span>Precio final</span><b class="big2">'+fmt$(price)+'</b></div>'
-      + '<button onclick="taxiReceipt()">Generar recibo</button>'
-      + '<button class="ghostb" onclick="taxiReset()">Nuevo viaje</button>'
-      + '<button class="ghostb" onclick="taxiBack()">Volver</button>';
+    const base = BASE, dist = (s.km/0.3)*PER_300M, wait = (s.waitSecs/60)*WAIT_PER_MIN;
+    top.classList.add('taxitop'); bot.classList.add('taxibot');
+    top.innerHTML = '<div class="taxidark">'
+      + '<div class="td-sumhead"><button class="td-iconbtn" onclick="taxiBack()">‹</button><b>Resumen del viaje</b><button class="td-iconbtn" onclick="taxiDeleteRun()">🗑️</button></div>'
+      + '<div class="td-date">'+fmtTaxiDate(s.endAt)+'</div>'
+      + '<div class="td-sumrow"><div><span>Tiempo de viaje</span><b>'+fmtHMS(s.totalSecs||0)+'</b></div><div><span>Distancia</span><b>'+(s.km||0).toFixed(2)+' Km</b></div><b class="td-bigprice">$'+price.toFixed(2)+'</b></div>'
+      + '<div class="td-break">Salida $'+base.toFixed(2)+' + distancia $'+dist.toFixed(2)+' + espera $'+wait.toFixed(2)+' = $'+price.toFixed(2)+' · <b>A cobrar: '+fmt$(price)+'</b></div>'
+      + '</div>';
+    bot.innerHTML = '<button onclick="taxiReset()">Nuevo recorrido</button>';
     zoom.classList.add('hidden'); compass.classList.add('hidden');
   }
 }
@@ -4224,16 +4247,14 @@ function stopTaxi(){
   if(myDriver && myDriver.id){ api('/api/taxi-run', { token: store.token, price: taxiPrice(s), km: s.km||0, secs: s.totalSecs||0 }).catch(()=>{}); }
   renderTaxiStrips();
 }
-function taxiReceipt(){
-  const s = loadTaxi(); if(!s) return;
-  const price = taxiPrice(s);
-  const base = BASE, dist = (s.km/0.3)*PER_300M, wait = (s.waitSecs/60)*WAIT_PER_MIN;
-  const txt = 'SANFERGO — RECIBO DEL TAXÍMETRO\n'
-    + 'Fecha: '+new Date(s.endAt||Date.now()).toLocaleString('es-MX')+'\n'
-    + 'Tiempo: '+fmtTime(s.totalSecs||0)+'\nDistancia: '+(s.km||0).toFixed(2)+' km\n'
-    + 'Salida: $'+base.toFixed(2)+'\nDistancia: $'+dist.toFixed(2)+'\nEspera: $'+wait.toFixed(2)+' ('+fmtTime(s.waitSecs||0)+')\n'
-    + 'Total: '+fmt$(price)+'\nA cobrar: '+fmt$(Math.round(price))+'\nSan Fernando, Chiapas';
-  downloadTxt('recibo-taximetro-'+(s.endAt||Date.now())+'.txt', txt);
+// v1.4.73: la papelera del resumen borra ESTE recorrido (también del
+// historial del teléfono, así el conteo gratis del día baja igual) y
+// vuelve al inicio del taxímetro.
+function taxiDeleteRun(){
+  const s = loadTaxi(); if(!s || !s.done) return;
+  if(!confirm('¿Borrar este recorrido del taxímetro?')) return;
+  taxiSaveHist(taxiLoadHist().filter(r => r.endAt !== s.endAt));
+  taxiReset();
 }
 function startTaxiTick(){
   if(taxiTick) return;
@@ -4393,12 +4414,6 @@ function showTaxiRun(idx){
   const r = hist[idx]; if(!r) return;
   const price = r.price;
   const base = BASE, dist = (r.km/0.3)*PER_300M, wait = (r.waitSecs/60)*WAIT_PER_MIN;
-  const txt = 'SANFERGO — RECIBO DEL TAXÍMETRO\n'
-    + 'Fecha: '+new Date(r.endAt).toLocaleString('es-MX')+'\n'
-    + 'Tiempo: '+fmtTime(r.totalSecs)+'\nDistancia: '+(r.km||0).toFixed(2)+' km\n'
-    + 'Salida: $'+base.toFixed(2)+'\nDistancia: $'+dist.toFixed(2)+'\nEspera: $'+wait.toFixed(2)+' ('+fmtTime(r.waitSecs)+')\n'
-    + 'Total: '+fmt$(price)+'\nA cobrar: '+fmt$(Math.round(price))+'\nSan Fernando, Chiapas';
-  window.__receiptTxt = txt; window.__receiptName = 'recibo-taximetro-'+r.endAt+'.txt';
   openDialog('<h2>Resumen del viaje</h2>'
     + '<div class="mapwrap" style="height:260px;min-height:260px"><div class="map" id="taxirun-map"></div></div>'
     + '<div class="card white"><div class="kv"><span>Fecha</span><b>'+fmtDateTime(new Date(r.endAt).toISOString())+'</b></div>'
@@ -4408,7 +4423,6 @@ function showTaxiRun(idx){
     + '<div class="kv"><span>Distancia</span><b>$'+dist.toFixed(2)+'</b></div>'
     + '<div class="kv"><span>Espera ('+fmtTime(r.waitSecs)+')</span><b>$'+wait.toFixed(2)+'</b></div>'
     + '<div class="kv"><span>A cobrar</span><b class="price">'+fmt$(Math.round(price))+'</b></div></div>'
-    + '<button class="btn" onclick="downloadReceipt()">Generar recibo</button>'
     + '<button class="btn ghost" onclick="closeDialog()">Cerrar</button>');
   setTimeout(()=>{
     if(taxiRunMap){ taxiRunMap.remove(); taxiRunMap = null; }
