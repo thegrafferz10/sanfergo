@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.68'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.69'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1929,6 +1929,22 @@ async function ensureNoProfilePassenger(){
     return true;
   } catch(e){ toast(e.message); return false; }
 }
+function passengerProfileComplete(){
+  // v1.4.69: "perfil completo" = lo mismo que exige publicar un viaje (el
+  // servidor rechaza publicar sin teléfono y ensureNoProfilePassenger pide
+  // nombre + teléfono). La foto NO se exige para pedir el viaje: el perfil
+  // se puede guardar sin foto. OJO: registrarse solo con correo crea un
+  // pasajero automático con el teléfono VACÍO, así que no basta con que
+  // exista el perfil.
+  return !!(myPassenger && (myPassenger.name||'').trim() && (myPassenger.phone||'').trim());
+}
+function profileBannerHtml(){
+  // v1.4.69: en la parte de arriba de Viajes, si el perfil está incompleto
+  // aparece la opción de completarlo; con el perfil completo no se pinta
+  // nada.
+  if(passengerProfileComplete()) return '';
+  return '<div class="card warn"><b>⚠️ Completa tu perfil para pedir viajes</b><p class="muted mt">Falta tu nombre y tu número de teléfono: el conductor necesita poder marcarte cuando llegue por ti.</p><button class="btn small" onclick="openRegistro(\'pasajero\',\'viajes\')">Completar mi perfil</button></div>';
+}
 async function renderViajes(){
   const page = $('#viajes-page');
   if(wizMap){ try { wizMap.remove(); } catch(e){} wizMap = null; }
@@ -1970,8 +1986,11 @@ async function renderViajes(){
     // tarjeta "Tu último viaje" (repetir vive ahora en el detalle del
     // historial). Solo: Solicitar (naranja), Programar (bloqueado,
     // Próximamente), la ayuda y Historial (verde).
+    // v1.4.69: si el perfil está incompleto, arriba va la tarjeta para
+    // completarlo (en vez del formulario "Sin perfil" de whoStrip): sin
+    // nombre + teléfono no se entra a pedir el viaje.
     page.innerHTML = backPill('Regresar al inicio', "go('home')")
-      + whoStrip()
+      + (typeof profileBannerHtml === 'function' ? profileBannerHtml() : '')
       + '<button class="btn amber" style="font-size:19px;padding:20px" onclick="startTripRequest()">Solicitar el viaje</button>'
       + '<button class="btn" disabled style="background:#d1d5db;color:#4b5563">🔒 Programar un viaje · Próximamente</button>'
       + '<p class="muted center mt">Primero eliges de dónde sales, luego a dónde vas, y publicas tu viaje.</p>'
@@ -2097,8 +2116,15 @@ function drawWizMap(){
   setTimeout(()=>wizMap.resize(), 100);
 }
 async function startTripRequest(){
-  if(!myPassenger){
-    if(!(await ensureNoProfilePassenger())) return;
+  // v1.4.69: sin perfil completo (nombre + teléfono, lo mismo que exige
+  // publicar) no se entra al flujo del viaje: se lleva al usuario a
+  // completar su perfil. Antes se podían hacer todos los pasos y solo al
+  // publicar salía que faltaba el teléfono (la cuenta solo-correo nace
+  // con pasajero y teléfono vacío).
+  if(!passengerProfileComplete()){
+    toast('Completa tu perfil para pedir viajes: tu nombre y tu número.');
+    openRegistro('pasajero','viajes');
+    return;
   }
   wiz.step = 1; renderViajes();
 }
