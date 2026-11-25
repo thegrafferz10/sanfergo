@@ -595,7 +595,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.71'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.72'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1304,6 +1304,30 @@ function closeEntryAd(){
 
 /* ===== REGISTRO ===== */
 let regKind = 'pasajero', regPhoto1 = null, regPhoto2 = null, regReturn = 'home';
+// v1.4.72: cada foto de chofer (cara y vehículo) ofrece dos fuentes:
+// cámara o galería. Antes había un solo input con capture, que en el
+// teléfono abría directo la cámara y no dejaba elegir una foto de la
+// galería. Ahora hay dos botones bonitos en fila — verde «Tomar foto»
+// (abre la cámara) y naranja «Subir de galería» (abre el selector de
+// archivos) — y dos inputs ocultos (mismo patrón que el de anuncios):
+// uno con capture (cámara: user para la cara, environment para el
+// vehículo) y otro sin capture (galería). Los dos pasan por
+// fileToPhoto igual que antes (480px, JPEG 0.75); solo cambia la
+// fuente de la foto. La foto del pasajero NO cambia (el usuario solo
+// pidió choferes).
+function driverPhotoField(slot){
+  const selfie = slot==='selfie';
+  const v = selfie ? 'regPhoto1' : 'regPhoto2';
+  const prev = selfie ? 'rd-prev1' : 'rd-prev2';
+  const cap = selfie ? 'user' : 'environment';
+  const cam = 'rd-cam-'+slot, gal = 'rd-gal-'+slot;
+  const on = 'fileToPhoto(this, d=>{'+v+'=d; document.getElementById(\''+prev+'\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})';
+  return '<div class="btnrow" style="margin-top:8px">'
+    + '<button type="button" class="btn small" onclick="document.getElementById(\''+cam+'\').click()">📷 Tomar foto</button>'
+    + '<button type="button" class="btn amber small" onclick="document.getElementById(\''+gal+'\').click()">🖼️ Subir de galería</button></div>'
+    + '<input type="file" id="'+cam+'" accept="image/*" capture="'+cap+'" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="'+on+'">'
+    + '<input type="file" id="'+gal+'" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="'+on+'">';
+}
 function openRegistro(kind, ret){
   regKind = kind; regPhoto1 = null; regPhoto2 = null; regReturn = ret || 'home';
   const p = $('#registro-page');
@@ -1335,8 +1359,8 @@ function openRegistro(kind, ret){
       p.innerHTML = backPill('Regresar', "go('"+regReturn+"')")
       + '<h2>Registro de conductor</h2>'
       + '<div class="card warn"><b>Tu registro está incompleto: falta ' + (!hasSelfie && !hasVeh ? 'tu foto y la foto de tu vehículo' : (!hasSelfie ? 'tu foto (selfie)' : 'la foto de tu vehículo')) + '.</b><p class="muted mt">Súbelas para poder ponerte en línea.</p></div>'
-      + (hasSelfie ? '' : '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1"></div><input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rd-prev1\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'selfie\')">Subir mi foto</button>')
-      + (hasVeh ? '' : '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2"></div><input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div><button class="btn" onclick="uploadDriverPhotoOnly(\'vehicle\')">Subir foto del vehículo</button>');
+      + (hasSelfie ? '' : '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1"></div>'+driverPhotoField('selfie')+'</div><button class="btn" onclick="uploadDriverPhotoOnly(\'selfie\')">Subir mi foto</button>')
+      + (hasVeh ? '' : '<div class="photobox"><b>Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2"></div>'+driverPhotoField('vehicle')+'</div><button class="btn" onclick="uploadDriverPhotoOnly(\'vehicle\')">Subir foto del vehículo</button>');
     } else {
       regStep = 0;
       p.innerHTML = backPill('Regresar', "go('"+regReturn+"')")
@@ -1356,13 +1380,13 @@ function openRegistro(kind, ret){
       + '</div>'
       + '<div id="rd-step2" class="hidden">'
       + '<div class="photobox"><b>Tu foto (selfie)</b><div class="muted">El pasajero verá esta foto cuando le llegue tu oferta, para reconocerte.</div><div id="rd-prev1">'+(hasSelfie?'<img src="'+d.selfie+'">':'')+'</div>'
-      + '<input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rd-prev1\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+      + driverPhotoField('selfie') + '</div>'
       + '<button class="btn" onclick="rdNext(2)">Siguiente</button>'
       + '<button class="btn ghost" onclick="showRegStep(1)">Regresar</button>'
       + '</div>'
       + '<div id="rd-step3" class="hidden">'
       + '<div class="photobox"><b id="rd-veh-photo-label">Foto de tu '+(veh==='moto'?'moto':'mototaxi')+'</b><div class="muted">El pasajero verá esta foto junto a tu oferta, para reconocer tu vehículo.</div><div id="rd-prev2">'+(hasVeh?'<img src="'+d.vehicle_photo+'">':'')+'</div>'
-      + '<input type="file" accept="image/*" capture="environment" onchange="fileToPhoto(this, d=>{regPhoto2=d; document.getElementById(\'rd-prev2\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+      + driverPhotoField('vehicle') + '</div>'
       + '<div id="rd-photo-warn"></div>'
       + '<p class="muted mt">Al registrarte, tu solicitud queda pendiente: el administrador de SanFerGo la revisa y, cuando la acepta, tu cuenta se activa y puedes ponerte en línea.</p>'
       + '<button class="btn amber" onclick="saveDriver()">Mandar mi solicitud de chofer</button>'
