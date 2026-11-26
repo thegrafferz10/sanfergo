@@ -188,6 +188,16 @@ input[type=file]{padding:8px}
    entrada de texto + Enviar; la foto solo la manda el chofer. */
 .chatbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 216px);z-index:60;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:50%;width:44px;height:44px;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .chatbtn .dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
+/* v1.4.84: en MANDADOS el chat ya no es el botón redondo flotante: es un
+   botón ancho verde al final de la columna de abajo (mockup aprobado
+   2026-11-26: "Chat con el conductor" / "Chat con el pasajero"). El
+   punto rojo avisa igual que en el botón redondo. En viajes sigue el
+   botón redondo de siempre. */
+.chatwide{position:relative;width:100%;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:14px;padding:12px;font-size:16px;font-weight:800;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.chatwide .dot{position:absolute;top:-4px;right:10px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
+/* v1.4.84: fase 2 del pasajero (Quiero, ya compró) — tarjeta de estado
+   compacta para que el mapa se vea GRANDE y LIBRE (mockup aprobado). */
+.strip.top.paxcol .statuscard.compact84{padding:8px 12px}
 .chatmsgs{max-height:52dvh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:6px 2px}
 .chatmsg{max-width:82%;padding:8px 11px;border-radius:14px;font-size:14px;line-height:1.35;white-space:pre-wrap;word-break:break-word}
 .chatmsg.mine{align-self:flex-end;background:#14532d;color:#fff;border-bottom-right-radius:4px}
@@ -661,7 +671,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.83'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.84'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3206,9 +3216,11 @@ function isQuieroMandado(r){
    PASAJERO — antes de que el chofer marque "Ya compré" (comprado).
    El mandado NO tiene punto exacto de recogida (solo el texto de dónde
    comprar, p. ej. "Todo en el centro", y el chofer ya sabe la tienda):
-   el mapa no dibuja ruta ni mototaxi hasta la entrega. Fase 2
-   (comprado / recogido / en_viaje) usa el mapa normal con ruta al
-   destino. Enviar (punto real de recogida) y los viajes nunca son fase 1. */
+   el mapa no dibuja ruta ni pines hasta la entrega. v1.4.84: la
+   MOTOTAXI sí se pinta en su posición real (el usuario la quiere ver
+   donde anda, aunque quede abajo). Fase 2 (comprado / recogido /
+   en_viaje) usa el mapa normal con ruta al destino. Enviar (punto real
+   de recogida) y los viajes nunca son fase 1. */
 function livePhase1Quiero(r){
   return !!r && !liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
 }
@@ -3328,7 +3340,7 @@ async function renderLiveMap(){
   const pick = { lat: r.origin_lat, lng: r.origin_lng };
   const dest = { lat: r.dest_lat, lng: r.dest_lng };
   const inTrip = liveHeadingToDest(r);
-  const phase1 = livePhase1Quiero(r); // v1.4.82: fase de compra de Quiero (pasajero) — sin ruta, sin pines, sin mototaxi
+  const phase1 = livePhase1Quiero(r); // v1.4.82: fase de compra de Quiero (pasajero) — sin ruta ni pines; v1.4.84: CON mototaxi en la posición real del chofer
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
   // v1.4.83: fase de compra del CHOFER (Quiero) — SIN mapa: sin ruta, sin
@@ -3360,8 +3372,9 @@ async function renderLiveMap(){
     setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
   }
   else { liveRouteCoords = null; liveRouteFallback = false; }
-  // v1.4.82: fase de compra de Quiero (pasajero) — sin pines ni mototaxi:
-  // el mapa queda limpio, solo de fondo para la tarjeta de estado.
+  // v1.4.82: fase de compra de Quiero (pasajero) — sin pines: el mapa
+  // queda limpio para la tarjeta de estado. v1.4.84: la mototaxi SÍ se
+  // pinta (abajo, en su posición real); solo se quitan los pines.
   if(!phase1){
   if(liveAsDriver){
     // Punto de recogida (usuario, v1.4.15): camino a recoger, un PIN
@@ -3413,17 +3426,23 @@ async function renderLiveMap(){
       }
     } catch(e){}
   }
-  // v1.4.61: la mototaxi se pinta en la posición MÁS FRESCA del chofer
-  // (el sondeo pudo actualizarla mientras este render esperaba la ruta):
-  // si no, nacía en un punto viejo y parecía no moverse. Y si por lo que
-  // sea ya hay un marcador, se quita antes de crear el nuevo: UNA sola
-  // mototaxi en el mapa (la del chofer; la posición del pasajero, si se
-  // muestra, es un punto, nunca una mototaxi).
+  } // fin if(!phase1) — pines (v1.4.84: la mototaxi ya no va dentro)
+  // v1.4.84: la mototaxi se pinta en la posición MÁS FRESCA del chofer
+  // (v1.4.61: el sondeo pudo actualizarla mientras este render esperaba
+  // la ruta; si no, nacía en un punto viejo y parecía no moverse — y si
+  // ya hay un marcador, se quita antes de crear el nuevo: UNA sola
+  // mototaxi). TAMBIÉN en fase 1 de Quiero (pasajero): el usuario la
+  // quiere ver donde anda, aunque quede abajo. Sin ruta y sin pines en
+  // fase 1, solo el marcador. Sin GPS del chofer aún no se pinta nada
+  // en fase 1 (no hay punto de recogida que usar de respaldo).
   const dPos = (liveReq.driver_lat && liveReq.driver_lng)
     ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : (from || pick);
-  if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
-  liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([dPos.lng, dPos.lat]).addTo(liveMap);
-  } // fin if(!phase1) — pines y mototaxi
+  if(phase1 && !from){
+    if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
+  } else {
+    if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
+    liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([dPos.lng, dPos.lat]).addTo(liveMap);
+  }
   // Encuadre (v1.4.43 chofer; v1.4.61 también pasajero): con la ruta
   // dibujada se encuadra TODA la ruta restante en la franja libre, para
   // que la línea azul se vea completa y no "cortada" bajo las tarjetas.
@@ -3431,9 +3450,12 @@ async function renderLiveMap(){
   // destino) y el mapa quedaba a lo ancho de todo el pueblo. Sin ruta
   // OSRM se encuadra chofer → objetivo.
   if(phase1){
-    // v1.4.82: fase de compra — sin ruta ni mototaxi: el mapa se centra
-    // en el punto de entrega (el único punto exacto del mandado).
-    fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());
+    // v1.4.84: fase de compra — sin ruta ni pines, pero CON la mototaxi
+    // en su posición real: el encuadre incluye chofer + entrega, así la
+    // mototaxi queda visible abajo, donde anda. Sin GPS del chofer aún,
+    // se centra solo en la entrega (como v1.4.82).
+    if(from) fitPoints(liveMap, [[from.lng, from.lat], [dest.lng, dest.lat]], liveFollowPadding());
+    else fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());
   } else if(liveRouteCoords && liveRouteCoords.length){
     fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
   } else {
@@ -3502,14 +3524,19 @@ function renderLiveStrips(){
         + (nxt83 ? '<button class="greenb" onclick="'+(nxt83==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt83+'\')')+'">'+btnLabel83+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
         + '</div>'
         + '<div class="muted center" style="font-size:12px">Cuando termines de comprar, toca el botón y te aparecerá el mapa para ir a entregarlo</div>'
-        + '<div class="drivercard" style="padding:8px 14px"><div class="row"><span>👤 '+esc(r.passenger_name||'Pasajero')+' · <b>'+fmt$(r.final_price||r.price)+'</b> · '+esc(r.payment_method||'efectivo')+'</span></div></div>';
+        + '<div class="drivercard" style="padding:8px 14px"><div class="row"><span>👤 '+esc(r.passenger_name||'Pasajero')+' · <b>'+fmt$(r.final_price||r.price)+'</b> · '+esc(r.payment_method||'efectivo')+'</span></div></div>'
+        + chatWideBtnHtml(); // v1.4.84: el chat va abajo (botón ancho), no redondo flotante
       pill.classList.add('hidden');
       $('#live-compass').classList.add('hidden');
       $('#live-recenter').classList.add('hidden');
       return;
     }
     top.classList.remove('paxcol'); bot.classList.remove('paxbot');
-    $('#live-compass').style.top=''; $('#live-recenter').style.bottom='';
+    $('#live-compass').style.top='';
+    // v1.4.84: en mandados el botón ancho de chat engorda la columna de
+    // abajo: el recentrar sube para no taparlo. En viajes queda el valor
+    // de siempre.
+    $('#live-recenter').style.bottom = r.kind==='mandado' ? 'calc(env(safe-area-inset-bottom,0px) + 250px)' : '';
     const targetLabel = inTrip ? 'al destino en '+(r.dest_zone||'') : (r.kind==='mandado' ? 'al punto de recogida en '+(r.origin_zone||'') : 'al punto de encuentro en '+(r.origin_zone||''));
     const tLat = inTrip ? r.dest_lat : r.origin_lat, tLng = inTrip ? r.dest_lng : r.origin_lng;
     const dd = (r.driver_lat && tLat) ? havKm(r.driver_lat, r.driver_lng, tLat, tLng) : null;
@@ -3549,7 +3576,8 @@ function renderLiveStrips(){
       + callBtn60
       + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
-      + (nxt ? '<button onclick="'+(nxt==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt+'\')')+'">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
+      + (nxt ? '<button onclick="'+(nxt==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt+'\')')+'">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
+      + (r.kind==='mandado' ? chatWideBtnHtml() : ''); // v1.4.84: chat ancho abajo en mandados; en viajes sigue el redondo
   } else {
     const dKm = (r.driver_lat && r.origin_lat) ? havKm(r.driver_lat, r.driver_lng, r.origin_lat, r.origin_lng) : null;
     const dKmDest = (r.driver_lat && r.dest_lat) ? havKm(r.driver_lat, r.driver_lng, r.dest_lat, r.dest_lng) : null;
@@ -3603,6 +3631,14 @@ function renderLiveStrips(){
         + '<div class="bt-row now"><span class="bt-dot orange">🛍️</span><div><b>El conductor está comprando</b><span>Comprando'+(buyTxt82 ? ' en '+esc(buyTxt82) : '')+'…</span></div></div>'
         + '<div class="bt-row next"><span class="bt-dot empty"></span><div><b>En camino a entregarte</b><span>Pendiente</span></div></div>'
         + '</div></div>';
+    } else if(isQuieroMandado(r)){
+      // v1.4.84: fase 2 de Quiero (pasajero, ya compró) — tarjeta
+      // compacta para que el mapa se vea GRANDE y LIBRE (mockup
+      // aprobado): solo título + píldora y una línea corta.
+      const line84 = r.trip_stage==='comprado' ? 'El conductor viene en camino a entregarte' : 'Tu encargo viene en camino a '+esc(r.dest_zone||'tu ubicación');
+      top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
+        + '<div class="statuscard compact84"><div class="row"><b>'+esc(passengerStageTitle(r))+'</b><span class="chip">'+stagePill+'</span></div>'
+        + '<div class="row" style="margin-top:6px"><span>'+line84+'</span></div></div>';
     } else {
       top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
         + '<div class="statuscard"><div class="row"><b>'+esc(passengerStageTitle(r))+'</b><span class="chip">'+stagePill+'</span></div>'
@@ -3619,7 +3655,8 @@ function renderLiveStrips(){
       + '<div style="font-size:13px;opacity:.85">'+esc(r.driver_vehicle||'')+' · Unidad '+esc(r.driver_unit||'—')+'</div>'
       + '<div style="font-size:13px;opacity:.85">WhatsApp '+esc(r.driver_phone||'')+'</div></div>'
       + '<div style="text-align:right"><div style="font-size:11px;opacity:.75">Precio final</div><b class="big2">'+fmt$(r.final_price||r.price)+'</b></div></div>'
-      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor.</span></div></div>';
+      + '<div class="row" style="margin-top:8px"><span>Pagas con '+esc(pay)+' directo al conductor.</span></div></div>'
+      + (r.kind==='mandado' ? chatWideBtnHtml() : ''); // v1.4.84: chat ancho abajo en mandados; en viajes sigue el redondo
     // v1.4.48: ya no hay "Cambiar" de pago en el viaje en curso: el pago
     // es efectivo desde que se publica (Transferencia ahora es "Tarjeta ·
     // Próximamente", deshabilitada) y queda fijado al aceptar.
@@ -3627,7 +3664,7 @@ function renderLiveStrips(){
     // El botón de recentrar debe librar la columna de abajo (Cancelar +
     // aviso verde + tarjeta del chofer).
     $('#live-compass').style.top = '';
-    $('#live-recenter').style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + (130 + (canCancel?54:0) + (arriveHtml?70:0)) + 'px)';
+    $('#live-recenter').style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + (130 + (canCancel?54:0) + (arriveHtml?70:0) + (r.kind==='mandado'?60:0)) + 'px)'; // v1.4.84: +60 en mandados por el botón ancho de chat
   }
   $('#live-compass').classList.remove('hidden');
 }
@@ -4087,7 +4124,9 @@ function startLivePolling(){
       // en la posición fresca — sin esto el sondeo actualizaba el texto
       // pero el mapa quedaba sin mototaxi hasta el próximo cambio de
       // etapa. No reframa ni pide ruta: eso ya lo hace ensureLiveRoute.
-      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r) && !livePhase1QuieroDriver(r)){
+      // v1.4.84: la fase 1 del PASAJERO ya no se excluye (ahí sí hay
+      // mototaxi); la fase 1 del chofer sí (no hay mapa).
+      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){
         liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);
       }
       // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
@@ -4141,21 +4180,42 @@ function startLivePolling(){
    con la hoja cerrada, el botón muestra un punto rojo cuando llega un
    mensaje del otro lado (se revisa en el sondeo en vivo, máx. 1 vez/5 s).
    La foto se baja a 800 px JPEG 0.75 antes de mandarse. */
-let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {};
+let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {}, chatUnread = false;
 function chatMyRole(){ return liveAsDriver ? 'chofer' : 'pasajero'; }
+/* v1.4.84: botón ancho de chat al final de la columna de abajo en
+   MANDADOS (mockup aprobado 2026-11-26): abre la misma hoja de chat
+   (openChatSheet) y lleva el punto rojo si hay mensajes sin leer. */
+function chatWideBtnHtml(){
+  const label = liveAsDriver ? 'Chat con el pasajero' : 'Chat con el conductor';
+  return '<button class="chatwide" id="live-chat-btn-bottom" onclick="openChatSheet()">💬 '+label+(chatUnread?'<span class="dot"></span>':'')+'</button>';
+}
 function chatShowBtn(){
   const b = document.getElementById('live-chat-btn');
   if(!b) return;
-  const show = !!liveReq && liveReq.status==='aceptado';
-  b.classList.toggle('hidden', !show);
-  if(!show) chatCloseSheet(true);
+  const accepted = !!liveReq && liveReq.status==='aceptado';
+  // v1.4.84: en MANDADOS el chat ya no es el botón redondo flotante:
+  // es el botón ancho verde de abajo (renderLiveStrips lo pinta). En
+  // viajes sigue el botón redondo de siempre.
+  b.classList.toggle('hidden', !(accepted && liveReq.kind!=='mandado'));
+  if(!accepted) chatCloseSheet(true);
   else if(!chatSeeded){ chatSeeded = true; chatSeed(); }
 }
 function chatSetDot(on){
+  // v1.4.84: el punto rojo vive en el botón de chat que esté en
+  // pantalla (redondo en viajes, ancho de abajo en mandados). Como la
+  // columna de abajo se repinta en cada sondeo, el estado queda en
+  // chatUnread y renderLiveStrips lo vuelve a pintar.
+  chatUnread = !!on;
   const b = document.getElementById('live-chat-btn');
-  if(!b) return;
-  const d = b.querySelector('.dot'); if(d) d.remove();
-  if(on) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+  if(b){
+    const d = b.querySelector('.dot'); if(d) d.remove();
+    if(on) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+  }
+  const wb = document.getElementById('live-chat-btn-bottom');
+  if(wb){
+    const d = wb.querySelector('.dot'); if(d) d.remove();
+    if(on) wb.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+  }
 }
 async function chatSeed(){
   // Al entrar al mapa en vivo, marcar hasta dónde ya hay mensajes para
