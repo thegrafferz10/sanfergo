@@ -632,7 +632,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.79'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.80'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2350,11 +2350,15 @@ function openPick(which, ret, startPos){
   go('picker');
   const top = $('#pick-top'), bot = $('#pick-bottom');
   if(pickConfirm){
+    // v1.4.80: el modo de confirmación también sirve para la entrega del
+    // mandado (tarjeta "Usar ubicación actual" del paso 1): mismo pin
+    // naranja con píldora, pero con los textos de entrega.
+    const isMdest = pickWhich==='mdest';
     top.classList.add('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<button class="backpill" onclick="closePick()">‹ Regresar</button>'
-      + '<div class="pick-instructions"><b>Confirma o fija tu punto de salida</b><div class="muted">El pin está en tu ubicación actual. Si vives en un callejón o tu casa no da a la calle, arrastra el pin hasta la entrada, donde sí puede llegar el mototaxi, y confirma tu punto.</div></div>';
+      + '<div class="pick-instructions"><b>'+(isMdest ? '¿A dónde se entrega?' : 'Confirma o fija tu punto de salida')+'</b><div class="muted">'+(isMdest ? 'Paso 1 de 4 · El pin está en tu ubicación actual. Si vives en un callejón, arrastra el pin hasta la entrada, donde sí puede llegar el mototaxi, y confirma tu punto.' : 'El pin está en tu ubicación actual. Si vives en un callejón o tu casa no da a la calle, arrastra el pin hasta la entrada, donde sí puede llegar el mototaxi, y confirma tu punto.')+'</div></div>';
     bot.classList.add('pickconfirm');bot.classList.remove('pickdest');
-    bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone"></span></div><button onclick="confirmPick()">Confirmar este punto de salida</button>';
+    bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone"></span></div><button onclick="confirmPick()">'+(isMdest ? 'Confirmar punto' : 'Confirmar este punto de salida')+'</button>';
   } else if(pickWhich==='origin'){
     // Origen SIN GPS (app real): mapa a pantalla completa, tarjeta de
     // instrucciones, píldora inferior y botón ámbar. SIN buscador aquí.
@@ -2377,15 +2381,17 @@ function openPick(which, ret, startPos){
     bot.classList.remove('pickconfirm');bot.classList.remove('pickdest');bot.classList.add('pickdest');
     bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button onclick="confirmPick()">Confirmar este destino</button>';
   } else if(pickWhich==='mdest'){
-    // Mapa de marcar entrega de "Quiero un mandado" (app real): pantalla
-    // completa SIN buscador; botón Regresar en círculo blanco arriba a la
-    // izquierda; tarjeta de instrucciones; píldora verde y botón
-    // "Confirmar este punto" (deshabilitado sin punto); el pin nace en el GPS.
+    // Mapa de marcar entrega de "Quiero un mandado" (v1.4.80, diseño
+    // aprobado): pantalla completa SIN buscador; botón Regresar en
+    // círculo blanco arriba a la izquierda; tarjeta "¿A dónde se
+    // entrega?" con "Paso 1 de 4"; botón para volver al GPS; píldora
+    // verde y botón "Confirmar punto" (deshabilitado sin punto); el pin
+    // nace en el GPS.
     top.classList.add('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<button class="backpill" style="border-radius:50%;width:44px;height:44px;padding:0;justify-content:center" onclick="closePick()">‹</button>'
-      + '<div class="pick-instructions"><b>Marca tu punto de entrega</b><div class="muted">El mapa abre en tu ubicación actual. Toca el mapa para marcar el punto, arrastra el pin para ajustarlo —por ejemplo a la entrada si vives en un callejón— y pellizca con dos dedos para acercar el mapa.</div></div>';
+      + '<div class="pick-instructions"><b>¿A dónde se entrega?</b><div class="muted">Paso 1 de 4 · Selecciona a dónde quieres que se entregue tu mandado. Toca el mapa para marcar el punto o arrastra el pin para ajustarlo.</div></div>';
     bot.classList.add('pickconfirm');bot.classList.remove('pickdest');
-    bot.innerHTML = '<div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button id="pick-confirm-btn" disabled onclick="confirmPick()">Confirmar este punto</button>';
+    bot.innerHTML = '<button class="btn ghost small" style="margin-bottom:8px" onclick="pickUseMyLocation()">📍 Usar mi ubicación actual</button><div class="pickzone-wrap"><span class="pickzone" id="pick-zone">Toca el mapa para marcar el punto</span></div><button id="pick-confirm-btn" disabled onclick="confirmPick()">Confirmar punto</button>';
   } else {
     top.classList.remove('pickconfirm');top.classList.remove('pickdest');
     top.innerHTML = '<div class="pickrow"><button class="backpill" style="margin:0" onclick="closePick()">‹ Regresar</button><span class="chip" id="pick-chip" style="font-size:13px">'+pickTopLabel()+'</span></div>'
@@ -2424,6 +2430,17 @@ function openPick(which, ret, startPos){
     pickMap.on('zoomend', ()=>drawPlaceLabels(pickMap));
     setTimeout(()=>pickMap.resize(), 120);
   }, 60);
+}
+async function pickUseMyLocation(){
+  // v1.4.80: botón "Usar mi ubicación actual" del mapa de entrega del
+  // mandado: vuelve a centrar el mapa en el GPS y pone el pin ahí.
+  try {
+    const p = await myLocation();
+    pickPos = { lat: p.lat, lng: p.lng }; pickTouched = true;
+    if(pickMap) pickMap.easeTo({ center: [p.lng, p.lat], zoom: 16, duration: 600 });
+    placePickMarker(); updatePickZone();
+    const b = document.getElementById('pick-confirm-btn'); if(b) b.disabled = false;
+  } catch(e){ toast('No se pudo obtener tu ubicación.'); }
 }
 function closePickToViajes(){ if(pickMap){ removePickMapControls(pickMap); pickMap.remove(); pickMap = null; } suppressEntryAdOnce = true; renderViajes(); }
 function renderPickResults(){
@@ -2522,7 +2539,7 @@ function placePickMarker(){
     el = document.createElement('div');
     el.className = 'pickpin-wrap';
     const pill = document.createElement('div');
-    pill.className = 'map-pill green'; pill.textContent = 'Tu punto de salida';
+    pill.className = 'map-pill green'; pill.textContent = pickWhich==='mdest' ? 'Tu punto de entrega' : 'Tu punto de salida';
     el.appendChild(pill);
     el.appendChild(dotEl('#f59e0b', 22));
     anchor = 'bottom';
@@ -4890,19 +4907,9 @@ function startMandado(kind){
   // defecto (se respeta lo ya elegido si es ≥$100). Enviar NO toca esto:
   // su pago del pedido sigue en su paso 3.
   if(kind==='quiero' && !(Number(md.carryAmount)>=100)) md.carryAmount = 150;
-  // v1.4.79 (ADD 4): la entrega de "Quiero un mandado" es la ubicación
-  // actual por defecto: el GPS se captura solo al entrar al flujo, sin
-  // pedirle nada al pasajero. Si ya hay un punto (lo cambió en el mapa),
-  // se respeta; si el GPS falla, el paso 2 ofrece activarlo a mano.
-  if(kind==='quiero' && !md.dest){
-    myLocation().then(pos=>{
-      if(md.kind==='quiero' && !md.dest){
-        md.dest = { lat: pos.lat, lng: pos.lng, label:'Mi ubicación actual', zone:'' };
-        md.destFromGps = true;
-        if(md.step===2) renderMandados();
-      }
-    }).catch(()=>{});
-  }
+  // v1.4.80: la entrega de "Quiero un mandado" ya NO se captura sola por
+  // GPS al entrar al flujo: el paso 1 la pide con dos tarjetas ("Usar
+  // ubicación actual" / "Ubicar un punto en el mapa"), como en Viajes.
   renderMandados();
 }
 function mdBack(step){ md.step = step; renderMandados(); }
@@ -4913,39 +4920,44 @@ function mdItemsHtml(){
 function renderMandadoQuiero(){
   const page = $('#mandados-page');
   if(md.step===1){
+    // v1.4.80: la entrega va AL INICIO, como en Viajes ("¿De dónde
+    // sales?"): dos tarjetas grandes — GPS o punto en el mapa — y el
+    // punto queda guardado desde el principio. La referencia aparece
+    // cuando ya hay punto confirmado.
+    const dz = md.dest ? nearestZoneName(md.dest) : null;
     page.innerHTML = backPill('Regresar', "mdBack(0)")
-      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 1 de 3 · Escribe tu lista de cosas.</p>'
+      + '<h2>¿A dónde se entrega?</h2>'
+      + '<p class="muted mt">Elige cómo marcar el punto de entrega.</p>'
+      + '<button class="bigopt hot" onclick="mdDeliveryGps()"><span class="row"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0f7a3d" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2" fill="#0f7a3d" stroke="none"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg><span class="tx"><b>Usar ubicación actual</b><div class="muted">Toma el GPS de tu teléfono y enseguida fijas el punto exacto en el mapa</div></span></span></button>'
+      + '<button class="bigopt" onclick="openPick(\'mdest\',\'mandados\')"><span class="row"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0f7a3d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.3-7-11a7 7 0 1 1 14 0c0 5.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="tx"><b>Ubicar un punto en el mapa</b><div class="muted">Abre el mapa y toca el punto exacto de entrega</div></span></span></button>'
+      + (md.dest
+        ? '<div class="card white mt" style="border:2px solid #16a34a;background:#f0fdf4"><b>📍 '+(md.destFromGps ? 'Se entrega en tu ubicación actual' : 'Punto de entrega marcado')+'</b><div class="muted mt">'+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(dz ? ' · cerca de '+esc(dz) : '')+'</div></div>'
+          + '<label class="mt">Referencia extra (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de portón verde, junto a la tienda" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
+          + '<button class="btn" onclick="mdBack(2)">Continuar</button>'
+        : '');
+  } else if(md.step===2){
+    page.innerHTML = backPill('Regresar', "mdBack(1)")
+      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 2 de 4 · Escribe tu lista de cosas.</p>'
       + mdVehicleHtml()
       + '<div class="card white"><b>¿Qué quieres que te traigan?</b><p class="muted mt">Una cosa por renglón: la mototaxi compra y te trae todo a tu ubicación.</p>'
       + mdItemsHtml() + '</div>'
       + '<div class="err hidden" id="md-err1">Escribe al menos una cosa que quieres que te traigan.</div>'
-      + '<button class="btn" onclick="if(!md.items.some(i=>i.trim())){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(2)">Continuar</button>';
-  } else if(md.step===2){
-    // v1.4.79: sin tarjetas "Un solo lugar / Varios lados", sin tiendas
-    // fijas ni buscador, sin paso aparte de entrega — en ESTA pantalla van
-    // las dos cosas: (1) dónde se compra, con dos instrucciones cortas y
-    // UN campo de texto libre (el usuario: las instrucciones son texto,
-    // no botones para seleccionar); (2) a dónde se entrega, que ya viene
-    // en la ubicación actual por GPS, con botón para cambiar el punto en
-    // el mapa. Un solo lugar de compra.
+      + '<button class="btn" onclick="if(!md.items.some(i=>i.trim())){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
+  } else if(md.step===3){
+    // v1.4.80: el CAMPO va arriba y las instrucciones ABAJO (corrección
+    // del usuario): primero se escribe dónde se compra y debajo se leen
+    // las dos instrucciones en tarjetas como las del inicio (icono de
+    // color + título azul). La entrega ya NO va aquí: se fijó en el paso 1.
     const buyText = (md.stops[0] && md.stops[0].zone) || '';
-    const dz = md.dest ? nearestZoneName(md.dest) : null;
-    page.innerHTML = backPill('Regresar', "mdBack(1)")
-      + '<h2>¿Dónde se compra?</h2><p class="muted mt">Paso 2 de 3 · Dónde se compra y a dónde se entrega.</p>'
-      + '<p class="muted mt">Instrucción 1: si es en un establecimiento, escribe el nombre de la tienda (por ejemplo: Abarrotes Castillejo, Farmacia del Súper Descuento, Bodega Aurrerá).</p>'
-      + '<p class="muted mt">Instrucción 2: si es en un lugar, escribe cuál (por ejemplo: Centro, Progreso, Madero).</p>'
+    page.innerHTML = backPill('Regresar', "mdBack(2)")
+      + '<h2>¿Dónde se compra?</h2><p class="muted mt">Paso 3 de 4 · Dónde se compra</p>'
       + '<label class="mt">¿Dónde se compra?</label>'
       + '<input id="md-buy-where" placeholder="Escribe la tienda o el lugar…" value="'+esc(buyText)+'" oninput="md.stops[0].zone=this.value">'
-      + '<div class="card white mt"><b>¿A dónde se entrega?</b>'
-      + (md.dest
-        ? '<p class="muted mt">📍 '+(md.destFromGps ? 'Se entrega en tu ubicación actual' : 'Punto de entrega marcado')+'</p><p class="muted">'+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(dz ? ' · cerca de '+esc(dz) : '')+'</p>'
-        : '<p class="muted mt">Aún no hay punto de entrega.</p><button class="btn ghost" style="border-color:var(--green);color:var(--green)" onclick="mdActivateDelivery()">📍 Usar mi ubicación actual</button>')
-      + '<button class="btn ghost small" onclick="openPick(\'mdest\',\'mandados\')">📍 Cambiar punto</button></div>'
-      + '<label class="mt">Referencia extra (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de portón verde, junto a la tienda" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
+      + '<div class="menu-card"><span class="icbox green">🏪</span><span><b style="color:var(--blue)">Instrucción 1</b><span class="muted">si es en un establecimiento, escribe el nombre de la tienda (por ejemplo: Abarrotes Castillejo, Farmacia del Súper Descuento, Bodega Aurrerá).</span></span></div>'
+      + '<div class="menu-card"><span class="icbox amber">📍</span><span><b style="color:var(--blue)">Instrucción 2</b><span class="muted">si es en un lugar, escribe cuál (por ejemplo: Centro, Progreso, Madero).</span></span></div>'
       + '<div class="err hidden" id="md-err2">Escribe dónde se compra: la tienda o el lugar.</div>'
-      + '<div class="err hidden" id="md-err2b">Falta el punto de entrega: toca «Usar mi ubicación actual» o «Cambiar punto».</div>'
-      + '<button class="btn" onclick="mdNextQuiero2()">Continuar</button>';
-  } else if(md.step===3){
+      + '<button class="btn" onclick="mdNextQuiero3()">Continuar</button>';
+  } else if(md.step===4){
     // Precio (app real): mapa a pantalla completa con ruta + pastilla y
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
@@ -4955,28 +4967,26 @@ function renderMandadoQuiero(){
     setTimeout(()=>drawMdMap(), 60);
   }
 }
-async function mdActivateDelivery(){
-  // v1.4.79 (ADD 4): la entrega es la ubicación actual — se captura el
-  // GPS a mano cuando el automático del inicio del flujo no llegó.
+async function mdDeliveryGps(){
+  // v1.4.80: tarjeta "Usar ubicación actual" del paso 1 de "Quiero" —
+  // como en Viajes: el GPS abre el mapa con el pin ya puesto para
+  // confirmar o arrastrar; si el GPS falla, se abre el mapa igual para
+  // marcar el punto a mano.
   try {
     const pos = await myLocation();
-    md.dest = { lat: pos.lat, lng: pos.lng, label:'Mi ubicación actual', zone:'' };
-    md.destFromGps = true;
-    renderMandados();
+    openPick('mdest','mandados',{ lat: pos.lat, lng: pos.lng });
   } catch(e){
-    toast('Activa tu ubicación para seguir: la entrega es en tu ubicación actual. Toca «Usar mi ubicación actual» y acepta el permiso.');
+    toast('No se pudo obtener tu ubicación. Usa el mapa.');
+    openPick('mdest','mandados');
   }
 }
-function mdNextQuiero2(){
-  // Paso 2 de "Quiero un mandado" (v1.4.79): el texto de dónde se compra
-  // es obligatorio y el punto de entrega también (el GPS automático ya
-  // cuenta como punto).
+function mdNextQuiero3(){
+  // Paso 3 de "Quiero un mandado" (v1.4.80): el texto de dónde se compra
+  // es obligatorio; el punto de entrega ya se fijó en el paso 1.
   const e2 = document.getElementById('md-err2'); if(e2) e2.classList.add('hidden');
-  const e2b = document.getElementById('md-err2b'); if(e2b) e2b.classList.add('hidden');
   const buy = ((md.stops[0] && md.stops[0].zone) || '').trim();
   if(!buy){ if(e2) e2.classList.remove('hidden'); return; }
   md.stops[0].zone = buy;
-  if(!md.dest || md.dest.lat==null){ if(e2b) e2b.classList.remove('hidden'); return; }
   mdComputePrice();
 }
 async function mdComputePrice(){
@@ -4998,7 +5008,7 @@ async function mdComputePrice(){
   const extra = (md.stops.length-1) * MANDADO_EXTRA_STOP;
   md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km) + extra);
   md.price = md.suggested;
-  mdBack(3);
+  mdBack(4);
 }
 function renderMandadoEnviar(){
   const page = $('#mandados-page');
@@ -5149,9 +5159,9 @@ async function mdComputeEnviarPrice(){
   mdBack(4);
 }
 function mandadoPickDone(which, pos, label){
-  // v1.4.79: 'morigin' (marcar punto exacto de compra) ya no existe — la
-  // compra es solo texto. Solo queda 'mdest' (cambiar el punto de entrega
-  // en el mapa); ese punto ya no es la ubicación actual.
+  // v1.4.80: 'mdest' marca el punto de entrega del paso 1 de "Quiero":
+  // se vuelve al paso 1, que ya muestra el punto confirmado, la
+  // referencia y el botón Continuar. 'morigin' ya no existe (v1.4.79).
   if(which==='mdest'){
     md.dest = { lat: pos.lat, lng: pos.lng, label, zone: pickLabel || md.destZone };
     md.destFromGps = false;
