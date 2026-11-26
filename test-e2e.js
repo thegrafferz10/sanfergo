@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.81 en /api/health', h.ok && h.version === '1.4.81', JSON.stringify(h));
+  check('versión 1.4.82 en /api/health', h.ok && h.version === '1.4.82', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.81', h134.ok && h134.version === '1.4.81', JSON.stringify(h134));
+  check('versión 1.4.82', h134.ok && h134.version === '1.4.82', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.81)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.81';") && h.version === '1.4.81', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.82)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.82';") && h.version === '1.4.82', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.81 en /api/health (sección)', h27.ok && h27.version === '1.4.81', JSON.stringify(h27));
+  check('versión 1.4.82 en /api/health (sección)', h27.ok && h27.version === '1.4.82', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.81 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.81', JSON.stringify(h28));
+  check('versión 1.4.82 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.82', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.81 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.81', JSON.stringify(h29));
+  check('versión 1.4.82 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.82', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.81 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.81', JSON.stringify(h30));
+  check('versión 1.4.82 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.82', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -3758,7 +3758,7 @@ async function api(path, body) {
   check('v1.4.65: openLiveTrip y exitLive usan syncDriverGpsWatch (salir del mapa ya no apaga el GPS) y doLogout sí lo apaga', html.includes('startLivePolling();\n  syncDriverGpsWatch();') && html.includes('syncDriverGpsWatch();\n  livePendingAdvance = null;') && html.includes('stopDriverGpsWatch(); // v1.4.65: sin sesión ya no hay servicio activo que reportar'));
   check('v1.4.65: el sondeo global del chofer sincroniza el watch tras leer sus servicios activos', html.includes('setDriverActiveFromList(mine.requests);') && html.slice(html.indexOf('setDriverActiveFromList(mine.requests);'), html.indexOf('setDriverActiveFromList(mine.requests);') + 400).includes('syncDriverGpsWatch();'));
   check('v1.4.65: el sondeo del mapa en vivo pasa de 5 s a 2 s y el reintento OSRM se ajusta a cada 8º tick (~16 s)', pollSec65.includes('}, 2000);') && pollSec65.includes('if(liveOsrmRetryTick >= 8){') && !pollSec65.includes('}, 5000);'));
-  check('v1.4.65: si el marcador se perdió, el sondeo lo vuelve a crear en la posición fresca (sin esperar al cambio de etapa)', pollSec65.includes("if(r.driver_lat && !liveDriverMarker && liveMap){") && pollSec65.includes("liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);"));
+  check('v1.4.65: si el marcador se perdió, el sondeo lo vuelve a crear en la posición fresca (sin esperar al cambio de etapa) — salvo en fase 1 de Quiero (v1.4.82: ahí no hay mototaxi)', pollSec65.includes("if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r)){") && pollSec65.includes("liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);"));
   check('v1.4.65: al finalizar el viaje el watch se apaga directo (sondeo y advanceLive), no con sync (driverActiveTrip queda viejo 5 s)', pollSec65.includes("stopDriverGpsWatch(); // v1.4.65: el viaje terminó") && html.includes("if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); stopDriverGpsWatch(); showTripSummary(liveReq, true); return; }"));
   // Evaluado: el ciclo de vida del watch con GPS simulado.
   let watch65 = null;
@@ -4734,6 +4734,34 @@ async function api(path, body) {
   // --- En vivo: el candado sigue puesto ---
   const meLock81 = await api('/api/me?token=' + encodeURIComponent(chatPaxAcc.token));
   check('v1.4.81: en vivo — /api/me sigue diciendo que Mandados está bloqueado', meLock81.ok && meLock81.mandados_locked === true, JSON.stringify(meLock81 && { locked: meLock81.mandados_locked }));
+
+  // ===== v1.4.82 (2026-11-26): mapa en vivo en dos fases para "Quiero un mandado" (pasajero) =====
+  console.log('== v1.4.82: fase de compra sin ruta ni mototaxi; entrega con ruta; píldora sin recorte ==');
+  // --- Cliente: livePhase1Quiero — la fase es Quiero + pasajero + antes de "Ya compré" ---
+  const ph1Src82 = html.slice(html.indexOf('function livePhase1Quiero(r){'), html.indexOf('function nextStage(r){'));
+  check('v1.4.82: existe livePhase1Quiero (Quiero + pasajero + aún no va al destino)', ph1Src82.includes('function livePhase1Quiero(r){') && ph1Src82.includes('!liveAsDriver') && ph1Src82.includes('isQuieroMandado(r)') && ph1Src82.includes('!liveHeadingToDest(r)'));
+  function runPhase1_82(r, asDriver){
+    const stubs = {
+      liveAsDriver: !!asDriver,
+      isQuieroMandado: (x)=>!!x && x.kind==='mandado' && !x.recipient_phone,
+      liveHeadingToDest: (x)=> x.kind==='viaje' ? (x.trip_stage==='en_viaje' || x.trip_stage==='finalizado') : ['recogido','comprado','en_viaje','entregado'].includes(x.trip_stage||''),
+    };
+    const fn = new Function('r', ...Object.keys(stubs), ph1Src82 + '; return livePhase1Quiero(r);');
+    return fn(r, ...Object.values(stubs));
+  }
+  const q82 = { kind:'mandado', recipient_phone: null };
+  check('v1.4.82: evaluado — fase 1: Quiero + pasajero en confirmado/en_camino/llego', runPhase1_82(Object.assign({}, q82, {trip_stage:'confirmado'}), false) && runPhase1_82(Object.assign({}, q82, {trip_stage:'en_camino'}), false) && runPhase1_82(Object.assign({}, q82, {trip_stage:'llego'}), false));
+  check('v1.4.82: evaluado — fase 2: Quiero + pasajero en comprado/en_viaje/recogido ya NO es fase 1', !runPhase1_82(Object.assign({}, q82, {trip_stage:'comprado'}), false) && !runPhase1_82(Object.assign({}, q82, {trip_stage:'en_viaje'}), false) && !runPhase1_82(Object.assign({}, q82, {trip_stage:'recogido'}), false));
+  check('v1.4.82: evaluado — NO es fase 1: chofer, Enviar (teléfono del destinatario) ni viaje', !runPhase1_82(Object.assign({}, q82, {trip_stage:'en_camino'}), true) && !runPhase1_82({ kind:'mandado', recipient_phone:'9610000083', trip_stage:'en_camino' }, false) && !runPhase1_82({ kind:'viaje', recipient_phone: null, trip_stage:'en_camino' }, false));
+  // --- Cliente: renderLiveMap no dibuja ruta, pines ni mototaxi en fase 1; centra en la entrega ---
+  const liveMapSec82 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
+  check('v1.4.82: renderLiveMap guarda la fase 1 (sin ruta OSRM ni recta, sin pines ni mototaxi) y en fase 1 centra el mapa en el punto de entrega', liveMapSec82.includes('const phase1 = livePhase1Quiero(r);') && liveMapSec82.includes('if(!phase1 && from)') && liveMapSec82.includes('if(!phase1 && rt)') && liveMapSec82.includes('if(!phase1){') && liveMapSec82.includes('if(phase1){') && liveMapSec82.includes('fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());'));
+  check('v1.4.82: ensureLiveRoute y el sondeo tampoco crean ruta ni mototaxi en fase 1', html.includes('if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r)){'));
+  // --- Cliente: tarjeta de fase 1 en renderLiveStrips + CSS de la línea de estado y la píldora ---
+  check('v1.4.82: la tarjeta de fase 1 dice "El conductor está comprando tu encargo" (COMPRANDO) con dónde se compra, cuánto lleva y la línea de estado', liveSec.includes('El conductor está comprando tu encargo') && liveSec.includes('COMPRANDO') && liveSec.includes('Se compra en: ') && liveSec.includes('Lleva ') && liveSec.includes(' para comprar') && liveSec.includes('buytimeline') && liveSec.includes('Tu mandado fue aceptado') && liveSec.includes('El conductor está comprando') && liveSec.includes('En camino a entregarte') && liveSec.includes('Pendiente'));
+  check('v1.4.82: la tarjeta de fase 1 usa el texto de compra de stops_json[0] y el dinero (order_amount)', liveSec.includes("JSON.parse(r.stops_json||'[]')[0]") && liveSec.includes('order_amount') && liveSec.includes('fmt$(r.order_amount||0)'));
+  check('v1.4.82: el CSS trae .buytimeline/.bt-row/.bt-dot y la píldora de etapa no se encoge (flex-shrink:0)', html.includes('.buytimeline{') && html.includes('.bt-row{') && html.includes('.bt-dot{') && html.includes('.strip.top.paxcol .statuscard .row .chip{flex-shrink:0}'));
+  check('v1.4.82: la fase 2 (comprado/en_viaje) sigue con la tarjeta normal: título por etapa y píldora', liveSec.includes('passengerStageTitle(r)') && liveSec.includes('stagePill'));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
