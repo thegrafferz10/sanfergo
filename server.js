@@ -880,7 +880,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.78' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.79' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -1038,6 +1038,19 @@ async function api(req, res, pathname) {
     const locked = body.locked !== false && body.locked !== '0' && body.locked !== 0;
     db.prepare(`INSERT OR REPLACE INTO admin_state (key, value) VALUES ('negocios_locked', ?)`).run(locked ? '1' : '0');
     return send(res, 200, { ok: true, negocios_locked: locked });
+  }
+
+  // v1.4.79: interruptor del candado de Mandados (solo admin). Espejo
+  // exacto del de Negocios (v1.4.64): sin el parámetro locked (o con
+  // cualquier valor distinto de false/'0'/0) se BLOQUEA — el valor seguro
+  // por defecto. El perfil del dueño (@thegrafferz10) sigue exento
+  // aunque el candado esté puesto.
+  if (pathname === '/api/admin/set-mandados-locked') {
+    const a = accountFromToken(body.token);
+    if (!a || a.role !== 'admin') return send(res, 403, { ok: false, error: 'Solo el administrador de SanFerGo puede hacer esto.' });
+    const locked = body.locked !== false && body.locked !== '0' && body.locked !== 0;
+    db.prepare(`INSERT OR REPLACE INTO admin_state (key, value) VALUES ('mandados_locked', ?)`).run(locked ? '1' : '0');
+    return send(res, 200, { ok: true, mandados_locked: locked });
   }
 
   // v1.4.67: interruptor de la promo de viajes gratis por recomendación
@@ -1294,7 +1307,7 @@ async function api(req, res, pathname) {
     if (a.status === 'bloqueado') return send(res, 403, { ok: false, error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     const passenger = a.passenger_id ? db.prepare('SELECT * FROM passengers WHERE id=?').get(a.passenger_id) : null;
     const driver = a.driver_id ? db.prepare('SELECT * FROM drivers WHERE id=?').get(a.driver_id) : null;
-    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null, negocios_locked: negociosLocked(), referral_enabled: referralPromoEnabled() });
+    return send(res, 200, { ok: true, account: publicAccount(a), passenger, driver: driver ? publicDriver(driver) : null, negocios_locked: negociosLocked(), mandados_locked: mandadosLocked(), referral_enabled: referralPromoEnabled() });
   }
   if (pathname === '/api/logout') {
     if (body.token) db.prepare('DELETE FROM sessions WHERE token=?').run(String(body.token));
@@ -1481,6 +1494,22 @@ async function api(req, res, pathname) {
   }
   function negociosExempt(a){ return !!a && (a.role === 'admin' || a.username === 'thegrafferz10'); }
   function negociosLockError(){ return { ok: false, locked: true, error: 'Negocios está bloqueado por ahora.' }; }
+  // v1.4.79: CANDADO de Mandados — mientras se afina el flujo, por
+  // defecto BLOQUEADO (sin fila en admin_state = bloqueado). Solo entran
+  // el perfil del dueño (@thegrafferz10) y el admin; el admin lo
+  // abre/cierra desde el panel (POST /api/admin/set-mandados-locked).
+  // Espejo del candado de Negocios (v1.4.64): mismo almacenamiento
+  // (admin_state), misma exención, mismo valor seguro por defecto. Se
+  // aplica en el SERVIDOR al publicar un mandado (/api/create-request
+  // con kind='mandado' devuelve 403 con locked:true a quien no esté
+  // exento); la bandeja del chofer y los mandados ya publicados no se
+  // tocan. Los viajes nunca pasan por este candado.
+  function mandadosLocked(){
+    const row = db.prepare(`SELECT value FROM admin_state WHERE key='mandados_locked'`).get();
+    return !row || row.value !== '0';
+  }
+  function mandadosExempt(a){ return !!a && (a.role === 'admin' || a.username === 'thegrafferz10'); }
+  function mandadosLockError(){ return { ok: false, locked: true, error: 'Mandados está bloqueado por ahora.' }; }
   // Negocios activos y visibles para todos (los Premium primero, con su
   // insignia '★ Premium · Verificado'). Los pendientes NO se ven aquí.
   if (pathname === '/api/businesses') {
@@ -2164,6 +2193,19 @@ async function api(req, res, pathname) {
     // sin teléfono). El registro de la cuenta no se toca: el pasajero
     // automático nace sin foto y se completa en el formulario.
     if (!p || !p.face_photo) return send(res, 400, { ok: false, error: 'Falta tu foto de cara (selfie): súbela en tu perfil de pasajero para poder pedir viajes y mandados.' });
+    // v1.4.79: "Quiero un mandado" sin ubicación exacta — la parada es
+    // solo el texto que escribió el pasajero: la etiqueta es obligatoria,
+    // las coordenadas ya no (el cliente las aproxima con el registro de
+    // lugares o usa el punto de entrega para estimar el precio).
+    if (kind === 'mandado' && body.type !== 'enviar' && !String(origin_zone || '').trim()) return send(res, 400, { ok: false, error: 'Escribe dónde se compra: la tienda o el lugar.' });
+    // v1.4.79: candado de Mandados (espejo de Negocios v1.4.64): con el
+    // candado puesto, solo el dueño y el admin publican mandados nuevos
+    // (Quiero y Enviar). La cuenta se resuelve por el token de la sesión
+    // o por el pasajero que publica. Los viajes no pasan por aquí.
+    if (kind === 'mandado' && mandadosLocked()) {
+      const a = accountFromToken(body.token) || (passenger_id ? db.prepare('SELECT * FROM accounts WHERE passenger_id=?').get(passenger_id) : null);
+      if (!mandadosExempt(a)) return send(res, 403, mandadosLockError());
+    }
     const km = distance_km ?? (origin_lat != null && dest_lat != null ? haversineKm(origin_lat, origin_lng, dest_lat, dest_lng) : 1);
     // Vehículo elegido para el mandado (el cliente lo manda en "Quiero un
     // mandado": mototaxi predeterminado, moto como opción). En viajes

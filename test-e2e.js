@@ -16,6 +16,12 @@ async function api(path, body) {
   // nacen PENDIENTES y solo van en línea tras la aprobación del admin.
   const ADM = await api('/api/login', { identifier: 'admin', password: 'admin' });
   check('login admin (admin/admin) con rol admin', ADM.ok && ADM.account.role === 'admin', JSON.stringify(ADM));
+  // v1.4.79: el candado de Mandados nace BLOQUEADO por defecto; para que
+  // las pruebas viejas (que publican mandados con cuentas normales) sigan
+  // pasando, el admin lo abre al inicio de la suite. La sección v1.4.79
+  // lo vuelve a cerrar al final, probando el candado en el camino.
+  const lockOpen79 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.79: el admin abre el candado de Mandados al inicio de la suite (las pruebas viejas publican mandados)', lockOpen79.ok && lockOpen79.mandados_locked === false, JSON.stringify(lockOpen79));
   async function approveDriver(id){ return api('/api/approve-driver', { token: ADM.token, driver_id: id }); }
   console.log('== Registro ==');
   const pax = await api('/api/register-passenger', { name: 'Lucia Prueba', phone: '9610000001', face_photo: PHOTO });
@@ -371,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.78 en /api/health', h.ok && h.version === '1.4.78', JSON.stringify(h));
+  check('versión 1.4.79 en /api/health', h.ok && h.version === '1.4.79', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -472,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.78', h134.ok && h134.version === '1.4.78', JSON.stringify(h134));
+  check('versión 1.4.79', h134.ok && h134.version === '1.4.79', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -634,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.78)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.78';") && h.version === '1.4.78', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.79)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.79';") && h.version === '1.4.79', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1428,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.78 en /api/health (sección)', h27.ok && h27.version === '1.4.78', JSON.stringify(h27));
+  check('versión 1.4.79 en /api/health (sección)', h27.ok && h27.version === '1.4.79', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1473,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.78 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.78', JSON.stringify(h28));
+  check('versión 1.4.79 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.79', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1487,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.78 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.78', JSON.stringify(h29));
+  check('versión 1.4.79 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.79', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1496,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.78 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.78', JSON.stringify(h30));
+  check('versión 1.4.79 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.79', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1718,7 +1724,7 @@ async function api(path, body) {
   check('v1.4.40: en vivo, el mandado por pagar trae distancia, ETA, pago y "Lleva $200", y el ya pagado trae pedido pagado sin monto por llevar', req40.ok && req40b.ok && open40.ok && row40 && row40.distance_km===0.9 && row40.eta_minutes===5 && row40.payment_method==='efectivo' && row40.order_payment==='por_pagar' && row40.order_amount===200 && row40b && row40b.order_payment==='pagado' && !(row40b.order_amount>0), JSON.stringify({row: row40 && {d: row40.distance_km, e: row40.eta_minutes, p: row40.payment_method, op: row40.order_payment, oa: row40.order_amount}, rowb: row40b && {op: row40b.order_payment, oa: row40b.order_amount}}));
   check('v1.4.34: publicar Enviar manda nombre, pago del pedido y cantidad', html.includes("type:'enviar'") && html.includes('recipient_name: md.recipientName') && html.includes('order_payment: md.orderPay') && html.includes("order_amount: md.orderPay==='por_pagar'"));
   const quieroSec = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
-  check('v1.4.78: "Quiero un mandado" ahora es en 4 pasos (2+3 fusionados)', quieroSec.includes('Paso 1 de 4') && quieroSec.includes('Paso 2 de 4') && quieroSec.includes('Paso 3 de 4') && quieroSec.includes('md.step===4') && !quieroSec.includes('Paso 1 de 5') && !quieroSec.includes('md.step===5'));
+  check('v1.4.79: "Quiero un mandado" ahora es en 3 pasos (compra+entrega en el paso 2)', quieroSec.includes('Paso 1 de 3') && quieroSec.includes('Paso 2 de 3') && quieroSec.includes('md.step===3') && !quieroSec.includes('Paso 1 de 4') && !quieroSec.includes('Paso 2 de 4') && !quieroSec.includes('Paso 3 de 4') && !quieroSec.includes('md.step===4') && !quieroSec.includes('Paso 1 de 5') && !quieroSec.includes('md.step===5'));
   // Limpieza: los dos anuncios de la prueba se borran (quedan los de otras secciones).
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adF.ad.id });
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adP.ad.id });
@@ -2081,10 +2087,10 @@ async function api(path, body) {
   new Function('wiz', 'renderViajes', tripOnclick49)(wizStub49, ()=>{ renderedStep49 = wizStub49.step; });
   check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del viaje se vuelve al paso 3 sin perder origen, destino, precio, personas ni pago', tripOnclick49 === 'wiz.step=3;renderViajes()' && wizStub49.step === 3 && renderedStep49 === 3 && wizStub49.price === 30 && wizStub49.pax === 3 && wizStub49.origin.lat === 16.87291 && wizStub49.dest.lng === -93.20652 && wizStub49.payment === 'efectivo', JSON.stringify({ onclick: tripOnclick49, step: wizStub49.step }));
   const mdBackLine49 = html.split('\n').find(l => l.trim().startsWith('function mdBack(step){'));
-  const mdStub49 = { step: 5, price: 30, km: 1.5, eta: 5, kind: 'quiero' };
+  const mdStub49 = { step: 3, price: 30, km: 1.5, eta: 5, kind: 'quiero' };
   let mdRendered49 = null;
   new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
-  check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Quiero (paso 5) se vuelve al paso 4 sin perder el precio ni los datos', mdOnclick49 === 'mdBack(md.step-1)' && mdStub49.step === 4 && mdRendered49 === 4 && mdStub49.price === 30 && mdStub49.km === 1.5, JSON.stringify({ onclick: mdOnclick49, step: mdStub49.step }));
+  check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Quiero (paso 3) se vuelve al paso 2 sin perder el precio ni los datos', mdOnclick49 === 'mdBack(md.step-1)' && mdStub49.step === 2 && mdRendered49 === 2 && mdStub49.price === 30 && mdStub49.km === 1.5, JSON.stringify({ onclick: mdOnclick49, step: mdStub49.step }));
   mdStub49.step = 4;
   new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
   check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Enviar (paso 4) se vuelve al paso 3', mdStub49.step === 3 && mdRendered49 === 3, JSON.stringify({ step: mdStub49.step }));
@@ -2131,6 +2137,7 @@ async function api(path, body) {
       renderSearching: () => { calls.searching = true; },
       renderMandadoQuiero: () => {},
       renderMandadoEnviar: () => {},
+      mandadosCanEnter: () => true, // v1.4.79: el candado abierto en la simulación (la puerta del perfil es lo que se prueba aquí)
     };
     const fn = new Function(...Object.keys(stubs), mdFnSrc50 + '; return renderMandados;')(...Object.values(stubs));
     await fn();
@@ -4187,7 +4194,7 @@ async function api(path, body) {
   async function runStart70(passenger, kind){
     const calls = { registro: null, toast: null, rendered: false };
     const mdObj = { step: 0, kind: null };
-    const fn = new Function('myPassenger', 'passengerProfileComplete', 'toast', 'openRegistro', 'md', 'renderMandados', smSrc70 + '\nreturn startMandado;')(passenger, () => ppcFn(passenger), (m) => { calls.toast = m; }, (k, r) => { calls.registro = [k, r]; }, mdObj, () => { calls.rendered = true; });
+    const fn = new Function('myPassenger', 'passengerProfileComplete', 'toast', 'openRegistro', 'md', 'renderMandados', 'mandadosCanEnter', 'myLocation', smSrc70 + '\nreturn startMandado;')(passenger, () => ppcFn(passenger), (m) => { calls.toast = m; }, (k, r) => { calls.registro = [k, r]; }, mdObj, () => { calls.rendered = true; }, () => true, async () => ({ lat: 16.87, lng: -93.2 }));
     await fn(kind);
     return { calls, step: mdObj.step, kind: mdObj.kind };
   }
@@ -4213,6 +4220,7 @@ async function api(path, body) {
       renderMandadoSearching: () => {}, renderSearching: () => {},
       profileBannerHtmlMandados: () => runBanner70(passenger),
       renderMandadoQuiero: () => {}, renderMandadoEnviar: () => {},
+      mandadosCanEnter: () => true,
     };
     const fn = new Function(...Object.keys(stubs), mdFnSrc70 + '; return renderMandados;')(...Object.values(stubs));
     await fn();
@@ -4275,7 +4283,7 @@ async function api(path, body) {
       myAccount: { name: 'Admin', username: 'admin', phone: '9614868605' },
       esc: (s) => String(s == null ? '' : s),
       pwInput: () => '',
-      adminCredsOpen: false, negociosLocked: locked, referralEnabled: enabled,
+      adminCredsOpen: false, negociosLocked: locked, mandadosLocked: false, referralEnabled: enabled,
       loadAdminOverview: () => {}, loadReferralStats: () => {},
       adminPoll: null, setInterval: () => 1, clearInterval: () => {},
     };
@@ -4454,9 +4462,9 @@ async function api(path, body) {
   check('v1.4.78: publicar mandado a $30 sí se puede', man30.ok && man30.request.price === 30, JSON.stringify(man30));
   // --- Cliente: paso fusionado, tiendas fijas, dinero para comprar, mapa divertido ---
   const quieroSec78 = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
-  check('v1.4.78: el paso 2 fusionado se titula "¿Dónde se compra?" y trae las 3 tiendas fijas', quieroSec78.includes('¿Dónde se compra?') && quieroSec78.includes('mdStopPlaceHtml') && html.includes('Abarrotes Castillejo') && html.includes('Farmacia del Súper Descuento') && html.includes('Bodega Aurrerá') && html.includes('function mdChoosePresetStore'));
+  check('v1.4.79: el paso 2 se titula "¿Dónde se compra?" con las dos instrucciones y UN campo de texto libre (sin tiendas fijas)', quieroSec78.includes('¿Dónde se compra?') && quieroSec78.includes('Instrucción 1:') && quieroSec78.includes('Instrucción 2:') && quieroSec78.includes('md-buy-where') && quieroSec78.includes('Escribe la tienda o el lugar') && html.includes('Abarrotes Castillejo') && html.includes('Farmacia del Súper Descuento') && html.includes('Bodega Aurrerá') && !quieroSec78.includes('mdStopPlaceHtml') && !quieroSec78.includes('function mdChoosePresetStore') && !quieroSec78.includes('<b>Un solo lugar</b>') && !quieroSec78.includes('<b>Varios lados</b>'));
   check('v1.4.78: el paso fusionado ya no tiene búsqueda de punto exacto ni pegar ubicación de WhatsApp', !quieroSec78.includes('mdStopSearchHtml') && !quieroSec78.includes('mdResolveWa(') && !quieroSec78.includes('md-wa-0'), '');
-  check('v1.4.78: el resumen del chofer muestra "Se compra en" con el nombre de la tienda/lugar', html.includes("rows.push(['Se compra en'") && html.includes('stops_json'), '');
+  check('v1.4.79: el resumen del chofer muestra "📍 Se compra en" con el texto tal como se escribió', html.includes("['📍 Se compra en'") && html.includes('stops_json'), '');
   check('v1.4.78: el paso de precio muestra el dinero para comprar con steppers de $50 ($150 por defecto, mínimo $100)', html.includes('¿Cuánto dinero lleva el chofer para comprar?') && html.includes('mdCarryStep(-50)') && html.includes('mdCarryStep(50)') && html.includes('carryAmount:150') && html.includes('Math.max(100,'), '');
   check('v1.4.78: publicar "Quiero" manda por_pagar con el dinero para comprar', html.includes("order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150"), '');
   check('v1.4.78: el mapa de mandados usa el estilo divertido Voyager y Viajes sigue con Meta', html.includes('basemaps.cartocdn.com/gl/voyager-gl-style/style.json') && html.includes("makeMap('md-map', false, true)") && html.includes("pickReturn==='mandados'") && html.includes("liveReq.kind==='mandado'") && html.includes('style: fun ? FUN_STYLE_URL : META_STYLE_URL'), '');
@@ -4533,6 +4541,61 @@ async function api(path, body) {
   check('v1.4.78: la foto del chat se toca para verla grande', html.includes('chatZoomPhoto') && html.includes('cursor:zoom-in'), '');
   check('v1.4.78: el chofer ve "Ya compré" y la hoja del ticket con "Sin ticket"', html.includes("comprado:'Ya compré'") && html.includes('askTicketPhoto()') && html.includes('Foto del ticket') && html.includes('Sin ticket'), '');
   check('v1.4.78: "Ya compré" solo sale en "Quiero un mandado" (Enviar sigue directo a "Ya voy en camino")', html.includes('isQuieroMandado(r)') && html.includes("isQuieroMandado(r) ? 'comprado' : 'en_viaje'"), '');
+
+  console.log('== v1.4.79: paso 2 con texto libre, entrega por GPS, candado de Mandados, pin de compra ==');
+  // --- Candado de Mandados: servidor (espejo de Negocios v1.4.64) ---
+  check('v1.4.79: el servidor tiene el candado de Mandados con bloqueo por defecto (sin fila = bloqueado) y exención solo para admin y @thegrafferz10', srv.includes("function mandadosLocked(){") && srv.includes("key='mandados_locked'") && srv.includes("return !row || row.value !== '0';") && srv.includes("function mandadosExempt(a){ return !!a && (a.role === 'admin' || a.username === 'thegrafferz10'); }"));
+  check('v1.4.79: /api/admin/set-mandados-locked existe, solo admin, guarda el estado en admin_state y por defecto bloquea (sin locked = bloqueado)', srv.includes("'/api/admin/set-mandados-locked'") && srv.includes("INSERT OR REPLACE INTO admin_state (key, value) VALUES ('mandados_locked', ?)") && srv.includes("const locked = body.locked !== false && body.locked !== '0' && body.locked !== 0;") && srv.includes("return send(res, 200, { ok: true, mandados_locked: locked });"));
+  check('v1.4.79: /api/me devuelve mandados_locked (el cliente lo lee al iniciar sesión)', srv.includes("mandados_locked: mandadosLocked()"));
+  check('v1.4.79: publicar mandado exige el texto de dónde se compra (Quiero sin coordenadas sí pasa)', srv.includes("Escribe dónde se compra: la tienda o el lugar."));
+  // --- Cliente: paso 2 con texto libre + entrega por GPS, 3 pasos ---
+  const quieroSec79 = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
+  check('v1.4.79: el paso 2 trae el bloque de entrega con GPS y "Cambiar punto" en la misma pantalla', quieroSec79.includes('¿A dónde se entrega?') && quieroSec79.includes('Se entrega en tu ubicación actual') && quieroSec79.includes('mdActivateDelivery()') && quieroSec79.includes('Cambiar punto') && quieroSec79.includes('Referencia extra') && quieroSec79.includes('mdNextQuiero2()'));
+  check('v1.4.79: el flujo "Quiero" es en 3 pasos y el precio es el paso 3 (sin paso aparte de entrega)', quieroSec79.includes('Paso 1 de 3') && quieroSec79.includes('Paso 2 de 3') && quieroSec79.includes('md.step===3') && !quieroSec79.includes('¿Dónde se entrega?</h2>') && !quieroSec79.includes('Paso 3 de 4') && !quieroSec79.includes('md.step===4'));
+  check('v1.4.79: el precio se estima con el registro (mdMatchBuyPlace) y si no hay coincidencia usa el punto de entrega', html.includes('function mdMatchBuyPlace') && html.includes('function mdResolveStops()') && html.includes('const origin = (first.lat!=null) ? first : dest;'));
+  check('v1.4.79: el mapa de precio dibuja aunque no haya punto de compra', html.includes('if(!dest || dest.lat==null) return;') && html.includes("if(first && first.lat!=null){ new maplibregl.Marker"));
+  check('v1.4.79: el cliente guarda el candado de Mandados al iniciar sesión y la exención es admin o @thegrafferz10', html.includes('let mandadosLocked = true;') && html.includes('mandadosLocked = !!j.mandados_locked;') && html.includes("function mandadosCanEnter(){ return !mandadosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }"));
+  check('v1.4.79: la tarjeta de Mandados en inicio muestra el candado con «Próximamente» cuando está bloqueado', html.includes("Mandados está bloqueado por ahora.") && html.includes('Próximamente · Encargos y paquetes en moto o mototaxi.'));
+  check('v1.4.79: el panel del admin tiene el interruptor del candado de Mandados', html.includes('toggleMandadosLock()') && html.includes('Mandados bloqueado') && html.includes('Mandados abierto') && html.includes('Abrir Mandados') && html.includes('Bloquear Mandados') && html.includes("'/api/admin/set-mandados-locked'"));
+  check('v1.4.79: el mapa en vivo pinta el pin de compra con su rótulo "Se compra en: <texto>"', html.includes('liveMarkers.buy') && html.includes("buyLbl.textContent = 'Se compra en: '") && html.includes('pickup-lbl'));
+  // --- En vivo: el candado bloquea, el dueño publica, el admin abre/cierra ---
+  // El candado está abierto desde el inicio de la suite; el admin lo cierra.
+  const lockClose79 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.79: el admin cierra el candado de Mandados', lockClose79.ok && lockClose79.mandados_locked === true, JSON.stringify(lockClose79));
+  const meLock79 = await api('/api/me?token=' + encodeURIComponent(chatPaxAcc.token));
+  check('v1.4.79: en vivo — /api/me dice que Mandados está bloqueado', meLock79.ok && meLock79.mandados_locked === true, JSON.stringify(meLock79 && { locked: meLock79.mandados_locked }));
+  const manBlocked79 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
+  check('v1.4.79: en vivo — cuenta normal NO puede publicar mandado con el candado puesto (403 locked)', !manBlocked79.ok && manBlocked79.locked === true, JSON.stringify(manBlocked79));
+  const envBlocked79 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Paquete', recipient_phone: '9610000099', recipient_name: 'Quien recibe', order_payment: 'pagado', order_amount: 0 });
+  check('v1.4.79: en vivo — Enviar también se bloquea con el candado puesto', !envBlocked79.ok && envBlocked79.locked === true, JSON.stringify(envBlocked79));
+  const tripLock79 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Progreso', dest_lat: 16.87737, dest_lng: -93.22214, distance_km: 1.5, price: 30, payment_method: 'efectivo' });
+  check('v1.4.79: en vivo — los viajes sí se publican con el candado de Mandados puesto', tripLock79.ok && tripLock79.request.kind === 'viaje', JSON.stringify(tripLock79));
+  // El dueño (@thegrafferz10) sí puede publicar con el candado puesto:
+  // texto libre SIN coordenadas y sin precio (sugiere $30, el mínimo).
+  // El dueño (@thegrafferz10) sí puede publicar con el candado puesto:
+  // la cuenta ya existe en esta corrida (own64, registrada en v1.4.64);
+  // se le sube la foto del pasajero porque publicar exige perfil completo.
+  const owner79 = own64;
+  const owner79photo = await api('/api/upload-passenger-photo', { passenger_id: owner79.passenger.id, photo: PHOTO });
+  check('v1.4.79: cuenta del dueño (@thegrafferz10) para el candado', owner79.ok && !!owner79.token && owner79.passenger && owner79.passenger.id && owner79photo.ok, JSON.stringify(owner79));
+  const ownerPhoto79 = await api('/api/upload-passenger-photo', { passenger_id: owner79.passenger.id, photo: PHOTO });
+  check('v1.4.79: el dueño sube su foto de cara', ownerPhoto79.ok, JSON.stringify(ownerPhoto79));
+  const manNoLabel79 = await api('/api/create-request', { passenger_id: owner79.passenger.id, kind: 'mandado', origin_zone: '   ', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
+  check('v1.4.79: publicar "Quiero" sin texto de dónde se compra se rechaza', !manNoLabel79.ok && /dónde se compra/.test(manNoLabel79.error || ''), JSON.stringify(manNoLabel79));
+  const manOwner79 = await api('/api/create-request', { passenger_id: owner79.passenger.id, kind: 'mandado', origin_zone: 'Farmacia del Súper Descuento', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Farmacia del Súper Descuento', lat: null, lng: null, detail: '' }], extra_stops: 0 });
+  check('v1.4.79: el dueño publica "Quiero" con texto libre SIN coordenadas y sin precio (sugiere $30)', manOwner79.ok && manOwner79.request.price === 30 && manOwner79.request.origin_lat === null, JSON.stringify(manOwner79));
+  const manOwnerRow79 = await api('/api/requests?id=' + manOwner79.request.id);
+  check('v1.4.79: la parada guarda el texto tal como se escribió en stops_json', manOwnerRow79.ok && (manOwnerRow79.requests[0].stops_json || '').includes('Farmacia del Súper Descuento'), JSON.stringify(manOwnerRow79.requests && manOwnerRow79.requests[0].stops_json));
+  // El admin abre el candado: la cuenta normal ya puede publicar.
+  const lockOpen2_79 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.79: el admin abre el candado de Mandados', lockOpen2_79.ok && lockOpen2_79.mandados_locked === false, JSON.stringify(lockOpen2_79));
+  const manOpen79 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
+  check('v1.4.79: en vivo — con el candado abierto la cuenta normal publica mandado', manOpen79.ok && manOpen79.request.price === 30, JSON.stringify(manOpen79));
+  // Y se vuelve a cerrar: el candado queda puesto al final.
+  const lockClose2_79 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.79: el admin vuelve a bloquear y el candado queda puesto', lockClose2_79.ok && lockClose2_79.mandados_locked === true, JSON.stringify(lockClose2_79));
+  const meLockEnd79 = await api('/api/me?token=' + encodeURIComponent(chatPaxAcc.token));
+  check('v1.4.79: en vivo — /api/me refleja el candado puesto al final', meLockEnd79.ok && meLockEnd79.mandados_locked === true, JSON.stringify(meLockEnd79 && { locked: meLockEnd79.mandados_locked }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
