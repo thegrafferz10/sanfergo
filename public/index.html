@@ -165,6 +165,10 @@ input[type=file]{padding:8px}
 .bt-row b{display:block;font-size:14px}
 .bt-row span{display:block;font-size:12px;color:#6b7280}
 .bt-row.next{opacity:.6}
+/* v1.4.83: fase de compra del CHOFER (Quiero) — sin mapa: la pantalla es
+   la lista de compra. El mapa se oculta y el fondo queda claro. */
+#view-live.nolive-map .fullmap{background:#f4f6f5}
+#view-live.nolive-map #live-map{visibility:hidden}
 .strip.bottom.paxbot{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px}
 .strip.bottom.paxbot .cancelwrap{display:flex;justify-content:center}
 .strip.bottom.paxbot .arrive{background:#14532d;color:#fff;border-radius:14px;padding:10px 14px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
@@ -657,7 +661,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.82'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.83'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3175,6 +3179,7 @@ function closestOnRoute(lat, lng, coords){
 function ensureLiveRoute(){
   if(!liveReq || !liveMap || (liveRouteCoords && liveRouteCoords.length)) return;
   if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta
+  if(livePhase1QuieroDriver(liveReq)) return; // v1.4.83: fase de compra del chofer — sin ruta
   const inT = liveHeadingToDest(liveReq);
   const tgt = inT ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
   const from = (liveReq.driver_lat && liveReq.driver_lng) ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : null;
@@ -3206,6 +3211,15 @@ function isQuieroMandado(r){
    destino. Enviar (punto real de recogida) y los viajes nunca son fase 1. */
 function livePhase1Quiero(r){
   return !!r && !liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
+}
+/* v1.4.83: FASE 1 de un "Quiero un mandado" en el mapa en vivo del
+   CHOFER — antes de que marque "Ya compré" (comprado). El chofer NO ve
+   mapa: ve la lista de lo que tiene que comprar (mockup aprobado por el
+   usuario 2026-11-26). Fase 2 (comprado / recogido / en_viaje) usa el
+   mapa normal con la ruta a la entrega. Enviar (punto real de recogida)
+   y los viajes nunca son fase 1 del chofer. */
+function livePhase1QuieroDriver(r){
+  return !!r && liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
 }
 function nextStage(r){
   // Flujo del chofer (v1.4.60): Aceptar deja el servicio automáticamente
@@ -3317,6 +3331,17 @@ async function renderLiveMap(){
   const phase1 = livePhase1Quiero(r); // v1.4.82: fase de compra de Quiero (pasajero) — sin ruta, sin pines, sin mototaxi
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
+  // v1.4.83: fase de compra del CHOFER (Quiero) — SIN mapa: sin ruta, sin
+  // pines, sin mototaxi, sin encuadre. El mapa se oculta y la pantalla es
+  // la lista de compra (renderLiveStrips la pinta). Al marcar "Ya compré"
+  // la fase 2 quita la clase y el mapa vuelve con su ruta.
+  const phase1d = livePhase1QuieroDriver(r);
+  if(phase1d){
+    document.getElementById('view-live').classList.add('nolive-map');
+    return;
+  }
+  document.getElementById('view-live').classList.remove('nolive-map');
+  liveMap.resize(); // por si venía oculto en fase 1: el mapa vuelve con su tamaño
   // Si OSRM falla (sin señal en la carretera o el servidor de rutas no
   // responde), la línea azul NO desaparece: se dibuja recta del chofer al
   // objetivo y el sondeo reintenta la ruta real cada ~15 s (v1.4.44).
@@ -3452,6 +3477,37 @@ function renderLiveStrips(){
   const inTrip = liveHeadingToDest(r);
   const canCancel = r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','en_viaje','entregado'].includes(r.trip_stage||''));
   if(liveAsDriver){
+    // v1.4.83: FASE 1 del chofer (Quiero, antes de "Ya compré") — SIN mapa:
+    // la pantalla es la lista de compra del mockup aprobado: tarjeta "Vas a
+    // comprar el encargo" + COMPRANDO + dónde se compra y cuánto lleva, y
+    // abajo la "Lista de compra" con el botón de etapa (que sigue siendo el
+    // de siempre: "Ya estoy afuera..." o "Ya compré" con su diálogo del
+    // ticket; en fase 1 el botón dice "Ya compré todo", como el mockup).
+    // Al marcar "Ya compré" la fase 2 pinta el mapa con la ruta a entregar.
+    if(livePhase1QuieroDriver(r)){
+      top.classList.add('paxcol'); bot.classList.add('paxbot');
+      let buyTxt83 = '';
+      try { const s083 = JSON.parse(r.stops_json||'[]')[0]; buyTxt83 = (s083 && (s083.zone||s083.detail)) || ''; } catch(e){}
+      let items83 = [];
+      try { items83 = JSON.parse(r.items_json||'[]') || []; } catch(e){ items83 = []; }
+      items83 = items83.filter(Boolean);
+      const listHtml83 = items83.length ? items83.map(i=>'• '+esc(i)).join('<br>') : (r.description ? '• '+esc(r.description) : '—');
+      const nxt83 = nextStage(r);
+      const btnLabel83 = nxt83==='comprado' ? 'Ya compré todo' : stageButtonLabel(r);
+      top.innerHTML = '<div class="backrow" style="align-items:center;gap:8px"><button class="exitp" onclick="exitLive()">‹ Regresar</button><b style="font-size:17px">Mandado en curso</b></div>'
+        + '<div class="statuscard"><div class="row"><b>Vas a comprar el encargo</b><span class="chip amber">COMPRANDO</span></div>'
+        + '<div class="row" style="margin-top:6px"><span>'+(buyTxt83 ? 'Se compra en: '+esc(buyTxt83)+' · ' : '')+'Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div></div>';
+      bot.innerHTML = '<div class="drivercard"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:20px">🛒</span><b style="font-size:17px">Lista de compra</b></div>'
+        + '<div style="margin-top:8px;font-size:15px;line-height:1.7;max-height:34dvh;overflow:auto">'+listHtml83+'</div>'
+        + (nxt83 ? '<button class="greenb" onclick="'+(nxt83==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt83+'\')')+'">'+btnLabel83+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
+        + '</div>'
+        + '<div class="muted center" style="font-size:12px">Cuando termines de comprar, toca el botón y te aparecerá el mapa para ir a entregarlo</div>'
+        + '<div class="drivercard" style="padding:8px 14px"><div class="row"><span>👤 '+esc(r.passenger_name||'Pasajero')+' · <b>'+fmt$(r.final_price||r.price)+'</b> · '+esc(r.payment_method||'efectivo')+'</span></div></div>';
+      pill.classList.add('hidden');
+      $('#live-compass').classList.add('hidden');
+      $('#live-recenter').classList.add('hidden');
+      return;
+    }
     top.classList.remove('paxcol'); bot.classList.remove('paxbot');
     $('#live-compass').style.top=''; $('#live-recenter').style.bottom='';
     const targetLabel = inTrip ? 'al destino en '+(r.dest_zone||'') : (r.kind==='mandado' ? 'al punto de recogida en '+(r.origin_zone||'') : 'al punto de encuentro en '+(r.origin_zone||''));
@@ -4031,7 +4087,7 @@ function startLivePolling(){
       // en la posición fresca — sin esto el sondeo actualizaba el texto
       // pero el mapa quedaba sin mototaxi hasta el próximo cambio de
       // etapa. No reframa ni pide ruta: eso ya lo hace ensureLiveRoute.
-      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r)){
+      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r) && !livePhase1QuieroDriver(r)){
         liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);
       }
       // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
