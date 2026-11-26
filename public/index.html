@@ -158,6 +158,21 @@ input[type=file]{padding:8px}
 .strip.bottom.paxbot .drivercard .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
 .recenter{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);z-index:60;background:#16a34a;color:#fff;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .compassbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 170px);z-index:60;background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:50%;width:36px;height:36px;font-size:17px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+/* v1.4.78: chat pasajero ⇄ chofer en el mapa en vivo. El botón flota en
+   la misma columna derecha (debajo de la brújula); el punto rojo avisa
+   que llegó un mensaje del otro lado. La hoja es un diálogo inferior
+   como los demás: lista con scroll, foto del chofer a todo lo ancho,
+   entrada de texto + Enviar; la foto solo la manda el chofer. */
+.chatbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 216px);z-index:60;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:50%;width:44px;height:44px;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.chatbtn .dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
+.chatmsgs{max-height:52dvh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:6px 2px}
+.chatmsg{max-width:82%;padding:8px 11px;border-radius:14px;font-size:14px;line-height:1.35;white-space:pre-wrap;word-break:break-word}
+.chatmsg.mine{align-self:flex-end;background:#14532d;color:#fff;border-bottom-right-radius:4px}
+.chatmsg.theirs{align-self:flex-start;background:#f1f5f9;color:#0f172a;border-bottom-left-radius:4px}
+.chatmsg .who{font-size:11px;font-weight:700;opacity:.75;display:block;margin-bottom:2px}
+.chatmsg img{max-width:100%;border-radius:10px;display:block;margin-top:4px}
+.chatrow{display:flex;gap:8px;margin-top:10px;align-items:center}
+.chatrow input{flex:1;min-width:0}
 /* Diálogo (resumen / recibo) */
 .dialog{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
 .dialog .box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:88dvh;overflow:auto;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
@@ -597,6 +612,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
     <div class="hidden" id="live-offline">📶 Sin internet — el mapa sigue con tu GPS</div>
     <button class="recenter hidden" id="live-recenter" onclick="liveRecenter()">◎ Centrar en tu mototaxi</button>
     <button class="compassbtn hidden" id="live-compass" onclick="liveResetNorth()">🧭</button>
+    <button class="chatbtn hidden" id="live-chat-btn" onclick="openChatSheet()" aria-label="Chat">💬</button>
     <div class="strip bottom" id="live-bottom"></div>
   </div>
 </div>
@@ -616,12 +632,13 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.77'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.78'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
 /* Tarifa oficial 2026-11-20: $10 base + $2.50 cada 300 m; espera $1.25/min parado; mínimo $20 */
 const BASE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
+const MIN_MANDADO = 30; // v1.4.78: el mandado empieza en $30 (el viaje sigue en $20).
 const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 const SUB_PLANS = [{key:'weekly',days:7,price:50,label:'Semanal',desc:'$50 por semana · 7 días'},{key:'monthly',days:30,price:150,label:'Mensual',desc:'$150 por mes · 30 días'},{key:'yearly',days:365,price:500,label:'Anual',desc:'$500 por año · 365 días'}];
 const fmt$ = n => '$' + Math.round(n);
@@ -913,6 +930,13 @@ function drawPlaceLabels(map){
 // (sin red a fbcdn, estilo caído), el respaldo es OSM ráster y luego Esri.
 // La atribución "© OpenStreetMap" vuelve a mostrarse (estaba apagada).
 const META_STYLE_URL = 'https://external.xx.fbcdn.net/maps/vt/style/canterbury_1_0/';
+/* v1.4.78: estilo DIVERTIDO solo para los mapas de mandados (Voyager de
+   CARTO, vectorial y colorido: calles en tonos pastel, parques verdes y
+   agua azul clara; verificado 2026-11-26: el style.json, el sprite y los
+   glifos cargan sin autenticación y con CORS abierto). Los mapas de
+   viajes siguen con el estilo Meta de siempre. Si Voyager no carga, el
+   respaldo es el estilo Meta y luego OSM ráster (nunca un mapa en blanco). */
+const FUN_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const LIGHT_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 function rasterStyle(tiles){
@@ -950,11 +974,13 @@ function pickNorth(){ if(pickMap) pickMap.easeTo({ bearing: 0, duration: 400 });
 function removePickMapControls(map){
   if(map && map._pickCtl){ try { map._pickCtl.remove(); } catch(e){} map._pickCtl = null; }
 }
-function makeMap(id, dark){
+function makeMap(id, dark, fun){
   // Mapa claro fijo estilo Apple Maps en toda la app, estilo vectorial de
   // Meta. Sin opciones de híbrido/satélite. El parámetro dark se ignora.
+  // fun=true (v1.4.78): mapas de mandados con el estilo colorido Voyager
+  // de CARTO; si no carga, el respaldo es el estilo Meta y luego OSM ráster.
   const m = new maplibregl.Map({
-    container: id, style: META_STYLE_URL,
+    container: id, style: fun ? FUN_STYLE_URL : META_STYLE_URL,
     center: [SF.lng, SF.lat], zoom: 15,
     touchZoomRotate: true, dragRotate: true, pitchWithRotate: false,
     attributionControl: { compact: true, customAttribution: '© OpenStreetMap' }, maxZoom: 20
@@ -962,16 +988,27 @@ function makeMap(id, dark){
   // Sin NavigationControl cuadrado: los controles propios van por vista.
   m._routes = {};
   m._fellBack = false;
+  m._styleStage = fun ? 'fun' : 'meta';
+  m._styleKind = fun ? 'fun' : 'meta';
   let tileErrs = 0;
+  function reapplyRoutes(){
+    const routes = m._routes || {};
+    for(const rid in routes){ const r = routes[rid]; removeRouteLine(m, rid); setRouteLine(m, rid, r.coords, r.color, r.width); }
+    if(m._placeLabelsWanted) drawPlaceLabels(m);
+  }
   function fallBack(){
+    if(m._styleStage === 'fun'){
+      // Voyager no cargó (red, estilo caído): bajar al estilo Meta de
+      // siempre y volver a pintar la ruta cuando cargue.
+      m._styleStage = 'meta'; m._styleKind = 'meta'; tileErrs = 0;
+      m.setStyle(META_STYLE_URL);
+      m.once('style.load', reapplyRoutes);
+      return;
+    }
     if(m._fellBack) return;
     m._fellBack = true;
-    const routes = m._routes || {};
     m.setStyle(rasterStyle(LIGHT_TILES));
-    m.once('style.load', ()=>{
-      for(const rid in routes){ const r = routes[rid]; setRouteLine(m, rid, r.coords, r.color, r.width); }
-      if(m._placeLabelsWanted) drawPlaceLabels(m);
-    });
+    m.once('style.load', reapplyRoutes);
   }
   m._fallBack = fallBack;
   m.on('error', (e)=>{
@@ -1076,16 +1113,38 @@ async function estimateKm(a, b){
 function setRouteLine(map, id, coords, color, width){
   map._routes = map._routes || {};
   map._routes[id] = { coords, color, width };
-  if(!map.getSource(id)){
-    map.addSource(id, { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
-    map.addLayer({ id: id, type: 'line', source: id, paint: { 'line-color': color, 'line-width': width || 5, 'line-opacity': 0.9 } });
-  } else {
-    map.getSource(id).setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
-  }
+  // v1.4.78: si el estilo aún no cargó (cambio de estilo en vivo), el
+  // addSource tira error: la ruta queda guardada en _routes y se repinta
+  // en style.load (ver reapplyRoutes en makeMap / setLiveMapStyle).
+  try {
+    if(!map.getSource(id)){
+      map.addSource(id, { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
+      map.addLayer({ id: id, type: 'line', source: id, paint: { 'line-color': color, 'line-width': width || 5, 'line-opacity': 0.9 } });
+    } else {
+      map.getSource(id).setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
+    }
+  } catch(e){}
 }
 function removeRouteLine(map, id){
-  if(map.getLayer(id)) map.removeLayer(id);
-  if(map.getSource(id)) map.removeSource(id);
+  try { if(map.getLayer(id)) map.removeLayer(id); } catch(e){}
+  try { if(map.getSource(id)) map.removeSource(id); } catch(e){}
+}
+/* v1.4.78: el mapa en vivo es UNO solo y se reusa entre viajes y
+   mandados: al abrir un mandado se cambia al estilo divertido (Voyager)
+   y al abrir un viaje se vuelve al estilo Meta. setStyle resetea las
+   capas: la ruta se vuelve a pintar en style.load desde _routes (los
+   marcadores HTML sobreviven al cambio). */
+function setLiveMapStyle(fun){
+  if(!liveMap) return;
+  const want = fun ? 'fun' : 'meta';
+  if(liveMap._styleKind === want) return;
+  liveMap._styleKind = want;
+  liveMap.setStyle(fun ? FUN_STYLE_URL : META_STYLE_URL);
+  liveMap.once('style.load', ()=>{
+    declutterLiveMap(liveMap);
+    const routes = liveMap._routes || {};
+    for(const rid in routes){ const r = routes[rid]; removeRouteLine(liveMap, rid); setRouteLine(liveMap, rid, r.coords, r.color, r.width); }
+  });
 }
 function fitPoints(map, pts, pad){
   if(!pts.length) return;
@@ -2333,7 +2392,7 @@ function openPick(which, ret, startPos){
   updatePickZone();
   setTimeout(async ()=>{
     if(pickMap){ removePickMapControls(pickMap); pickMap.remove(); pickMap = null; }
-    pickMap = makeMap('pick-map', false);
+    pickMap = makeMap('pick-map', false, pickReturn==='mandados'); // v1.4.78: el selector de punto de un mandado usa el mapa divertido
     addPickMapControls(pickMap);
     pickMap.on('load', async ()=>{
       if(startPos){
@@ -2517,6 +2576,15 @@ function priceSheetHtml(kind){
     extra = '<div style="background:#14532d;color:#fff;border-radius:12px;padding:12px;display:flex;justify-content:space-between;margin-top:8px"><span>Distancia estimada · '+md.km.toFixed(1)+' km</span><span>Tiempo estimado · ≈ '+md.eta+' min</span></div>'
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
   }
+  // v1.4.78: "Quiero un mandado" — cuánto dinero lleva el chofer para
+  // comprar: $150 por defecto, pasos de $50, mínimo $100, sin máximo.
+  // Enviar NO toca esto (su pago del pedido sigue en su paso 3).
+  let carryHtml = '';
+  if(!isTrip && md.kind==='quiero'){
+    carryHtml = '<div style="font-weight:700;margin-top:10px">¿Cuánto dinero lleva el chofer para comprar?</div>'
+      + '<div class="stepper"><button class="pm" onclick="mdCarryStep(-50)">−</button><span class="val" id="md-carry-val">'+fmt$(Number(md.carryAmount)||150)+'</span><button class="pm" onclick="mdCarryStep(50)">+</button></div>'
+      + '<p class="muted center mt">El chofer compra con ese dinero y te trae el cambio. Mínimo $100, de $50 en $50.</p>';
+  }
   // v1.4.67: usar el viaje gratis (solo viajes, solo si el pasajero tiene
   // saldo). Al prenderlo, la nota de pago dice la diferencia que paga.
   let freeHtml = '';
@@ -2534,13 +2602,14 @@ function priceSheetHtml(kind){
   // precio no había forma de volver (reporte del usuario 21:58). Vuelve
   // al paso anterior sin borrar nada (origen, destino, precio y personas
   // se quedan en wiz/md). En mandados el paso anterior depende del flujo:
-  // Quiero está en el paso 5 (vuelve al 4) y Enviar en el 4 (vuelve al 3),
+  // Quiero está en el paso 4 (vuelve al 3) y Enviar en el 4 (vuelve al 3),
   // por eso mdBack(md.step-1).
   const backBtn = '<button class="backpill" style="margin:0 0 6px" onclick="'+(isTrip ? 'wiz.step=3;renderViajes()' : 'mdBack(md.step-1)')+'">‹ Regresar</button>';
   return backBtn
     + '<b>'+(isTrip ? 'Tu precio' : 'Precio y publicar')+'</b>'
     + (!isTrip ? mdPublishSummaryHtml() : '')
     + extra
+    + carryHtml
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-weight:700">Tu precio</span><button class="sugg-pill" onclick="priceSetSuggested(\''+kind+'\')">Sugerido: '+fmt$(sugg)+'</button></div>'
     + '<div class="stepper"><button class="pm" onclick="priceStep(\''+kind+'\',-5)">−</button><span class="val" id="price-val">'+fmt$(st.price)+'</span><button class="pm" onclick="priceStep(\''+kind+'\',5)">+</button></div>'
     + (isTrip ? '<p class="muted center mt">Tú pones el precio, de $5 en $5. El conductor lo acepta o te ofrece el suyo.</p>' : '')
@@ -2567,6 +2636,9 @@ function mdPublishSummaryHtml(){
     const stops = (md.stops||[]).map(s=>s.zone||s.detail||'').filter(Boolean);
     rows.push(['Se recoge en', esc(stops.length ? stops.join(' · ') : 'Varios lados')]);
     rows.push(['Se entrega', esc('Tu punto' + (md.destRef ? ' · '+md.destRef : ''))]);
+    // v1.4.78: el dinero que lleva el chofer para comprar (se actualiza
+    // en vivo al mover el stepper, id md-sum-carry).
+    rows.push(['Dinero para comprar', 'Lleva <span id="md-sum-carry">'+fmt$(Number(md.carryAmount)||150)+'</span> para comprar']);
   } else {
     rows.push(['Se recoge', esc('Donde estás tú' + (md.pickupRef ? ' · '+md.pickupRef : ''))]);
     rows.push(['Se entrega', esc('Punto de WhatsApp' + (md.dest && md.dest.lat!=null ? ' ('+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+')' : ''))]);
@@ -2585,11 +2657,18 @@ function mdSummaryLine(){
   }
   return (md.description||'Mandado') + ' · se recoge donde estás tú';
 }
+function mdCarryStep(d){
+  // v1.4.78: el dinero que lleva el chofer para comprar en "Quiero un
+  // mandado": $150 por defecto, pasos de $50, mínimo $100, sin máximo.
+  md.carryAmount = Math.max(100, (Number(md.carryAmount)||150) + d);
+  const v = document.getElementById('md-carry-val'); if(v) v.textContent = fmt$(md.carryAmount);
+  const s = document.getElementById('md-sum-carry'); if(s) s.textContent = fmt$(md.carryAmount);
+}
 function priceStep(kind, d){
   const st = kind==='viaje' ? wiz : md;
   // v1.4.48: el piso del stepper es el mínimo por personas en viajes
-  // (1=$20, 2=$25, 3=$30); en mandados sigue $20.
-  const floor = kind==='viaje' ? minForPax(st.pax) : MIN_TRIP;
+  // (1=$20, 2=$25, 3=$30); en mandados es $30 (v1.4.78).
+  const floor = kind==='viaje' ? minForPax(st.pax) : MIN_MANDADO;
   st.price = Math.max(floor, st.price + d);
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
   const sp = document.getElementById('md-sum-price'); if(sp) sp.textContent = fmt$(st.price);
@@ -2947,7 +3026,7 @@ function stageLabel(r){
   // Etiqueta corta de etapa, según el tipo (app real: en mandado "en_camino"
   // es "Va a recoger" y "en_viaje" es "En camino a entregar").
   if(r.kind==='mandado'){
-    return { confirmado:'Confirmado', en_camino:'Va a recoger', llego:'Llegó', recogido:'Recogido', en_viaje:'En camino a entregar', entregado:'Entregado' }[r.trip_stage] || r.trip_stage;
+    return { confirmado:'Confirmado', en_camino:'Va a recoger', llego:'Llegó', recogido:'Recogido', comprado:'Comprado', en_viaje:'En camino a entregar', entregado:'Entregado' }[r.trip_stage] || r.trip_stage;
   }
   return STAGE_LABEL[r.trip_stage] || r.trip_stage;
 }
@@ -2957,7 +3036,7 @@ function stageLabel(r){
    vuelta al punto de recogida — ahí estaba la línea "cortada" (v1.4.43). */
 function liveHeadingToDest(r){
   if(r.kind==='viaje') return r.trip_stage==='en_viaje' || r.trip_stage==='finalizado';
-  return ['recogido','en_viaje','entregado'].includes(r.trip_stage||'');
+  return ['recogido','comprado','en_viaje','entregado'].includes(r.trip_stage||'');
 }
 /* Paradas intermedias de un mandado "Varios lados" (stops_json): la
    primera es el origen (ya es la recogida), las demás se visitan en orden
@@ -3035,6 +3114,13 @@ function ensureLiveRoute(){
     }
   }).catch(()=>{});
 }
+function isQuieroMandado(r){
+  // "Quiero un mandado" (el chofer compra) vs "Enviar un mandado" (el
+  // paquete ya existe): Enviar SIEMPRE trae teléfono del destinatario
+  // (obligatorio ahí); Quiero nunca lo trae. Sirve también para los
+  // mandados viejos, que siguen la misma regla.
+  return !!r && r.kind==='mandado' && !r.recipient_phone;
+}
 function nextStage(r){
   // Flujo del chofer (v1.4.60): Aceptar deja el servicio automáticamente
   // "en camino" (sin botón). Viaje: "Ya estoy afuera" es SOLO la llegada
@@ -3042,7 +3128,9 @@ function nextStage(r){
   // recorrido" (en_viaje: ahí empieza el viaje y se marca
   // trip_started_at) → "Llegué a destino". Mandado: "Ya estoy afuera
   // para recoger el paquete" → "Ya voy en camino" (ya lo recogió, va a
-  // entregarlo) → "Entregado".
+  // entregarlo) → "Entregado". En "Quiero un mandado" (v1.4.78, ADD 3)
+  // hay un paso extra entre llego y en_viaje: "Ya compré" (comprado),
+  // donde se ofrece mandar la foto del ticket por el chat (opcional).
   // Compatibilidad con servicios en curso: el 'llego' viejo de un viaje
   // ya era la llegada (su botón ahora es "Iniciar recorrido" hacia
   // en_viaje); el 'recogido' viejo de un mandado equivale a en_viaje
@@ -3054,19 +3142,20 @@ function nextStage(r){
     return null;
   }
   if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino') return 'llego';
-  if(r.trip_stage==='llego') return 'en_viaje';
+  if(r.trip_stage==='llego') return isQuieroMandado(r) ? 'comprado' : 'en_viaje';
+  if(r.trip_stage==='comprado') return 'en_viaje';
   if(r.trip_stage==='recogido' || r.trip_stage==='en_viaje') return 'entregado';
   return null;
 }
 function stageButtonLabel(r){
   const n = nextStage(r); if(!n) return '';
   if(r.kind==='viaje') return { llego:'Ya estoy afuera', en_viaje:'Iniciar recorrido', finalizado:'Llegué a destino' }[n] || '';
-  return { llego:'Ya estoy afuera para recoger el paquete', en_viaje:'Ya voy en camino', entregado:'Entregado' }[n] || '';
+  return { llego:'Ya estoy afuera para recoger el paquete', comprado:'Ya compré', en_viaje:'Ya voy en camino', entregado:'Entregado' }[n] || '';
 }
 function passengerStageTitle(r){
   // Titular en frase completa que ve el PASAJERO según la etapa (app real).
   if(r.kind==='mandado'){
-    return { confirmado:'Tu mandado está confirmado', en_camino:'El conductor va a recoger tu encargo', llego:'El conductor llegó al punto de recogida', recogido:'Tu encargo ya fue recogido', en_viaje:'Tu encargo va en camino a su destino', entregado:'Tu encargo fue entregado' }[r.trip_stage] || 'Tu mandado está confirmado';
+    return { confirmado:'Tu mandado está confirmado', en_camino:'El conductor va a recoger tu encargo', llego:'El conductor llegó al punto de recogida', recogido:'Tu encargo ya fue recogido', comprado:'Tu encargo ya fue comprado', en_viaje:'Tu encargo va en camino a su destino', entregado:'Tu encargo fue entregado' }[r.trip_stage] || 'Tu mandado está confirmado';
   }
   return { confirmado:'Tu viaje está confirmado', en_camino:'Tu mototaxi va en camino', llego:'Tu mototaxi llegó · sal a su encuentro', en_viaje:'Viaje en curso · vas rumbo a tu destino', finalizado:'Llegaste a tu destino' }[r.trip_stage] || 'Tu viaje está confirmado';
 }
@@ -3106,13 +3195,19 @@ async function openLiveTrip(requestId, asDriver, tries){
     toast(e.message); if(liveAsDriver){ go('chofer'); driverTab('recibir'); } return;
   }
   liveFollow = true; liveHeading = null; liveRouteCoords = null; liveRouteFallback = false; liveOsrmRetryTick = 0; liveTraveledPts = [];
+  // v1.4.78: chat del servicio aceptado (botón flotante en el mapa en vivo).
+  chatSeeded = false; chatCloseSheet(true); chatShowBtn();
   acquireWakeLock();
   if(!liveMap){
-    liveMap = makeMap('live-map', true);
+    liveMap = makeMap('live-map', true, liveReq.kind==='mandado');
     declutterLiveMap(liveMap);
     liveMap.on('dragstart', liveFollowOff);
     liveMap.on('zoomstart', liveFollowOff);
     liveMap.on('rotatestart', liveFollowOff);
+  } else {
+    // v1.4.78: el mapa en vivo se reusa entre servicios: mandado = estilo
+    // divertido (Voyager), viaje = estilo Meta de siempre.
+    setLiveMapStyle(liveReq.kind==='mandado');
   }
   liveMap.resize();
   try { await renderLiveMap(); } catch(e){ /* el mapa igual abre: las tiras se dibujan abajo */ }
@@ -3232,6 +3327,7 @@ function applyHeading(heading){
 }
 function renderLiveStrips(){
   const r = liveReq; if(!r) return;
+  chatShowBtn(); // v1.4.78: el botón 💬 solo aparece con el servicio aceptado
   const top = $('#live-top'), bot = $('#live-bottom'), pill = $('#live-pill');
   const stage = stageLabel(r);
   const inTrip = liveHeadingToDest(r);
@@ -3278,7 +3374,7 @@ function renderLiveStrips(){
       + callBtn60
       + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
-      + (nxt ? '<button onclick="advanceLive(\''+nxt+'\')">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
+      + (nxt ? '<button onclick="'+(nxt==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt+'\')')+'">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>');
   } else {
     const dKm = (r.driver_lat && r.origin_lat) ? havKm(r.driver_lat, r.driver_lng, r.origin_lat, r.origin_lng) : null;
     const dKmDest = (r.driver_lat && r.dest_lat) ? havKm(r.driver_lat, r.driver_lng, r.dest_lat, r.dest_lng) : null;
@@ -3353,6 +3449,7 @@ async function cancelLiveRequest(rid){
 }
 function exitLive(){
   releaseWakeLock();
+  chatSeeded = false; chatCloseSheet(true); // v1.4.78: cierra la hoja del chat y su sondeo
   if(livePoll) { clearInterval(livePoll); livePoll = null; }
   // v1.4.65: salir del mapa en vivo ya NO apaga el GPS del chofer —
   // sync lo apaga solo si ya no hay servicio activo; si el viaje sigue,
@@ -3362,6 +3459,39 @@ function exitLive(){
   liveLocQueue = [];
   liveSetOffline(false);
   if(liveAsDriver) go('chofer'); else go('viajes');
+}
+/* v1.4.78 (ADD 3): foto del ticket al marcar "Ya compré" en un "Quiero
+   un mandado". Se ofrece ANTES de avanzar: cámara o galería (misma baja
+   a 800 px JPEG 0.75 que el chat) y la foto se manda por el chat para que
+   el pasajero vea cuánto se gastó. OPCIONAL: "Sin ticket" avanza igual —
+   en los mercados no siempre dan ticket y el chofer nunca debe quedarse
+   bloqueado por esto. Cerrar la hoja con la ✕ no avanza nada: el chofer
+   sigue en "llego" y puede tocar "Ya compré" de nuevo. */
+function askTicketPhoto(){
+  openDialog('<div class="flex" style="justify-content:space-between;align-items:center"><b>🧾 Foto del ticket</b><button class="x" onclick="closeDialog()">✕</button></div>'
+    + '<p class="muted mt">¿Ya compraste todo? Si te dieron ticket, mándale la foto al pasajero por el chat para que vea cuánto se gastó. Si no te dieron, no pasa nada.</p>'
+    + '<div class="btnrow"><button type="button" class="btn" onclick="document.getElementById(\'ticket-cam\').click()">📷 Tomar foto del ticket</button><button type="button" class="btn amber" onclick="document.getElementById(\'ticket-gal\').click()">🖼️ Subir de galería</button></div>'
+    + '<input type="file" id="ticket-cam" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="ticketPhotoChosen(this)">'
+    + '<input type="file" id="ticket-gal" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="ticketPhotoChosen(this)">'
+    + '<button class="btn ghost" style="margin-top:10px" onclick="closeDialog();advanceLive(\'comprado\')">Sin ticket · continuar</button>');
+}
+async function ticketPhotoChosen(input){
+  const f = input.files && input.files[0];
+  closeDialog();
+  if(!f){ advanceLive('comprado'); return; }
+  const img = new Image();
+  const url = URL.createObjectURL(f);
+  img.onload = async ()=>{
+    const max = 800, k = Math.min(1, max / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    try { await chatSend('', cv.toDataURL('image/jpeg', 0.75)); } catch(e){ toast('No se pudo mandar la foto del ticket, pero el mandado sigue.'); }
+    advanceLive('comprado');
+  };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); toast('No se pudo leer esa foto.'); advanceLive('comprado'); };
+  img.src = url;
 }
 async function advanceLive(stage){
   // v1.4.43: guardia contra doble toque — seis toques seguidos en el mismo
@@ -3730,6 +3860,8 @@ function startLivePolling(){
       liveSetOffline(false);
       const prevStage = liveReq.trip_stage, prevLat = liveReq.driver_lat, prevLng = liveReq.driver_lng;
       liveReq = r;
+      // v1.4.78: punto rojo del chat con la hoja cerrada (máx. 1 vez/5 s).
+      if(!chatOpen && Date.now()-chatBadgeLast > 5000){ chatBadgeLast = Date.now(); chatFetch(); }
       if(r.status==='finalizado'){
         releaseWakeLock();
         stopDriverGpsWatch(); // v1.4.65: el viaje terminó — se apaga directo (sync leería driverActiveTrip, que el sondeo global refresca cada 5 s y aún trae el viaje como activo)
@@ -3805,6 +3937,149 @@ function startLivePolling(){
   // a 5 s (con reportes del chofer cada 8 s) su mototaxi avanzaba a
   // saltos. Una sola fila por tick, sin fotos: el costo es mínimo.
   }, 2000);
+}
+
+/* ===== CHAT PASAJERO ⇄ CHOFER (v1.4.78) =====
+   Hoja inferior en el mapa en vivo de un servicio ACEPTADO (viaje o
+   mandado). El pasajero y el chofer se escriben; el chofer además puede
+   mandar foto de un producto (cámara o galería, mismo patrón verde/
+   naranja que el registro de chofer) cuando algo no está claro. Sin
+   acuses de lectura, sin push: con la hoja abierta se sondea cada 3 s;
+   con la hoja cerrada, el botón muestra un punto rojo cuando llega un
+   mensaje del otro lado (se revisa en el sondeo en vivo, máx. 1 vez/5 s).
+   La foto se baja a 800 px JPEG 0.75 antes de mandarse. */
+let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {};
+function chatMyRole(){ return liveAsDriver ? 'chofer' : 'pasajero'; }
+function chatShowBtn(){
+  const b = document.getElementById('live-chat-btn');
+  if(!b) return;
+  const show = !!liveReq && liveReq.status==='aceptado';
+  b.classList.toggle('hidden', !show);
+  if(!show) chatCloseSheet(true);
+  else if(!chatSeeded){ chatSeeded = true; chatSeed(); }
+}
+function chatSetDot(on){
+  const b = document.getElementById('live-chat-btn');
+  if(!b) return;
+  const d = b.querySelector('.dot'); if(d) d.remove();
+  if(on) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+}
+async function chatSeed(){
+  // Al entrar al mapa en vivo, marcar hasta dónde ya hay mensajes para
+  // que el punto rojo solo avise de los que lleguen después.
+  if(!liveReq) return;
+  try {
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0');
+    chatLastId = (j.messages||[]).reduce((m,x)=>Math.max(m,x.id), 0);
+  } catch(e){}
+}
+function chatTime(ts){
+  const d = new Date(String(ts||'').replace(' ', 'T') + 'Z');
+  return isNaN(d) ? '' : d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+}
+function chatMsgHtml(m){
+  const mine = m.sender_role === chatMyRole();
+  const who = mine ? 'Tú' : (m.sender_name || (m.sender_role==='chofer' ? 'Chofer' : 'Pasajero'));
+  // v1.4.78 (ADD 3): la foto (ticket incluido) se toca para verla grande.
+  if(m.photo) chatPhotos[m.id] = m.photo;
+  let body = m.kind==='foto' && m.photo ? '<img src="'+m.photo+'" onclick="chatZoomPhoto('+m.id+')" style="cursor:zoom-in">' : esc(m.text||'');
+  if(m.kind==='foto' && m.text) body += esc(m.text);
+  return '<div class="chatmsg '+(mine?'mine':'theirs')+'"><span class="who">'+esc(who)+' · '+chatTime(m.created_at)+'</span>'+body+'</div>';
+}
+function chatZoomPhoto(id){
+  const p = chatPhotos[id];
+  if(!p) return;
+  openDialog('<div class="flex" style="justify-content:space-between;align-items:center"><b>🧾 Foto</b><button class="x" onclick="openChatSheet()">✕</button></div><img src="'+p+'" style="width:100%;border-radius:12px;margin-top:10px">');
+}
+function chatRenderList(list){
+  const el = document.getElementById('chat-msgs');
+  if(!el) return;
+  el.innerHTML = list.length ? list.map(chatMsgHtml).join('')
+    : '<p class="muted center">Aún no hay mensajes. Escríbele al '+(liveAsDriver?'pasajero':'chofer')+' si hay algún detalle con las compras.</p>';
+  el.scrollTop = el.scrollHeight;
+}
+async function chatFetch(){
+  if(!liveReq) return;
+  // Si el diálogo se cerró por otro lado, la hoja ya no está abierta.
+  if(chatOpen && document.getElementById('dialog').classList.contains('hidden')) chatCloseSheet(true);
+  try {
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId);
+    const msgs = j.messages||[];
+    if(!msgs.length) return;
+    chatLastId = Math.max(chatLastId, ...msgs.map(m=>m.id));
+    if(chatOpen){
+      chatList = chatList.concat(msgs);
+      chatRenderList(chatList);
+    } else if(msgs.some(m=>m.sender_role!==chatMyRole())){
+      chatSetDot(true);
+    }
+  } catch(e){}
+}
+function chatSheetHtml(){
+  const isDriver = liveAsDriver;
+  return '<div class="flex" style="justify-content:space-between;align-items:center"><b>💬 Chat con '+(isDriver?'el pasajero':'el chofer')+'</b><button class="x" onclick="chatCloseSheet()">✕</button></div>'
+    + '<p class="muted mt">Para cualquier detalle de las compras o del servicio.</p>'
+    + '<div class="chatmsgs" id="chat-msgs"></div>'
+    + (isDriver
+      ? '<div class="btnrow" style="margin-top:10px"><button type="button" class="btn small" onclick="document.getElementById(\'chat-cam\').click()">📷 Tomar foto</button><button type="button" class="btn amber small" onclick="document.getElementById(\'chat-gal\').click()">🖼️ Subir de galería</button></div>'
+        + '<input type="file" id="chat-cam" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
+        + '<input type="file" id="chat-gal" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
+      : '')
+    + '<div class="chatrow"><input id="chat-input" placeholder="Escribe un mensaje…" autocomplete="off" onkeydown="if(event.key===\'Enter\')chatSendText()"><button class="btn small" onclick="chatSendText()">Enviar</button></div>';
+}
+async function openChatSheet(){
+  if(!liveReq || liveReq.status!=='aceptado') return;
+  chatOpen = true; chatList = []; chatLastId = 0; chatSetDot(false);
+  openDialog(chatSheetHtml());
+  try {
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0');
+    chatList = j.messages||[];
+    chatLastId = chatList.length ? Math.max(...chatList.map(m=>m.id)) : 0;
+  } catch(e){}
+  chatRenderList(chatList);
+  if(chatTimer) clearInterval(chatTimer);
+  chatTimer = setInterval(chatFetch, 3000);
+  const inp = document.getElementById('chat-input'); if(inp) inp.focus();
+}
+function chatCloseSheet(silent){
+  chatOpen = false;
+  if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
+  if(!silent) closeDialog();
+}
+async function chatSend(text, photo){
+  if(chatSending || !liveReq) return;
+  chatSending = true;
+  try {
+    const j = await api('/api/chat/send', { token: store.token, request_id: liveReq.id, text: text||'', photo: photo||null });
+    chatList.push(j.message);
+    chatLastId = Math.max(chatLastId, j.message.id);
+    chatRenderList(chatList);
+    const inp = document.getElementById('chat-input'); if(inp){ inp.value=''; inp.focus(); }
+  } catch(e){ toast(e.message); }
+  chatSending = false;
+}
+function chatSendText(){
+  const inp = document.getElementById('chat-input');
+  const text = inp ? inp.value.trim() : '';
+  if(!text) return;
+  chatSend(text, null);
+}
+function chatSendPhoto(input){
+  const f = input.files && input.files[0];
+  if(!f || !liveReq) return;
+  const img = new Image();
+  const url = URL.createObjectURL(f);
+  img.onload = async ()=>{
+    const max = 800, k = Math.min(1, max / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    await chatSend('', cv.toDataURL('image/jpeg', 0.75));
+    input.value = '';
+  };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); toast('No se pudo leer esa foto.'); };
+  img.src = url;
 }
 /* GPS del chofer a nivel de app: se comparte desde cualquier pantalla mientras hay servicio activo */
 /* GPS del chofer desacoplado de la vista (v1.4.65): la causa del mapa
@@ -4450,7 +4725,7 @@ function showTaxiRun(idx){
 
 /* ===== MANDADOS — rediseño completo ===== */
 let md = null; // estado del flujo de mandado
-function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', recipientName:'', waDest:null, description:'', orderPay:'', orderAmount:'', km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
+function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', recipientName:'', waDest:null, description:'', orderPay:'', orderAmount:'', carryAmount:150, km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
 let mdMap = null, mdSearchLists = {};
 function mdVehicleHtml(){
   return '<label class="mt">¿En qué vehículo?</label>'
@@ -4458,13 +4733,36 @@ function mdVehicleHtml(){
     + '<button type="button" class="veh-opt '+(md.vehicle==='moto'?'sel':'')+'" onclick="md.vehicle=\'moto\';renderMandados()">🏍️ Moto</button></div>'
     + '<p class="muted mt">Para mandados sí puedes elegir moto de dos ruedas o mototaxi.</p>';
 }
-function mdStopSearchHtml(i){
+/* v1.4.78: tiendas fijas donde comprar, sin ubicación exacta — el chofer
+   solo necesita saber dónde comprar. "Abarrotes Castillejo" viene del
+   registro de lugares de Meta ("Abarrotes Castillejos", 16.87025,
+   -93.20678). "Farmacia del Súper Descuento" y "Bodega Aurrerá" NO están
+   en el registro: van al centro del pueblo (16.87137, -93.20652) como
+   punto APROXIMADO — el usuario debe confirmar su ubicación real. */
+const MD_PRESET_STORES = [
+  { name:'Abarrotes Castillejo', lat:16.87025, lng:-93.20678 },
+  { name:'Farmacia del Súper Descuento', lat:16.87137, lng:-93.20652, approx:true },
+  { name:'Bodega Aurrerá', lat:16.87137, lng:-93.20652, approx:true },
+];
+function mdChoosePresetStore(i, j){
+  const s = MD_PRESET_STORES[j]; if(!s) return;
+  md.stops[i].zone = s.name; md.stops[i].lat = s.lat; md.stops[i].lng = s.lng; md.stops[i].detail = '';
+  renderMandados();
+}
+function mdStopPlaceHtml(i){
   const st = md.stops[i];
-  return '<label class="mt">¿Dónde se compra?</label>'
+  const chosen = st.zone && st.lat!=null;
+  return '<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b>'
+    + '<div class="muted mt">¿Dónde se compra?</div>'
+    + '<div class="btnrow" style="margin-top:8px">'
+    + MD_PRESET_STORES.map((s,j)=>'<button type="button" class="pay-opt '+(st.zone===s.name?'sel':'')+'" onclick="mdChoosePresetStore('+i+','+j+')">'+esc(s.name)+'</button>').join('')
+    + '</div>'
+    + '<label class="mt">O escribe un lugar: Centro, Progreso, Madero…</label>'
     + '<input id="md-stop-q-'+i+'" placeholder="Escribe un lugar: Centro, Mercado, Progreso…" autocomplete="off" value="'+esc(st.zone||'')+'" oninput="mdStopSearch('+i+', this.value)">'
     + '<div id="md-stop-res-'+i+'"></div>'
-    + '<label class="mt">Calle o referencia (opcional)</label><input id="md-stop-ref-'+i+'" placeholder="Ej. junto a la farmacia" value="'+esc(st.ref||'')+'" oninput="md.stops['+i+'].ref=this.value">'
-    + (st.lat!=null ? '<p class="muted mt">📍 Punto marcado: '+st.lat.toFixed(5)+', '+st.lng.toFixed(5)+(st.zone ? ' · cerca de '+esc(st.zone) : '')+'</p>' : '');
+    + (chosen ? '<p class="muted mt">✓ Se compra en: <b>'+esc(st.zone)+'</b></p>' : '')
+    + ((!md.singlePlace) && md.stops.length>2 ? '<button class="btn ghost small" onclick="md.stops.splice('+i+',1);renderMandados()">Quitar</button>' : '')
+    + '</div>';
 }
 function mdStopSearch(i, q){
   const box = document.getElementById('md-stop-res-'+i); if(!box) return;
@@ -4493,7 +4791,7 @@ function drawMdMap(){
   const first = md.stops[0], dest = md.dest;
   if(!first || first.lat==null || !dest || dest.lat==null) return;
   if(mdMap){ mdMap.remove(); mdMap = null; }
-  mdMap = makeMap('md-map', false);
+  mdMap = makeMap('md-map', false, true); // v1.4.78: el mapa de mandados es el divertido (Voyager)
   mdMap.on('load', async ()=>{
     new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([first.lng, first.lat]).addTo(mdMap);
     new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([dest.lng, dest.lat]).addTo(mdMap);
@@ -4559,7 +4857,12 @@ function startMandado(kind){
     openRegistro('pasajero','mandados');
     return;
   }
-  md.kind = kind; md.step = 1; renderMandados();
+  md.kind = kind; md.step = 1;
+  // v1.4.78: "Quiero un mandado" lleva dinero para comprar: $150 por
+  // defecto (se respeta lo ya elegido si es ≥$100). Enviar NO toca esto:
+  // su pago del pedido sigue en su paso 3.
+  if(kind==='quiero' && !(Number(md.carryAmount)>=100)) md.carryAmount = 150;
+  renderMandados();
 }
 function mdBack(step){ md.step = step; renderMandados(); }
 function mdItemsHtml(){
@@ -4570,36 +4873,30 @@ function renderMandadoQuiero(){
   const page = $('#mandados-page');
   if(md.step===1){
     page.innerHTML = backPill('Regresar', "mdBack(0)")
-      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 1 de 5 · Escribe tu lista de cosas.</p>'
+      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 1 de 4 · Escribe tu lista de cosas.</p>'
       + mdVehicleHtml()
       + '<div class="card white"><b>¿Qué quieres que te traigan?</b><p class="muted mt">Una cosa por renglón: la mototaxi compra y te trae todo a tu ubicación.</p>'
       + mdItemsHtml() + '</div>'
       + '<div class="err hidden" id="md-err1">Escribe al menos una cosa que quieres que te traigan.</div>'
       + '<button class="btn" onclick="if(!md.items.some(i=>i.trim())){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(2)">Continuar</button>';
   } else if(md.step===2){
+    // v1.4.78: los pasos 2 y 3 son UNO solo: en la misma pantalla se
+    // elige si es un solo lugar o varios lados Y dónde se compra en cada
+    // parada, sin ubicación exacta (el chofer solo necesita saber dónde
+    // comprar). Sin pegar ubicación de WhatsApp ni marcar punto en mapa.
+    const multi = !md.singlePlace;
     page.innerHTML = backPill('Regresar', "mdBack(1)")
-      + '<h2>¿De dónde son las compras?</h2><p class="muted mt">Paso 2 de 5 · ¿Todo se compra en un solo lugar o en varios lados?</p>'
+      + '<h2>¿Dónde se compra?</h2><p class="muted mt">Paso 2 de 4 · Indícale al chofer dónde tiene que comprar tu mandado.</p>'
       + '<button class="bigopt" style="height:88px;'+(md.singlePlace?'background:#14532d;color:#fff;border-color:#14532d':'')+'" onclick="md.singlePlace=true;md.stops=md.stops.slice(0,1);renderMandados()"><span class="row"><span style="font-size:28px">📍</span><span class="tx"><b>Un solo lugar</b><div class="'+(md.singlePlace?'':'muted')+'">Todas las compras son en el mismo lugar: una sola recogida.</div></span></span></button>'
       + '<button class="bigopt" style="height:88px;'+(!md.singlePlace?'background:#14532d;color:#fff;border-color:#14532d':'')+'" onclick="md.singlePlace=false;if(md.stops.length<2)md.stops.push({zone:\'\',detail:\'\',ref:\'\',lat:null,lng:null});renderMandados()"><span class="row"><span style="font-size:28px">🗺️</span><span class="tx"><b>Varios lados</b><div class="'+(!md.singlePlace?'':'muted')+'">Las compras son en lugares distintos: una parada por lugar. Cada parada extra suma $10 al precio.</div></span></span></button>'
-      + '<button class="btn" onclick="mdBack(3)">Continuar</button>';
-  } else if(md.step===3){
-    const multi = !md.singlePlace;
-    page.innerHTML = backPill('Regresar', "mdBack(2)")
-      + '<h2>'+(multi?'¿En qué lugares se compra?':'¿Dónde está lo que quieres?')+'</h2>'
-      + '<p class="muted mt">Paso 3 de 5 · '+(multi?'Una parada por lugar, en el orden de la ruta.':'El lugar donde la mototaxi recoge tus cosas.')+'</p>'
-      + md.stops.map((st,i)=>'<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b>'
-        + mdStopSearchHtml(i)
-        + (multi && md.stops.length>2 ? '<button class="btn ghost small" onclick="md.stops.splice('+i+',1);renderMandados()">Quitar</button>' : '')
-        + '</div>').join('')
+      + md.stops.map((st,i)=>mdStopPlaceHtml(i)).join('')
       + (multi ? '<button class="btn ghost" onclick="md.stops.push({zone:\'\',detail:\'\',ref:\'\',lat:null,lng:null});renderMandados()">+ Agregar otro lugar (+$10)</button><p class="muted center mt">Cada parada extra suma $10 al precio sugerido: se ve desglosado en el paso del precio.</p>' : '')
-      + (!multi ? '<div class="dashbox"><b>¿Ya te mandaron la ubicación por WhatsApp?</b><p class="muted mt">Pega el enlace o las coordenadas y se marca el punto de recogida.</p>'
-        + '<input id="md-wa-0" placeholder="Enlace de Google Maps o coordenadas" value="'+esc(md.stops[0].detail||'')+'"><button class="btn ghost small" onclick="mdResolveWa(0)">Marcar como punto de recogida</button></div>' : '')
-      + '<div class="err hidden" id="md-err3">Marca el lugar de cada parada: escribe el lugar y elige una coincidencia, o pega su ubicación.</div>'
-      + '<button class="btn" onclick="mdResolveStops();if(md.stops.some(x=>x.lat==null)){document.getElementById(\'md-err3\').classList.remove(\'hidden\');return;}mdBack(4)">Continuar</button>';
-  } else if(md.step===4){
+      + '<div class="err hidden" id="md-err2">Elige dónde se compra en cada parada: toca una tienda o escribe el lugar y elige una coincidencia.</div>'
+      + '<button class="btn" onclick="mdResolveStops();if(md.stops.some(x=>x.lat==null)){document.getElementById(\'md-err2\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
+  } else if(md.step===3){
     const dz = md.dest ? nearestZoneName(md.dest) : null;
-    page.innerHTML = backPill('Regresar', "mdBack(3)")
-      + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 4 de 5 · Marca tu punto de entrega en el mapa.</p>'
+    page.innerHTML = backPill('Regresar', "mdBack(2)")
+      + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 3 de 4 · Marca tu punto de entrega en el mapa.</p>'
       + '<p class="muted mt">La entrega es en el punto que marques en el mapa: ahí te llevan tus cosas. El mapa abre en tu ubicación actual para que dejes el pin justo donde te lo entregan.</p>'
       + (md.dest ? '<div class="card white" style="border:2px solid #16a34a;background:#f0fdf4"><b>📍 Punto de entrega marcado</b><div class="muted mt">'+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(dz ? ' · cerca de '+esc(dz) : '')+'</div></div>'
         + '<button class="btn ghost" style="border-color:var(--green);color:var(--green)" onclick="openPick(\'mdest\',\'mandados\')">Cambiar mi punto</button>'
@@ -4608,7 +4905,7 @@ function renderMandadoQuiero(){
       + '<label class="mt">Referencia extra (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de portón verde, junto a la tienda" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
       + '<div class="err hidden" id="md-err4">Marca tu punto para seguir: toca «Marcar mi punto», ajusta el pin donde te lo entregan y toca «Confirmar este punto».</div>'
       + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null){document.getElementById(\'md-err4\').classList.remove(\'hidden\');return;}mdComputePrice()">Continuar</button>';
-  } else if(md.step===5){
+  } else if(md.step===4){
     // Precio (app real): mapa a pantalla completa con ruta + pastilla y
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
@@ -4624,21 +4921,11 @@ function mdStopEditor(i){
   return '<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b><div class="muted mt">Lugar: <b>'+esc(s.zone)+'</b>'+(s.lat!=null?' · 📍 punto marcado':'')+'</div>'
     + '<button class="btn ghost small" onclick="openPick(\'morigin\',\'mandados\');mdPickStop='+i+'">🔍 Buscar lugar / marcar punto en el mapa</button></div>';
 }
-async function mdResolveWa(i){
-  const txt = $('#md-wa-'+i).value.trim();
-  if(!txt) return toast('Pega el enlace o las coordenadas.');
-  try {
-    const j = await api('/api/resolve-location', { text: txt });
-    md.stops[i].lat = j.lat; md.stops[i].lng = j.lng; md.stops[i].detail = txt;
-    toast('Ubicación marcada en el mapa.');
-    renderMandados();
-  } catch(e){ toast(e.message); }
-}
 async function mdComputePrice(){
   mdResolveStops();
   const first = md.stops[0];
-  if(first.lat==null){ toast('Marca el punto de recogida de la primera parada.'); return; }
-  for(const st of md.stops){ if(st.lat==null){ toast('Marca el punto de cada parada.'); return; } }
+  if(first.lat==null){ toast('Elige dónde se compra en la primera parada.'); return; }
+  for(const st of md.stops){ if(st.lat==null){ toast('Elige dónde se compra en cada parada.'); return; } }
   // La entrega es el punto confirmado en el mapa, nunca el GPS ni Centro.
   const dest = md.dest;
   if(!dest || dest.lat==null){ toast('Marca tu punto de entrega en el mapa.'); return; }
@@ -4646,9 +4933,9 @@ async function mdComputePrice(){
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
   const extra = (md.stops.length-1) * MANDADO_EXTRA_STOP;
-  md.suggested = Math.max(MIN_TRIP, suggestedPrice(md.km) + extra);
+  md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km) + extra);
   md.price = md.suggested;
-  mdBack(5);
+  mdBack(4);
 }
 function renderMandadoEnviar(){
   const page = $('#mandados-page');
@@ -4794,7 +5081,7 @@ async function mdComputeEnviarPrice(){
   const est = await estimateKm(origin, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
-  md.suggested = suggestedPrice(md.km);
+  md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km)); // v1.4.78: Enviar también es mandado: mínimo $30
   md.price = md.suggested;
   mdBack(4);
 }
@@ -4815,7 +5102,7 @@ async function publishMandado(){
   // Sin punto de entrega marcado no se publica nada (nunca se inventa Centro).
   if(!md.dest || md.dest.lat==null){ toast('Marca el punto de entrega en el mapa.'); return; }
   const price = md.price;
-  if(!price || price < MIN_TRIP || price > 1000 || price % 5 !== 0){ toast('El precio debe ir de cinco en cinco: $20, $25, $30, $35…'); return; }
+  if(!price || price < MIN_MANDADO || price > 1000 || price % 5 !== 0){ toast('El precio debe ir de cinco en cinco: $30, $35, $40…'); return; }
   const pay = md.payment;
   try {
     let body;
@@ -4829,7 +5116,10 @@ async function publishMandado(){
         description: md.items.filter(i=>i.trim()).join(' · '),
         items: md.items.filter(i=>i.trim()),
         stops: md.stops.map(s=>({ zone:s.zone, lat:s.lat, lng:s.lng, detail:s.detail||'' })),
-        extra_stops: Math.max(0, md.stops.length-1) };
+        extra_stops: Math.max(0, md.stops.length-1),
+        // v1.4.78: el chofer lleva dinero para comprar ($150 por defecto,
+        // pasos de $50, mínimo $100): el chofer lo ve como "Lleva $X".
+        order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150 };
     } else {
       const dest = md.dest;
       body = { passenger_id: myPassenger.id, kind:'mandado', type:'enviar',
@@ -5188,6 +5478,13 @@ function mandadoDriverSummaryHtml(r){
   // viejas, sin esos campos, no muestran nada y la tarjeta no se rompe.
   if(!r || r.kind!=='mandado') return '';
   const rows = [];
+  // v1.4.78: dónde se compra (tienda o lugar por parada), para que el
+  // chofer sepa dónde comprar sin ubicación exacta.
+  try {
+    const stops = JSON.parse(r.stops_json||'[]');
+    const names = stops.map(s=>s && (s.zone||s.detail||'')).filter(Boolean);
+    if(names.length) rows.push(['Se compra en', esc(names.join(' · '))]);
+  } catch(e){}
   if(r.recipient_name||r.recipient_phone) rows.push(['Recibe', esc(r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')]);
   if(r.order_payment==='pagado') rows.push(['Pedido', 'Ya pagado']);
   else if(r.order_payment==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo']);
@@ -5548,10 +5845,10 @@ function inboxDetailHtml(r, sub, atLimit){
     // actual del pasajero: la contraoferta vieja y rechazada ($30) no
     // puede aparecer cuando el pasajero ya subió a $35. El borrador
     // arranca en el precio del pasajero (o en el mínimo por personas).
-    driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP);
+    driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_MANDADO);
     h += '<div class="card" style="background:#fffbeb;border:1px solid #f59e0b"><b>Tu contraoferta</b>'
       + '<div class="stepper"><button class="pm" onclick="driverCounterStep(-5)">−</button><span class="val" id="dc-val">'+fmt$(driverCounter.price)+'</span><button class="pm" onclick="driverCounterStep(5)">+</button></div>'
-      + '<p class="muted center mt">De $5 en $5, mínimo '+fmt$(r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP)+'.</p>'
+      + '<p class="muted center mt">De $5 en $5, mínimo '+fmt$(r.kind==='viaje'?minForPax(r.passenger_count):MIN_MANDADO)+'.</p>'
       + '<div class="btnrow"><button class="btn amber" onclick="driverRespond('+r.id+', \'contraoferta\', driverCounter.price)">Enviar contraoferta</button><button class="btn ghost" onclick="driverCounter=null;renderDriverInbox()">Volver</button></div></div>';
   } else {
     h += '<div class="btnrow"><button class="btn" onclick="driverRespond('+r.id+', \'acepta\', '+r.price+')">Aceptar '+fmt$(r.price)+'</button>'
@@ -5606,9 +5903,9 @@ function closeInboxOverlay(){
 function driverCounterStep(d){
   if(!driverCounter) return;
   // v1.4.48: el piso es el mínimo por personas del viaje (1=$20, 2=$25,
-  // 3=$30); en mandados sigue $20.
+  // 3=$30); en mandados es $30 (v1.4.78).
   const rr = (inboxLastList||[]).find(x=>x.id===driverCounter.rid);
-  const floor = rr && rr.kind==='viaje' ? minForPax(rr.passenger_count) : MIN_TRIP;
+  const floor = rr && rr.kind==='viaje' ? minForPax(rr.passenger_count) : MIN_MANDADO;
   driverCounter.price = Math.max(floor, driverCounter.price + d);
   const v = document.getElementById('dc-val'); if(v) v.textContent = fmt$(driverCounter.price);
 }
