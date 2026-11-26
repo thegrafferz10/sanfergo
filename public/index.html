@@ -117,6 +117,11 @@ h1{font-size:26px}h2{font-size:20px}h3{font-size:17px}
 .mt{margin-top:12px}.mt2{margin-top:20px}
 .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
 .kv:last-child{border-bottom:none}
+/* v1.4.81: filas apiladas del resumen del mandado (etiqueta gris arriba, valor en negrita abajo). */
+.sumrow{padding:8px 0;border-bottom:1px solid var(--line)}
+.sumrow:last-child{border-bottom:0}
+.sumrow .sumlab{font-size:13px;color:var(--muted)}
+.sumrow .sumval{font-size:15px;font-weight:700;margin-top:2px}
 input[type=file]{padding:8px}
 .photobox{border:2px dashed var(--line);border-radius:14px;padding:12px;text-align:center;margin-top:8px}
 .photobox img{max-width:100%;border-radius:10px;max-height:180px}
@@ -370,6 +375,12 @@ input[type=file]{padding:8px}
 #trip-summary-overlay .sumfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
 #trip-summary-overlay .sumfloat h2{padding-right:56px}
 #trip-summary-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
+/* v1.4.81: ventana flotante "Lista de tu mandado" (mismo patrón que el anuncio de entrada: overlay oscuro 60%, tarjeta blanca sin marco, radio 24 px, X grande en el borde superior). */
+#md-list-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}
+#md-list-overlay .mdlistwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}
+#md-list-overlay .mdlistfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}
+#md-list-overlay .mdlistfloat h2{margin-top:6px}
+#md-list-overlay .adx{position:absolute;top:-22px;right:8px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}
 #trip-summary-overlay .summinimap{height:180px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
 .histminimap{height:220px;border-radius:16px;overflow:hidden;margin:10px 0 4px}
 #trip-summary-overlay .sumthanks{color:var(--green);font-weight:800;font-size:15px;margin-top:4px}
@@ -632,7 +643,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.80'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.81'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -2596,7 +2607,8 @@ function priceSheetHtml(kind){
   if(!isTrip){
     const n = Math.max(0, (md.stops||[]).length - 1);
     const base = suggestedPrice(md.km);
-    extra = '<div style="background:#14532d;color:#fff;border-radius:12px;padding:12px;display:flex;justify-content:space-between;margin-top:8px"><span>Distancia estimada · '+md.km.toFixed(1)+' km</span><span>Tiempo estimado · ≈ '+md.eta+' min</span></div>'
+    // v1.4.81: la píldora trae distancia y tiempo en dos columnas iguales (etiqueta arriba, valor grande abajo, divisor vertical).
+    extra = '<div style="background:#14532d;color:#fff;border-radius:12px;padding:12px 0;display:flex;margin-top:8px"><div style="flex:1;text-align:center"><div style="font-size:13px;opacity:.85">Distancia estimada</div><div style="font-size:26px;font-weight:800;line-height:1.2">'+md.km.toFixed(1)+' km</div></div><div style="width:1px;background:rgba(255,255,255,.35)"></div><div style="flex:1;text-align:center"><div style="font-size:13px;opacity:.85">Tiempo estimado</div><div style="font-size:26px;font-weight:800;line-height:1.2">≈ '+md.eta+' min</div></div></div>'
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
   }
   // v1.4.78: "Quiero un mandado" — cuánto dinero lleva el chofer para
@@ -2605,8 +2617,7 @@ function priceSheetHtml(kind){
   let carryHtml = '';
   if(!isTrip && md.kind==='quiero'){
     carryHtml = '<div style="font-weight:700;margin-top:10px">¿Cuánto dinero lleva el chofer para comprar?</div>'
-      + '<div class="stepper"><button class="pm" onclick="mdCarryStep(-50)">−</button><span class="val" id="md-carry-val">'+fmt$(Number(md.carryAmount)||150)+'</span><button class="pm" onclick="mdCarryStep(50)">+</button></div>'
-      + '<p class="muted center mt">El chofer compra con ese dinero y te trae el cambio. Mínimo $100, de $50 en $50.</p>';
+      + '<div class="stepper"><button class="pm" onclick="mdCarryStep(-50)">−</button><span class="val" id="md-carry-val">'+fmt$(Number(md.carryAmount)||150)+'</span><button class="pm" onclick="mdCarryStep(50)">+</button></div>';
   }
   // v1.4.67: usar el viaje gratis (solo viajes, solo si el pasajero tiene
   // saldo). Al prenderlo, la nota de pago dice la diferencia que paga.
@@ -2650,29 +2661,55 @@ function mdPublishSummaryHtml(){
   // precio y forma de pago. Ocupa el lugar de los tres párrafos largos que
   // se quitaron, así la hoja sigue sin scroll. Precio y pago se actualizan
   // en vivo al mover el stepper o cambiar el pago (ids md-sum-price/pay).
-  const rows = [];
-  const what = md.kind==='quiero'
-    ? ((md.items||[]).filter(i=>i.trim()).join(' · ') || 'Mandado')
-    : (md.description || 'Mandado');
-  rows.push(['Qué se entrega', esc(what)]);
+  // v1.4.81: "Quiero" trae el resumen con filas APILADAS (etiqueta gris
+  // arriba, valor en negrita abajo) en este orden: "Se compra en", "Ver
+  // lista de Mandados" (botón que abre la lista en una ventana flotante),
+  // "Dinero para comprar" y "Tu precio". La fila "Qué se entrega" se
+  // QUITÓ (la lista vive en la ventana flotante) y "Se recoge en" ahora
+  // dice "Se compra en". "Enviar" NO cambia (sus filas .kv de siempre).
   if(md.kind==='quiero'){
     const stops = (md.stops||[]).map(s=>s.zone||s.detail||'').filter(Boolean);
-    rows.push(['Se recoge en', esc(stops.length ? stops.join(' · ') : 'Varios lados')]);
-    const dz = md.dest ? nearestZoneName(md.dest) : null;
-    rows.push(['Se entrega', esc('Tu punto' + (dz ? ' · cerca de '+dz : '') + (md.destRef ? ' · '+md.destRef : ''))]);
-    // v1.4.78: el dinero que lleva el chofer para comprar (se actualiza
-    // en vivo al mover el stepper, id md-sum-carry).
-    rows.push(['Dinero para comprar', 'Lleva <span id="md-sum-carry">'+fmt$(Number(md.carryAmount)||150)+'</span> para comprar']);
-  } else {
-    rows.push(['Se recoge', esc('Donde estás tú' + (md.pickupRef ? ' · '+md.pickupRef : ''))]);
-    rows.push(['Se entrega', esc('Punto de WhatsApp' + (md.dest && md.dest.lat!=null ? ' ('+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+')' : ''))]);
-    if(md.recipientName||md.recipient) rows.push(['Recibe', esc((md.recipientName||'Quien recibe') + (md.recipient ? ' · '+md.recipient : ''))]);
-    if(md.orderPay==='pagado') rows.push(['Pedido', 'Ya pagado']);
-    else if(md.orderPay==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(Number(md.orderAmount)||0)+' para recogerlo']);
+    return '<div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-top:8px"><b>Resumen de tu mandado</b>'
+      + '<div class="sumrow"><div class="sumlab">Se compra en</div><div class="sumval">'+esc(stops.length ? stops.join(' · ') : 'Varios lados')+'</div></div>'
+      + '<div class="sumrow" style="display:flex;justify-content:space-between;align-items:center"><div class="sumlab">Ver lista de Mandados</div><button type="button" class="btn small" style="width:auto;margin-top:0;flex:none" onclick="mdShowListPopup()">Ver lista</button></div>'
+      + '<div class="sumrow"><div class="sumlab">Dinero para comprar</div><div class="sumval">Lleva <span id="md-sum-carry">'+fmt$(Number(md.carryAmount)||150)+'</span> para comprar</div></div>'
+      + '<div class="sumrow"><div class="sumlab">Tu precio</div><div class="sumval"><span id="md-sum-price">'+fmt$(md.price)+'</span> · <span id="md-sum-pay">Efectivo</span></div></div>'
+      + '</div>';
   }
+  const rows = [];
+  const what = (md.description || 'Mandado');
+  rows.push(['Qué se entrega', esc(what)]);
+  rows.push(['Se recoge', esc('Donde estás tú' + (md.pickupRef ? ' · '+md.pickupRef : ''))]);
+  rows.push(['Se entrega', esc('Punto de WhatsApp' + (md.dest && md.dest.lat!=null ? ' ('+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+')' : ''))]);
+  if(md.recipientName||md.recipient) rows.push(['Recibe', esc((md.recipientName||'Quien recibe') + (md.recipient ? ' · '+md.recipient : ''))]);
+  if(md.orderPay==='pagado') rows.push(['Pedido', 'Ya pagado']);
+  else if(md.orderPay==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(Number(md.orderAmount)||0)+' para recogerlo']);
   rows.push(['Tu precio', '<span id="md-sum-price">'+fmt$(md.price)+'</span> · <span id="md-sum-pay">Efectivo</span>']);
   return '<div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-top:8px"><b>Resumen de tu mandado</b>'
     + rows.map(r=>'<div class="kv"><span>'+r[0]+'</span><b style="text-align:right">'+r[1]+'</b></div>').join('') + '</div>';
+}
+// v1.4.81: "Ver lista" del resumen del precio (Quiero): la lista del
+// mandado en una ventana flotante como el anuncio de entrada (tarjeta
+// blanca sin marco, X grande en el borde superior, tocar fuera la cierra
+// al instante). El punto de entrega va adentro, bajo la lista.
+function mdShowListPopup(){
+  mdCloseListPopup();
+  const items = (md.items||[]).filter(i=>i.trim());
+  const dz = md.dest ? nearestZoneName(md.dest) : null;
+  const destLabel = 'Tu punto' + (dz ? ' · cerca de '+dz : '') + (md.destRef ? ' · '+md.destRef : '');
+  const ov = document.createElement('div');
+  ov.id = 'md-list-overlay';
+  ov.innerHTML = '<div class="mdlistwrap"><button class="adx" aria-label="Cerrar lista" onclick="mdCloseListPopup()">✕</button>'
+    + '<div class="mdlistfloat"><h2>Lista de tu mandado</h2>'
+    + (items.length ? '<ul style="margin:10px 0 0;padding-left:18px">' + items.map(i=>'<li style="font-size:16px;font-weight:700;margin:4px 0">'+esc(i)+'</li>').join('') + '</ul>' : '<p class="muted mt">Sin artículos en la lista.</p>')
+    + '<p class="muted mt">Se entrega en:<br><b style="color:var(--dark)">'+esc(destLabel)+'</b></p>'
+    + '</div></div>';
+  ov.addEventListener('click', e=>{ if(e.target === ov) mdCloseListPopup(); });
+  document.body.appendChild(ov);
+}
+function mdCloseListPopup(){
+  const ov = document.getElementById('md-list-overlay');
+  if(ov) ov.remove();
 }
 function mdSummaryLine(){
   if(md.kind==='quiero'){
@@ -4912,7 +4949,7 @@ function startMandado(kind){
   // ubicación actual" / "Ubicar un punto en el mapa"), como en Viajes.
   renderMandados();
 }
-function mdBack(step){ md.step = step; renderMandados(); }
+function mdBack(step){ mdCloseListPopup(); md.step = step; renderMandados(); }
 function mdItemsHtml(){
   return md.items.map((it,i)=>'<div class="itemrow"><input data-item="'+i+'" value="'+esc(it)+'" placeholder="'+(i===0?'Ej. 2 kg de tortillas':'Ej. un refresco, pan, lo que sigue…')+'" oninput="md.items['+i+']=this.value"><button class="x" aria-label="Quitar" onclick="md.items.splice('+i+',1);if(!md.items.length)md.items=[\'\'];renderMandados()">🗑️</button></div>').join('')
     + (md.items.length<10 ? '<button class="btn ghost" style="border:2px dashed var(--green);color:var(--green)" onclick="md.items.push(\'\');renderMandados()">+ Agregar otra cosa</button>' : '<p class="muted center mt">Máximo 10 cosas por mandado.</p>');
@@ -5170,6 +5207,7 @@ function mandadoPickDone(which, pos, label){
   go('mandados');
 }
 async function publishMandado(){
+  mdCloseListPopup();
   if(!myPassenger){ toast('Primero regístrate como pasajero.'); openRegistro('pasajero','mandados'); return; }
   // v1.4.71: candado también al publicar, igual que en publishTrip().
   if(!passengerProfileComplete()){ toast('Completa tu perfil para pedir mandados: falta tu foto de cara (selfie).'); openRegistro('pasajero','mandados'); return; }
@@ -5861,11 +5899,14 @@ function inboxDetailHtml(r, sub, atLimit){
   // Contenido del detalle de una solicitud (v1.4.41): EXACTAMENTE lo que
   // antes se abría en línea dentro de la lista — pasajero con foto y
   // teléfono, De/A con los nombres resueltos, distancia, precio,
-  // descripción, cosas, paradas extra, forma de pago, cuadro Resumen del
-  // mandado, contraoferta del pasajero y los botones Aceptar /
-  // Contraofertar (o el formulario de contraoferta) — ahora dentro del
-  // flotante. Al final, el botón para cerrar y volver a ver todas las
-  // solicitudes (la X de arriba también lo cierra).
+  // descripción, forma de pago y los botones Aceptar / Contraofertar (o
+  // el formulario de contraoferta) — ahora dentro del flotante. Para
+  // MANDADOS (v1.4.81): filas apiladas (Se compra en / Se entrega en /
+  // Precio del pasajero / Lista / Pedido / Pago), sin duplicados, sin
+  // fila de Distancia y sin la caja verde "Resumen del mandado" (sus
+  // filas se funden en el detalle). Al final, el botón para cerrar y
+  // volver a ver todas las solicitudes (la X de arriba también lo
+  // cierra).
   const mine = (r.offers||[]).find(o=>o.driver_id===myDriver.id);
   // (v1.4.56) Una oferta rechazada está MUERTA: no decide los botones.
   // Solo la oferta VIVA (pendiente) cuenta como 'ya respondiste' o como
@@ -5876,22 +5917,52 @@ function inboxDetailHtml(r, sub, atLimit){
   const counter = mineLive && mineLive.passenger_counter_price;
   const highFare = r.price >= 80;
   let h = '<div class="flex mt">'+(r.passenger_photo?'<img class="avatar" src="'+r.passenger_photo+'">':'<div class="avatar"></div>')
-  + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>'
-  + '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
-  + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
-  + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
-  + (r.kind==='viaje' ? '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>' : '')
-  + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>'
+  + '<div class="flex1"><b>'+esc(r.passenger_name||'Pasajero')+'</b><div class="muted">'+esc(r.passenger_phone||'')+'</div></div></div>';
+  // v1.4.81: detalle del mandado con filas apiladas (etiqueta gris
+  // arriba, valor en negrita abajo), sin duplicados y SIN fila de
+  // Distancia: el chofer ya va al punto de compra y la distancia no le
+  // aporta nada aquí (la píldora de distancia/tiempo del Paso 4 del
+  // pasajero NO se toca). "Se compra en" es el mismo lugar que el
+  // viejo "De" de un mandado Quiero, así que sale una sola vez; la
+  // caja verde "Resumen del mandado" ya no se pinta aquí: sus filas
+  // (Recibe/Pedido) se funden en esta lista. Enviar se distingue por
+  // tener teléfono de quien recibe (Quiero nunca lo tiene).
+  if(r.kind==='mandado'){
+    const isEnviar = !!(r.recipient_phone || r.recipient_name);
+    let buyVal = r._dispO, items = [];
+    try { items = JSON.parse(r.items_json||'[]') || []; } catch(e){ items = []; }
+    items = items.filter(Boolean);
+    if(!isEnviar){
+      try {
+        const stops = JSON.parse(r.stops_json||'[]');
+        const names = (stops||[]).map(s=>s && (s.zone||s.detail||'')).filter(Boolean);
+        if(names.length) buyVal = names.join(' · ');
+      } catch(e){}
+    }
+    const sumRow = (lab, val)=>'<div class="sumrow"><div class="sumlab">'+lab+'</div><div class="sumval">'+val+'</div></div>';
+    h += sumRow(isEnviar ? 'Se recoge en' : 'Se compra en', esc(buyVal))
+      + sumRow('Se entrega en', esc(r._dispD))
+      + '<div class="sumrow"><div class="sumlab">Precio del pasajero</div><b class="price">'+fmt$(r.price)+'</b></div>'
+      + '<div class="sumrow"><div class="sumlab">Lista</div><div class="sumval">'+(items.length ? items.map(i=>'• '+esc(i)).join('<br>') : (r.description ? '• '+esc(r.description) : '—'))+'</div></div>'
+      + (isEnviar && (r.recipient_name||r.recipient_phone) ? sumRow('Recibe', esc((r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+r.recipient_phone : ''))) : '')
+      + (r.order_payment==='pagado' ? sumRow('Pedido', 'Ya pagado') : r.order_payment==='por_pagar' ? sumRow('Pedido', 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo') : '')
+      + (r.payment_method ? sumRow('Pago', esc(r.payment_method)) : '');
+  } else {
+    h += '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
+      + '<div class="kv"><span>A</span><b>'+esc(r._dispD)+'</b></div>'
+      + '<div class="kv"><span>Distancia</span><b>'+r.distance_km+' km · ~'+r.eta_minutes+' min</b></div>'
+      + '<div class="kv"><span>Personas</span><b>'+paxText(r.passenger_count)+'</b></div>'
+      + '<div class="kv"><span>Precio del pasajero</span><b class="price">'+fmt$(r.price)+'</b></div>';
+  }
   // v1.4.67: viaje gratis — el chofer ve de un vistazo que SanFerGo cubre hasta $30 y lo que el pasajero paga al terminar.
-  + (r.is_free_trip?'<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Viaje gratis</b><p class="muted mt">SanFerGo cubre hasta '+fmt$(FREE_TRIP_COVER)+' de este viaje. El pasajero paga '+fmt$(freeTripPays(r.price))+' en efectivo al terminar. Solo tú (chofer de SanFerGo) ves este viaje.</p></div>':'')
+  h += (r.is_free_trip?'<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b>🎁 Viaje gratis</b><p class="muted mt">SanFerGo cubre hasta '+fmt$(FREE_TRIP_COVER)+' de este viaje. El pasajero paga '+fmt$(freeTripPays(r.price))+' en efectivo al terminar. Solo tú (chofer de SanFerGo) ves este viaje.</p></div>':'')
   // (v1.4.55) Precio mejorado: el pasajero subió el precio y la
   // solicitud se volvió a publicar como nueva.
-  + (r.price_improved?'<div class="card" style="background:#dcfce7;border:1px solid #16a34a"><b>Precio mejorado: el pasajero ha aumentado su precio.</b><p class="muted mt">Antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'. La solicitud se volvió a publicar como nueva con este precio mejorado.</p></div>':'')
-  + (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
-  + (r.items_json?'<p class="muted">Cosas: '+esc(JSON.parse(r.items_json).join(' · '))+'</p>':'')
-  + (r.extra_stops?'<p class="muted">Paradas extra: '+r.extra_stops+' (+$'+(r.extra_stops*MANDADO_EXTRA_STOP)+')</p>':'')
-  + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'')
-  + mandadoDriverSummaryHtml(r);
+  + (r.price_improved?'<div class="card" style="background:#dcfce7;border:1px solid #16a34a"><b>Precio mejorado: el pasajero ha aumentado su precio.</b><p class="muted mt">Antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'. La solicitud se volvió a publicar como nueva con este precio mejorado.</p></div>':'');
+  if(r.kind==='viaje'){
+    h += (r.description?'<p class="muted mt">'+esc(r.description)+'</p>':'')
+      + (r.payment_method?'<p class="muted">Pago: '+esc(r.payment_method)+'</p>':'');
+  }
   // (v1.4.54) Oferta rechazada: el aviso NARANJA dice qué se rechazó.
   // Si el pasajero rechazó la oferta del chofer, eso dice; si el chofer
   // rechazó la contraoferta del pasajero, eso dice. (v1.4.56) El aviso
@@ -5952,7 +6023,7 @@ function renderInboxOverlay(list){
     if(ov) ov.remove();
     return;
   }
-  const sig = JSON.stringify([r.id, r.status, r.price, r.price_improved, r.republished_at, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit, r.is_free_trip]);
+  const sig = JSON.stringify([r.id, r.status, r.price, r.price_improved, r.republished_at, r._dispO, r._dispD, r.distance_km, r.eta_minutes, r.payment_method, r.description, r.items_json, r.stops_json, r.recipient_name, r.recipient_phone, r.extra_stops, r.order_payment, r.order_amount, (r.offers||[]).map(o=>o.id+':'+o.status+':'+(o.passenger_counter_price||'')).join(','), driverCounter?driverCounter.rid+':'+driverCounter.price:'', inboxLastSub, inboxLastAtLimit, r.is_free_trip]);
   if(ov && sig===inboxOvSig) return; // nada cambió en el flotante: no se toca
   inboxOvSig = sig;
   const inner = '<div class="reqwrap"><button class="adx" aria-label="Cerrar" onclick="closeInboxOverlay()">✕</button>'
