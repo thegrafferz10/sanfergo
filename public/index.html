@@ -151,6 +151,20 @@ input[type=file]{padding:8px}
 .strip.top.paxcol button.exitp{background:#fff;color:var(--dark);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:700;width:auto;margin-top:0}
 .strip.top.paxcol .statuscard{background:rgba(255,255,255,.96);border-radius:14px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
 .strip.top.paxcol .statuscard .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+/* v1.4.82: la píldora de etapa nunca se recorta ("EN CAMI…"): no se
+   encoge; el título es el que se ajusta a la línea. */
+.strip.top.paxcol .statuscard .row .chip{flex-shrink:0}
+.strip.top.paxcol .statuscard .row b{min-width:0}
+/* v1.4.82: línea de estado de la fase de compra (Quiero): aceptado ✓ →
+   comprando (en curso) → en camino a entregarte (pendiente). */
+.buytimeline{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:10px}
+.bt-row{display:flex;gap:10px;align-items:flex-start}
+.bt-dot{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;background:#e8f5ee;color:var(--green)}
+.bt-dot.orange{background:#ffedd5;color:#ea580c}
+.bt-dot.empty{background:#fff;border:2px solid #d1d5db}
+.bt-row b{display:block;font-size:14px}
+.bt-row span{display:block;font-size:12px;color:#6b7280}
+.bt-row.next{opacity:.6}
 .strip.bottom.paxbot{background:transparent;box-shadow:none;padding:0;display:flex;flex-direction:column;gap:8px}
 .strip.bottom.paxbot .cancelwrap{display:flex;justify-content:center}
 .strip.bottom.paxbot .arrive{background:#14532d;color:#fff;border-radius:14px;padding:10px 14px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
@@ -643,7 +657,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.81'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.82'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3160,6 +3174,7 @@ function closestOnRoute(lat, lng, coords){
    (el usuario la vio recién después de "Ya estoy afuera"). */
 function ensureLiveRoute(){
   if(!liveReq || !liveMap || (liveRouteCoords && liveRouteCoords.length)) return;
+  if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta
   const inT = liveHeadingToDest(liveReq);
   const tgt = inT ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
   const from = (liveReq.driver_lat && liveReq.driver_lng) ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : null;
@@ -3181,6 +3196,16 @@ function isQuieroMandado(r){
   // (obligatorio ahí); Quiero nunca lo trae. Sirve también para los
   // mandados viejos, que siguen la misma regla.
   return !!r && r.kind==='mandado' && !r.recipient_phone;
+}
+/* v1.4.82: FASE 1 de un "Quiero un mandado" en el mapa en vivo del
+   PASAJERO — antes de que el chofer marque "Ya compré" (comprado).
+   El mandado NO tiene punto exacto de recogida (solo el texto de dónde
+   comprar, p. ej. "Todo en el centro", y el chofer ya sabe la tienda):
+   el mapa no dibuja ruta ni mototaxi hasta la entrega. Fase 2
+   (comprado / recogido / en_viaje) usa el mapa normal con ruta al
+   destino. Enviar (punto real de recogida) y los viajes nunca son fase 1. */
+function livePhase1Quiero(r){
+  return !!r && !liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
 }
 function nextStage(r){
   // Flujo del chofer (v1.4.60): Aceptar deja el servicio automáticamente
@@ -3289,16 +3314,17 @@ async function renderLiveMap(){
   const pick = { lat: r.origin_lat, lng: r.origin_lng };
   const dest = { lat: r.dest_lat, lng: r.dest_lng };
   const inTrip = liveHeadingToDest(r);
+  const phase1 = livePhase1Quiero(r); // v1.4.82: fase de compra de Quiero (pasajero) — sin ruta, sin pines, sin mototaxi
   const target = inTrip ? dest : pick;
   const from = (r.driver_lat && r.driver_lng) ? { lat: r.driver_lat, lng: r.driver_lng } : null;
   // Si OSRM falla (sin señal en la carretera o el servidor de rutas no
   // responde), la línea azul NO desaparece: se dibuja recta del chofer al
   // objetivo y el sondeo reintenta la ruta real cada ~15 s (v1.4.44).
   let rt = null;
-  if(from){ try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; } }
+  if(!phase1 && from){ try { rt = await osrmRoute(from, target, liveRouteWaypoints(r, inTrip)); } catch(e){ rt = null; } }
   if(gen61 !== liveRenderGen) return; // un render más nuevo ya empezó: no crear marcadores ni línea huérfanos
-  if(rt){ liveRouteCoords = rt.coords; liveRouteFallback = false; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
-  else if(from){
+  if(!phase1 && rt){ liveRouteCoords = rt.coords; liveRouteFallback = false; setRouteLine(liveMap, 'route', rt.coords, '#2b7de9', 5); }
+  else if(!phase1 && from){
     // v1.4.44: respaldo — el 2026-11-23 el chofer yendo a recoger (viaje
     // en camino, 203 m) no vio ninguna línea: OSRM falló y no había
     // respaldo (la captura muestra la mototaxi y el pin "Recoge aquí"
@@ -3309,6 +3335,9 @@ async function renderLiveMap(){
     setRouteLine(liveMap, 'route', fb, '#2b7de9', 5);
   }
   else { liveRouteCoords = null; liveRouteFallback = false; }
+  // v1.4.82: fase de compra de Quiero (pasajero) — sin pines ni mototaxi:
+  // el mapa queda limpio, solo de fondo para la tarjeta de estado.
+  if(!phase1){
   if(liveAsDriver){
     // Punto de recogida (usuario, v1.4.15): camino a recoger, un PIN
     // compacto con la etiqueta "Recoge aquí" — la píldora verde enorme
@@ -3369,13 +3398,18 @@ async function renderLiveMap(){
     ? { lat: liveReq.driver_lat, lng: liveReq.driver_lng } : (from || pick);
   if(liveDriverMarker){ liveDriverMarker.remove(); liveDriverMarker = null; }
   liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([dPos.lng, dPos.lat]).addTo(liveMap);
+  } // fin if(!phase1) — pines y mototaxi
   // Encuadre (v1.4.43 chofer; v1.4.61 también pasajero): con la ruta
   // dibujada se encuadra TODA la ruta restante en la franja libre, para
   // que la línea azul se vea completa y no "cortada" bajo las tarjetas.
   // El pasajero antes encuadraba los DOS puntos del viaje (recogida +
   // destino) y el mapa quedaba a lo ancho de todo el pueblo. Sin ruta
   // OSRM se encuadra chofer → objetivo.
-  if(liveRouteCoords && liveRouteCoords.length){
+  if(phase1){
+    // v1.4.82: fase de compra — sin ruta ni mototaxi: el mapa se centra
+    // en el punto de entrega (el único punto exacto del mandado).
+    fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());
+  } else if(liveRouteCoords && liveRouteCoords.length){
     fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
   } else {
     const framePts = inTrip
@@ -3497,10 +3531,28 @@ function renderLiveStrips(){
     } else {
       hintLine = esc(r.driver_name||'Tu conductor')+' · '+stage.toLowerCase()+' · pago '+esc(pay)+'.';
     }
-    top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
-      + '<div class="statuscard"><div class="row"><b>'+esc(passengerStageTitle(r))+'</b><span class="chip">'+stagePill+'</span></div>'
-      + '<div class="row" style="margin-top:6px"><span>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+' · '+(r.kind==='mandado'?'Mandado':'Viaje en mototaxi')+(r.distance_km ? ' · '+r.distance_km+' km' : '')+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span></div>'
-      + (hintLine ? '<div class="row" style="margin-top:6px"><span>'+hintLine+'</span></div>' : '')+'</div>';
+    // v1.4.82: FASE 1 de Quiero — la tarjeta de estado NO dice "va a
+    // recoger" (no hay punto de recogida): dice que está comprando, con
+    // dónde se compra, cuánto dinero lleva y la línea de estado
+    // (aceptado ✓ → comprando → en camino a entregarte). La tarjeta del
+    // chofer, el chat y el botón de cancelar quedan como estaban.
+    if(livePhase1Quiero(r)){
+      let buyTxt82 = '';
+      try { const s082 = JSON.parse(r.stops_json||'[]')[0]; buyTxt82 = (s082 && (s082.zone||s082.detail)) || ''; } catch(e){}
+      top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
+        + '<div class="statuscard"><div class="row"><b>El conductor está comprando tu encargo</b><span class="chip">COMPRANDO</span></div>'
+        + '<div class="row" style="margin-top:6px"><span>'+(buyTxt82 ? 'Se compra en: '+esc(buyTxt82)+' · ' : '')+'Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div>'
+        + '<div class="buytimeline">'
+        + '<div class="bt-row done"><span class="bt-dot">✓</span><div><b>Tu mandado fue aceptado</b></div></div>'
+        + '<div class="bt-row now"><span class="bt-dot orange">🛍️</span><div><b>El conductor está comprando</b><span>Comprando'+(buyTxt82 ? ' en '+esc(buyTxt82) : '')+'…</span></div></div>'
+        + '<div class="bt-row next"><span class="bt-dot empty"></span><div><b>En camino a entregarte</b><span>Pendiente</span></div></div>'
+        + '</div></div>';
+    } else {
+      top.innerHTML = '<div class="backrow"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
+        + '<div class="statuscard"><div class="row"><b>'+esc(passengerStageTitle(r))+'</b><span class="chip">'+stagePill+'</span></div>'
+        + '<div class="row" style="margin-top:6px"><span>'+esc(r.origin_zone||'')+' → '+esc(r.dest_zone||'')+' · '+(r.kind==='mandado'?'Mandado':'Viaje en mototaxi')+(r.distance_km ? ' · '+r.distance_km+' km' : '')+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span></div>'
+        + (hintLine ? '<div class="row" style="margin-top:6px"><span>'+hintLine+'</span></div>' : '')+'</div>';
+    }
     pill.classList.add('hidden');
     // Tarjeta del chofer (app real): nombre en su línea, vehículo · unidad,
     // WhatsApp, a la derecha "Precio final $X" con etiqueta, y línea de pago.
@@ -3979,7 +4031,7 @@ function startLivePolling(){
       // en la posición fresca — sin esto el sondeo actualizaba el texto
       // pero el mapa quedaba sin mototaxi hasta el próximo cambio de
       // etapa. No reframa ni pide ruta: eso ya lo hace ensureLiveRoute.
-      if(r.driver_lat && !liveDriverMarker && liveMap){
+      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1Quiero(r)){
         liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);
       }
       // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
