@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.80 en /api/health', h.ok && h.version === '1.4.80', JSON.stringify(h));
+  check('versión 1.4.81 en /api/health', h.ok && h.version === '1.4.81', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.80', h134.ok && h134.version === '1.4.80', JSON.stringify(h134));
+  check('versión 1.4.81', h134.ok && h134.version === '1.4.81', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.80)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.80';") && h.version === '1.4.80', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.81)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.81';") && h.version === '1.4.81', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.80 en /api/health (sección)', h27.ok && h27.version === '1.4.80', JSON.stringify(h27));
+  check('versión 1.4.81 en /api/health (sección)', h27.ok && h27.version === '1.4.81', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.80 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.80', JSON.stringify(h28));
+  check('versión 1.4.81 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.81', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.80 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.80', JSON.stringify(h29));
+  check('versión 1.4.81 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.81', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.80 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.80', JSON.stringify(h30));
+  check('versión 1.4.81 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.81', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1639,7 +1639,7 @@ async function api(path, body) {
   check('v1.4.35: el precio del resumen se actualiza al mover el stepper', html.includes("getElementById('md-sum-price')") && html.includes('priceStep(') && html.includes('priceSetSuggested('));
   check('v1.4.35: la tarjeta del chofer usa el resumen en solicitudes y en curso', inboxSec.includes('mandadoDriverSummaryHtml(r)') && inboxSec.includes("driverInboxTab==='curso'") && inboxSec.includes('Abrir mapa del servicio'));
   const liveSec = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function driverPasteLocationInline'));
-  check('v1.4.35: el resumen del mandado sigue en las tarjetas del chofer (bandeja/en curso), pero ya NO en el mapa en vivo (v1.4.43: pantalla despejada)', !liveSec.includes('mandadoDriverSummaryHtml(r)') && (html.match(/mandadoDriverSummaryHtml\(r\)/g)||[]).length >= 3);
+  check('v1.4.35: el resumen del mandado sigue en las tarjetas del chofer (bandeja/en curso), pero ya NO en el mapa en vivo (v1.4.43: pantalla despejada) ni en el detalle (v1.4.81: sus filas se funden en el detalle)', !liveSec.includes('mandadoDriverSummaryHtml(r)') && (html.match(/mandadoDriverSummaryHtml\(r\)/g)||[]).length >= 2);
   // --- v1.4.36: la bandeja del chofer no parpadea y es lista, no páginas ---
   check('v1.4.36: Recibir Viajes pinta Cargando… SOLO en la primera carga (lista anterior intacta)', html.includes('let inboxLoaded = false, inboxSig = ') && html.includes("if(!inboxLoaded) p.innerHTML = head + '<p class=\"muted center mt\">Cargando…</p>'") && html.includes('async function loadDriverInbox(force){'));
   check('v1.4.36: el refresco no repinta si nada cambió (firma de datos) y no se solapa', inboxSec.includes('inboxSig') && inboxSec.includes('if(inboxLoaded && !force && sig===inboxSig) return;') && inboxSec.includes('if(inboxLoading) return;') && inboxSec.includes('} finally { inboxLoading = false; paintDriverActiveBanners(); }'));
@@ -1653,7 +1653,8 @@ async function api(path, body) {
   // map de la lista, no el viejo "if(!expanded)".
   const compactSec = inboxSec.slice(inboxSec.indexOf('list.map(r=>{'), inboxSec.indexOf("}).join('');", inboxSec.indexOf('list.map(r=>{')));
   check('v1.4.37: la fila colapsada solo muestra tipo, de → a y precio (sin resumen, distancia ni botones)', compactSec.includes('inboxToggle') && compactSec.includes('→') && compactSec.includes('fmt$(r.price)') && compactSec.includes('▾') && !compactSec.includes('Recibe') && !compactSec.includes('Resumen del mandado') && !compactSec.includes('Aceptar') && !compactSec.includes('Distancia') && !compactSec.includes('mandadoDriverSummaryHtml'));
-  check('v1.4.37: el detalle trae el resumen completo con Aceptar y Contraofertar (ahora en el flotante, v1.4.41)', inboxSec.includes('function inboxDetailHtml(r, sub, atLimit){') && inboxSec.includes('mandadoDriverSummaryHtml(r)') && inboxSec.includes("Aceptar '+fmt$(r.price)") && inboxSec.includes('Contraofertar') && !inboxSec.includes('const expanded = inboxExpandedId===r.id;') && !inboxSec.includes("if(!expanded) return card + '</div>';"));
+  const detailSec37 = inboxSec.slice(inboxSec.indexOf('function inboxDetailHtml(r, sub, atLimit){'), inboxSec.indexOf('function renderInboxOverlay(list){'));
+  check('v1.4.37: el detalle trae el resumen completo con Aceptar y Contraofertar (ahora en el flotante, v1.4.41; v1.4.81: la caja verde "Resumen del mandado" ya NO vive en el detalle, sus filas se funden en él)', inboxSec.includes('function inboxDetailHtml(r, sub, atLimit){') && !detailSec37.includes('mandadoDriverSummaryHtml(r)') && detailSec37.includes("Aceptar '+fmt$(r.price)") && detailSec37.includes('Contraofertar') && !inboxSec.includes('const expanded = inboxExpandedId===r.id;') && !inboxSec.includes("if(!expanded) return card + '</div>';"));
   check('v1.4.37: el detalle abierto sobrevive al refresco (el id entra en la firma) y se cierra solo si la solicitud sale de la lista', inboxSec.includes('driverInboxTab, inboxExpandedId, driverCounter?') && inboxSec.includes('if(inboxExpandedId && !list.some(r=>r.id===inboxExpandedId)) inboxExpandedId = null;') && inboxSec.includes('if(inboxExpandedId===rid){ closeInboxOverlay(); return; }') && inboxSec.includes('inboxExpandedId = rid;'));
   // --- v1.4.38: aviso de contraoferta en la fila colapsada ---
   check('v1.4.38: la fila colapsada muestra el aviso ámbar "Te contraofertó $X · Toca para responder" cuando el pasajero contraofertó', compactSec.includes('Te contraofertó ') && compactSec.includes("fmt$(counter)") && compactSec.includes('· Toca para responder') && compactSec.includes('#fef3c7') && compactSec.includes('passenger_counter_price'));
@@ -2089,10 +2090,10 @@ async function api(path, body) {
   const mdBackLine49 = html.split('\n').find(l => l.trim().startsWith('function mdBack(step){'));
   const mdStub49 = { step: 4, price: 30, km: 1.5, eta: 5, kind: 'quiero' };
   let mdRendered49 = null;
-  new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
+  new Function('md', 'renderMandados', 'mdCloseListPopup', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; }, ()=>{});
   check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Quiero (paso 4) se vuelve al paso 3 sin perder el precio ni los datos', mdOnclick49 === 'mdBack(md.step-1)' && mdStub49.step === 3 && mdRendered49 === 3 && mdStub49.price === 30 && mdStub49.km === 1.5, JSON.stringify({ onclick: mdOnclick49, step: mdStub49.step }));
   mdStub49.step = 4;
-  new Function('md', 'renderMandados', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; });
+  new Function('md', 'renderMandados', 'mdCloseListPopup', mdBackLine49 + '; mdBack(md.step-1);')(mdStub49, ()=>{ mdRendered49 = mdStub49.step; }, ()=>{});
   check('v1.4.49: al tocar "‹ Regresar" en el paso de precio del mandado Enviar (paso 4) se vuelve al paso 3', mdStub49.step === 3 && mdRendered49 === 3, JSON.stringify({ step: mdStub49.step }));
 
   // --- v1.4.50: con un viaje en espera o en curso, entrar a Mandados NO
@@ -4650,6 +4651,89 @@ async function api(path, body) {
   check('v1.4.80: en vivo — publicar "Quiero" sin texto de dónde se compra se sigue rechazando', !manNoLabel80.ok && /dónde se compra/.test(manNoLabel80.error || ''), JSON.stringify(manNoLabel80));
   const manOk80 = await api('/api/create-request', { passenger_id: own64.passenger.id, kind: 'mandado', origin_zone: 'Abarrotes Castillejo', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Abarrotes Castillejo', lat: null, lng: null, detail: '' }], extra_stops: 0 });
   check('v1.4.80: en vivo — el dueño publica "Quiero" con texto libre (sugiere $30)', manOk80.ok && manOk80.request.price === 30, JSON.stringify(manOk80));
+
+  console.log('== v1.4.81: resumen del precio de Quiero con filas apiladas, "Ver lista" flotante y píldora en dos columnas ==');
+  // --- Cliente: el resumen de Quiero trae las filas en orden, sin "Qué se entrega" ---
+  const sumFnSrc81 = html.slice(html.indexOf('function mdPublishSummaryHtml(){'), html.indexOf('// v1.4.81: "Ver lista" del resumen'));
+  const sumQ81 = sumFnSrc81.slice(sumFnSrc81.indexOf("if(md.kind==='quiero'){"), sumFnSrc81.indexOf('const rows = [];'));
+  check('v1.4.81: el resumen de Quiero usa filas apiladas (.sumrow) en orden: "Se compra en", "Ver lista", "Dinero para comprar", "Tu precio"', sumQ81.includes('sumrow') && sumQ81.includes('Se compra en') && sumQ81.includes('Ver lista de Mandados') && sumQ81.includes('mdShowListPopup()') && sumQ81.includes('Dinero para comprar') && sumQ81.includes('md-sum-carry') && sumQ81.includes('Tu precio') && sumQ81.includes('md-sum-price') && sumQ81.indexOf('Se compra en') < sumQ81.indexOf('Ver lista de Mandados') && sumQ81.indexOf('Ver lista de Mandados') < sumQ81.indexOf('Dinero para comprar') && sumQ81.indexOf('Dinero para comprar') < sumQ81.indexOf('Tu precio'));
+  check('v1.4.81: el resumen de Quiero YA NO trae la fila "Qué se entrega" ni "Se entrega" ni "Se recoge en"', !sumQ81.includes('Qué se entrega') && !sumQ81.includes('Se entrega') && !sumQ81.includes('Se recoge en'));
+  check('v1.4.81: "Enviar" sigue con sus filas .kv de siempre (sin tocar)', sumFnSrc81.includes("['Se recoge'") && sumFnSrc81.includes("['Se entrega'") && sumFnSrc81.includes('Punto de WhatsApp') && sumFnSrc81.includes("'<div class=\"kv\">"));
+  check('v1.4.81: el CSS trae .sumrow (filas apiladas) y #md-list-overlay (ventana flotante)', html.includes('.sumrow{') && html.includes('#md-list-overlay{') && html.includes('.mdlistfloat'));
+  // --- Cliente: la píldora en dos columnas, sin el texto chiquito del dinero, stepper de precio intacto ---
+  const priceSec81 = html.slice(html.indexOf('function priceSheetHtml(kind){'), html.indexOf('function mdPublishSummaryHtml(){'));
+  check('v1.4.81: la píldora de distancia/tiempo trae dos columnas iguales (etiqueta arriba, valor grande abajo, divisor vertical)', priceSec81.includes('Distancia estimada') && priceSec81.includes('Tiempo estimado') && priceSec81.includes('font-size:26px') && priceSec81.includes('rgba(255,255,255,.35)') && priceSec81.includes('flex:1;text-align:center') && !priceSec81.includes('Distancia estimada · '));
+  check('v1.4.81: el stepper de dinero YA NO trae el texto chiquito ("El chofer compra con ese dinero…")', !html.includes('El chofer compra con ese dinero y te trae el cambio'));
+  check('v1.4.81: el stepper de precio sigue (Sugerido, − $Y +, $30 mínimo, pasos de $5)', priceSec81.includes('Sugerido: ') && priceSec81.includes('priceStep(') && priceSec81.includes('id="price-val"') && priceSec81.includes('priceSetSuggested'));
+  check('v1.4.81: al salir del paso (Regresar o publicar) la ventana flotante se cierra', html.includes('function mdBack(step){ mdCloseListPopup();') && html.includes('mdCloseListPopup();\n  if(!myPassenger)'));
+  // --- Evaluado: el resumen real de Quiero y de Enviar ---
+  function runSummary81(mdObj){
+    const fn = new Function('md', 'esc', 'fmt$', 'nearestZoneName', sumFnSrc81 + '; return mdPublishSummaryHtml;')(mdObj, (s)=>String(s ?? ''), (n)=>'$'+Number(n), ()=> 'Mercado');
+    return fn();
+  }
+  const sumQ81eval = runSummary81({ kind:'quiero', stops:[{zone:'Todo en el centro'}], dest:{lat:16.87,lng:-93.2}, destRef:'', carryAmount:150, price:30 });
+  check('v1.4.81: evaluado — el resumen de Quiero trae "Se compra en", "Ver lista", "Dinero para comprar" y "Tu precio" en orden, sin "Qué se entrega"', sumQ81eval.includes('Se compra en') && sumQ81eval.includes('Todo en el centro') && sumQ81eval.includes('Ver lista de Mandados') && sumQ81eval.includes('Ver lista') && sumQ81eval.includes('mdShowListPopup()') && sumQ81eval.includes('Dinero para comprar') && sumQ81eval.includes('Lleva') && sumQ81eval.includes('$150') && sumQ81eval.includes('Tu precio') && sumQ81eval.includes('$30') && sumQ81eval.indexOf('Se compra en') < sumQ81eval.indexOf('Ver lista de Mandados') && sumQ81eval.indexOf('Ver lista de Mandados') < sumQ81eval.indexOf('Dinero para comprar') && sumQ81eval.indexOf('Dinero para comprar') < sumQ81eval.indexOf('Tu precio') && !sumQ81eval.includes('Qué se entrega') && !sumQ81eval.includes('Se recoge') && !sumQ81eval.includes('Se entrega'), sumQ81eval.slice(0, 300));
+  const sumE81eval = runSummary81({ kind:'enviar', description:'Paquete', pickupRef:'', dest:{lat:16.87,lng:-93.2}, recipientName:'Ana', recipient:'9610000000', orderPay:'por_pagar', orderAmount:200, price:30 });
+  check('v1.4.81: evaluado — el resumen de "Enviar" sigue igual (qué se entrega, recogida, entrega, recibe, pedido, precio)', sumE81eval.includes('Qué se entrega') && sumE81eval.includes('Paquete') && sumE81eval.includes('Se recoge') && sumE81eval.includes('Se entrega') && sumE81eval.includes('Punto de WhatsApp') && sumE81eval.includes('Recibe') && sumE81eval.includes('Se pagará'), sumE81eval.slice(0, 300));
+  // --- Evaluado: la ventana flotante "Ver lista" ---
+  const popFnSrc81 = html.slice(html.indexOf('function mdShowListPopup(){'), html.indexOf('function mdSummaryLine(){'));
+  check('v1.4.81: la ventana "Ver lista" usa el patrón del anuncio flotante (overlay #md-list-overlay, X .adx, tocar fuera cierra)', popFnSrc81.includes("ov.id = 'md-list-overlay'") && popFnSrc81.includes('Lista de tu mandado') && popFnSrc81.includes('mdCloseListPopup()') && popFnSrc81.includes('class="adx"') && popFnSrc81.includes('if(e.target === ov) mdCloseListPopup()') && popFnSrc81.includes('Se entrega en:'));
+  function runPopup81(mdObj){
+    let closed = false;
+    const fakeOv = { id: '', innerHTML: '', listeners: {}, addEventListener(ev, fn){ this.listeners[ev] = fn; }, remove(){ closed = true; } };
+    const fakeDoc = { body: { appendChild: ()=>{} }, createElement: ()=>fakeOv, getElementById: ()=>fakeOv };
+    const fn = new Function('md', 'esc', 'nearestZoneName', 'document', popFnSrc81 + '; return mdShowListPopup;')(mdObj, (s)=>String(s ?? ''), ()=> 'Mercado', fakeDoc);
+    fn();
+    closed = false;
+    return { html: fakeOv.innerHTML, ovId: fakeOv.id, ov: fakeOv, wasClosed: ()=>closed };
+  }
+  const pop81 = runPopup81({ kind:'quiero', items:['Tres kilos de carne'], dest:{lat:16.87,lng:-93.2}, destRef:'Buenos Aires' });
+  check('v1.4.81: evaluado — "Ver lista" abre el overlay con la lista y el punto de entrega', pop81.ovId === 'md-list-overlay' && pop81.html.includes('Lista de tu mandado') && pop81.html.includes('Tres kilos de carne') && pop81.html.includes('Se entrega en:') && pop81.html.includes('Tu punto') && pop81.html.includes('cerca de Mercado') && pop81.html.includes('Buenos Aires') && pop81.html.includes('✕'), pop81.html.slice(0, 300));
+  check('v1.4.81: evaluado — tocar fuera de la tarjeta cierra la ventana flotante', typeof pop81.ov.listeners.click === 'function' && (pop81.ov.listeners.click({ target: pop81.ov }), pop81.wasClosed()), '');
+  const pop81b = runPopup81({ kind:'quiero', items:['Tres kilos de carne'], dest:{lat:16.87,lng:-93.2}, destRef:'' });
+  check('v1.4.81: evaluado — tocar DENTRO de la tarjeta NO cierra la ventana', typeof pop81b.ov.listeners.click === 'function' && (pop81b.ov.listeners.click({ target: {} }), !pop81b.wasClosed()), '');
+  // --- Detalle del mandado en el panel del chofer: filas apiladas, sin duplicados, sin Distancia ---
+  const detailSec81 = html.slice(html.indexOf('function inboxDetailHtml(r, sub, atLimit){'), html.indexOf('function renderInboxOverlay(list){'));
+  const detMand81 = detailSec81.slice(detailSec81.indexOf("if(r.kind==='mandado'){"), detailSec81.indexOf('} else {', detailSec81.indexOf("if(r.kind==='mandado'){")));
+  const detTrip81 = detailSec81.slice(detailSec81.indexOf('} else {', detailSec81.indexOf("if(r.kind==='mandado'){")));
+  check('v1.4.81: el detalle del MANDADO usa filas apiladas en orden: "Se compra en", "Se entrega en", "Precio del pasajero", "Lista", "Pedido", "Pago"', detMand81.includes('sumrow') && detMand81.includes('Se compra en') && detMand81.includes('Se entrega en') && detMand81.includes('Precio del pasajero') && detMand81.includes('Lista') && detMand81.includes('Pedido') && detMand81.includes('Pago') && detMand81.indexOf('Se compra en') < detMand81.indexOf('Se entrega en') && detMand81.indexOf('Se entrega en') < detMand81.indexOf('Precio del pasajero') && detMand81.indexOf('Precio del pasajero') < detMand81.indexOf('Lista') && detMand81.indexOf('Lista') < detMand81.indexOf('Pedido') && detMand81.indexOf('Pedido') < detMand81.indexOf('Pago'));
+  check('v1.4.81: el detalle del MANDADO NO trae fila de Distancia (el chofer ya va al punto; la píldora del Paso 4 del pasajero no se toca)', !detMand81.includes('Distancia') && !detMand81.includes('distance_km') && !detMand81.includes('eta_minutes'));
+  check('v1.4.81: el detalle del MANDADO ya no duplica: sin "Cosas:", sin "Paradas extra", sin la caja verde "Resumen del mandado" (sus filas se funden aquí); Enviar se distingue por quien recibe', !detMand81.includes('Cosas:') && !detMand81.includes('Paradas extra') && !detailSec81.includes('mandadoDriverSummaryHtml(r)') && detMand81.includes('recipient_phone') && detMand81.includes('Se recoge en'));
+  check('v1.4.81: el detalle de VIAJE sigue igual (De/A/Distancia/Personas/Precio en .kv)', detTrip81.includes("'<div class=\"kv\"><span>De</span><b>'") && detTrip81.includes("'<div class=\"kv\"><span>A</span><b>'") && detTrip81.includes('Distancia') && detTrip81.includes('Personas') && detTrip81.includes('Precio del pasajero'));
+  check('v1.4.81: el encabezado y los botones del detalle no se tocaron (foto, nombre, teléfono, Aceptar $X, Contraofertar, Ver todas las solicitudes)', detailSec81.includes('passenger_photo') && detailSec81.includes('passenger_name') && detailSec81.includes('passenger_phone') && detailSec81.includes("Aceptar '+fmt$(r.price)") && detailSec81.includes('Contraofertar') && detailSec81.includes('‹ Ver todas las solicitudes'));
+  // --- Evaluado: el detalle real del mandado (Quiero y Enviar) y el control de viaje ---
+  function runDetail81(r, driverCounter){
+    const stubs = {
+      esc: (s)=>String(s==null?'':s),
+      fmt$: (n)=>'$'+Math.round(Number(n)||0),
+      paxText: (p)=>{ const n=Math.max(1,Math.min(3,Number(p)||1)); return n===1?'1 persona':n+' personas'; },
+      minForPax: (p)=>20 + 5*(Math.max(1,Math.min(3,Number(p)||1))-1),
+      MIN_TRIP: 20,
+      MANDADO_EXTRA_STOP: 10,
+      FREE_DAILY_LIMIT: 5,
+      myDriver: { id: 777 },
+      driverCounter: driverCounter || null,
+    };
+    const fn = new Function('r','sub','atLimit', ...Object.keys(stubs), detailSec81 + '; return inboxDetailHtml(r, sub, atLimit);');
+    return fn(r, false, false, ...Object.values(stubs));
+  }
+  function reqMandado81(over){
+    return Object.assign({ id: 1001, kind: 'mandado', passenger_name: 'Pax Mandado', passenger_phone: '9610000081', price: 30, distance_km: 2.1, eta_minutes: 7, payment_method: 'efectivo', passenger_count: 1, _dispO: 'Todo en el centro', _dispD: 'Progreso Buenos Aires', description: 'Tres kilos de carne', items_json: JSON.stringify(['Tres kilos de carne']), stops_json: JSON.stringify([{zone:'Todo en el centro'}]), extra_stops: 0, order_payment: 'por_pagar', order_amount: 150, recipient_phone: null, recipient_name: null, price_improved: 0, previous_price: null, republished_at: null, offers: [] }, over||{});
+  }
+  let detM81 = '', detM81Err = '';
+  try { detM81 = runDetail81(reqMandado81(), null); } catch(e){ detM81Err = String(e && e.message || e); }
+  check('v1.4.81: evaluado — detalle del MANDADO Quiero: filas en orden (Se compra en / Se entrega en / Precio $30 / Lista / Pedido / Pago), sin Distancia ni duplicados', !!detM81 && detM81.includes('Se compra en') && detM81.includes('Todo en el centro') && detM81.includes('Se entrega en') && detM81.includes('Progreso Buenos Aires') && detM81.includes('Precio del pasajero') && detM81.includes('$30') && detM81.includes('Lista') && detM81.includes('Tres kilos de carne') && detM81.includes('Pedido') && detM81.includes('Se pagará · Lleva $150 para recogerlo') && detM81.includes('Pago') && detM81.includes('efectivo') && detM81.indexOf('Se compra en') < detM81.indexOf('Se entrega en') && detM81.indexOf('Se entrega en') < detM81.indexOf('Precio del pasajero') && detM81.indexOf('Precio del pasajero') < detM81.indexOf('Lista') && detM81.indexOf('Lista') < detM81.indexOf('Pedido') && detM81.indexOf('Pedido') < detM81.indexOf('Pago') && !detM81.includes('Distancia') && !detM81.includes('Cosas:') && !detM81.includes('Resumen del mandado') && !detM81.includes('Paradas extra'), detM81Err || detM81.slice(0, 400));
+  check('v1.4.81: evaluado — detalle del MANDADO Quiero: cada dato sale UNA sola vez (sin duplicados)', !!detM81 && (detM81.match(/Se compra en/g)||[]).length === 1 && (detM81.match(/Todo en el centro/g)||[]).length === 1 && (detM81.match(/Tres kilos de carne/g)||[]).length === 1 && (detM81.match(/Progreso Buenos Aires/g)||[]).length === 1, detM81.slice(0, 400));
+  check('v1.4.81: evaluado — detalle del MANDADO Quiero: botones intactos (Aceptar $30, Contraofertar, Ver todas las solicitudes)', !!detM81 && detM81.includes('Aceptar $30') && detM81.includes('Contraofertar') && detM81.includes('‹ Ver todas las solicitudes'), detM81.slice(0, 400));
+  let detE81 = '', detE81Err = '';
+  try { detE81 = runDetail81(reqMandado81({ id: 1002, passenger_name: 'Pax Enviar', _dispO: 'Donde estás tú', _dispD: 'Punto de WhatsApp', description: 'Paquete con documentos', items_json: null, stops_json: null, order_amount: 200, recipient_phone: '9610000083', recipient_name: 'Ana' }), null); } catch(e){ detE81Err = String(e && e.message || e); }
+  check('v1.4.81: evaluado — detalle del MANDADO Enviar: "Se recoge en" + Recibe + Pedido, sin repetir y sin "Se compra en" ni Distancia', !!detE81 && detE81.includes('Se recoge en') && detE81.includes('Donde estás tú') && detE81.includes('Se entrega en') && detE81.includes('Punto de WhatsApp') && detE81.includes('Lista') && detE81.includes('• Paquete con documentos') && detE81.includes('Recibe') && detE81.includes('Ana · 9610000083') && detE81.includes('Pedido') && detE81.includes('Se pagará · Lleva $200 para recogerlo') && detE81.includes('Pago') && !detE81.includes('Se compra en') && !detE81.includes('Distancia') && !detE81.includes('Cosas:') && !detE81.includes('Resumen del mandado'), detE81Err || detE81.slice(0, 400));
+  let detV81 = '', detV81Err = '';
+  try { detV81 = runDetail81({ id: 1003, kind: 'viaje', passenger_name: 'Pax Viaje', passenger_phone: '9610000084', price: 25, distance_km: 0.8, eta_minutes: 5, payment_method: 'efectivo', passenger_count: 2, _dispO: 'cerca de Madero', _dispD: 'cerca de Progreso', description: '', items_json: null, stops_json: null, extra_stops: 0, order_payment: null, order_amount: 0, recipient_phone: null, recipient_name: null, price_improved: 0, previous_price: null, republished_at: null, offers: [] }, null); } catch(e){ detV81Err = String(e && e.message || e); }
+  check('v1.4.81: evaluado — control: el detalle de VIAJE sigue igual (De/A/Distancia/Personas/Precio, Aceptar $25)', !!detV81 && detV81.includes('De</span>') && detV81.includes('cerca de Madero') && detV81.includes('A</span>') && detV81.includes('cerca de Progreso') && detV81.includes('Distancia') && detV81.includes('0.8 km · ~5 min') && detV81.includes('Personas') && detV81.includes('2 personas') && detV81.includes('Precio del pasajero') && detV81.includes('$25') && detV81.includes('Aceptar $25') && detV81.includes('Contraofertar'), detV81Err || detV81.slice(0, 400));
+  // --- En vivo: el candado sigue puesto ---
+  const meLock81 = await api('/api/me?token=' + encodeURIComponent(chatPaxAcc.token));
+  check('v1.4.81: en vivo — /api/me sigue diciendo que Mandados está bloqueado', meLock81.ok && meLock81.mandados_locked === true, JSON.stringify(meLock81 && { locked: meLock81.mandados_locked }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
