@@ -632,7 +632,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.78'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.79'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -788,9 +788,11 @@ let PLACES = [];
 let LANDMARKS = []; // negocios y lugares con nombre (rótulos del mapa)
 let myPassenger = null, myDriver = null, myAccount = null;
 let negociosLocked = true; // v1.4.64: candado de Negocios — por defecto BLOQUEADO hasta que /api/me diga lo contrario; solo el perfil del dueño (@thegrafferz10) y el admin entran, y el admin lo abre/cierra desde el panel.
+let mandadosLocked = true; // v1.4.79: candado de Mandados — espejo exacto del de Negocios (v1.4.64): por defecto BLOQUEADO mientras se afina el flujo; solo el perfil del dueño (@thegrafferz10) y el admin entran a pedir mandados nuevos, y el admin lo abre/cierra desde el panel.
 let referralEnabled = true; // v1.4.67: la promo de viajes gratis por recomendación — prendida por defecto; el admin la apaga desde el panel y /api/me dice cómo está
 let refCodeFromUrl = ''; // v1.4.67: ?ref=<usuario> del enlace de recomendación, para prellenar el campo del registro
 function negociosCanEnter(){ return !negociosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }
+function mandadosCanEnter(){ return !mandadosLocked || (myAccount && (myAccount.role==='admin' || myAccount.username==='thegrafferz10')); }
 let currentView = 'home';
 let pollTimer = null, pollBusy = false;
 let lastSnapshot = {};
@@ -816,6 +818,7 @@ async function loadMe(){
         const j = await api('/api/me?token=' + encodeURIComponent(store.token));
         myAccount = j.account;
         negociosLocked = !!j.negocios_locked; // v1.4.64: el candado viene del servidor (por defecto bloqueado)
+        mandadosLocked = !!j.mandados_locked; // v1.4.79: el candado de Mandados viene del servidor (por defecto bloqueado, espejo de Negocios)
         referralEnabled = j.referral_enabled !== false; // v1.4.67: la promo de viajes gratis viene del servidor (por defecto prendida)
         myPassenger = j.passenger || null;
         myDriver = j.driver || null;
@@ -1249,7 +1252,10 @@ function renderHome(){
   const menu = $('#home-menu');
   if(menu) menu.innerHTML = ''
     + '<button class="menu-card" onclick="go(\'viajes\')"><span class="icbox green">🛺</span><span><b>Viajes</b><span class="muted">Pide tu mototaxi en San Fernando y pon tu precio.</span></span><span class="chev">›</span></button>'
-    + '<button class="menu-card" onclick="go(\'mandados\')"><span class="icbox amber">📦</span><span><b>Mandados</b><span class="muted">Encargos y paquetes en moto o mototaxi.</span></span><span class="chev">›</span></button>'
+    // v1.4.79: Mandados con candado, espejo de Negocios (v1.4.64) — si está bloqueado y la cuenta no es la del dueño ni admin, la tarjeta muestra 🔒 + «Próximamente» y al tocarla solo avisa (no entra).
+    + (mandadosCanEnter()
+      ? '<button class="menu-card" onclick="openMandados()"><span class="icbox amber">📦</span><span><b>Mandados</b><span class="muted">Encargos y paquetes en moto o mototaxi.</span></span><span class="chev">›</span></button>'
+      : '<button class="menu-card" style="opacity:.7" onclick="toast(\'Mandados está bloqueado por ahora.\')"><span class="icbox green">🔒</span><span><b>Mandados</b><span class="muted">Próximamente · Encargos y paquetes en moto o mototaxi.</span></span></button>')
     // v1.4.64: Negocios con candado — si está bloqueado y la cuenta no es la del dueño ni admin, la tarjeta muestra 🔒 + «Próximamente» y al tocarla solo avisa (no entra).
     + (negociosCanEnter()
       ? '<button class="menu-card" onclick="openNegocios()"><span class="icbox green">🏪</span><span><b>Negocios</b><span class="muted">Tiendas y negocios locales de San Fernando.</span></span><span class="chev">›</span></button>'
@@ -2535,7 +2541,7 @@ async function confirmPick(){
   if(pickMap){ removePickMapControls(pickMap); pickMap.remove(); pickMap = null; }
   suppressEntryAdOnce = true;
   if(pickWhich==='origin'){ wiz.origin = { lat:pickPos.lat, lng:pickPos.lng, label, zone }; wiz.step=2; go('viajes'); }
-  else if(pickWhich==='mdest' || pickWhich==='morigin'){ mandadoPickDone(pickWhich, pickPos, label); }
+  else if(pickWhich==='mdest'){ mandadoPickDone(pickWhich, pickPos, label); }
   else { wiz.dest = { lat:pickPos.lat, lng:pickPos.lng, label, zone }; await computeTrip(); go('viajes'); }
 }
 function pricePayNoteText(kind, price){
@@ -2635,7 +2641,8 @@ function mdPublishSummaryHtml(){
   if(md.kind==='quiero'){
     const stops = (md.stops||[]).map(s=>s.zone||s.detail||'').filter(Boolean);
     rows.push(['Se recoge en', esc(stops.length ? stops.join(' · ') : 'Varios lados')]);
-    rows.push(['Se entrega', esc('Tu punto' + (md.destRef ? ' · '+md.destRef : ''))]);
+    const dz = md.dest ? nearestZoneName(md.dest) : null;
+    rows.push(['Se entrega', esc('Tu punto' + (dz ? ' · cerca de '+dz : '') + (md.destRef ? ' · '+md.destRef : ''))]);
     // v1.4.78: el dinero que lleva el chofer para comprar (se actualiza
     // en vivo al mover el stepper, id md-sum-carry).
     rows.push(['Dinero para comprar', 'Lleva <span id="md-sum-carry">'+fmt$(Number(md.carryAmount)||150)+'</span> para comprar']);
@@ -3274,6 +3281,30 @@ async function renderLiveMap(){
     liveMarkers.pick = new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([pick.lng, pick.lat]).addTo(liveMap);
   }
   liveMarkers.dest = new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([dest.lng, dest.lat]).addTo(liveMap);
+  // v1.4.79 (ADD 5): punto de compra del mandado — si el texto que
+  // escribió el pasajero emparejó con el registro, el punto aproximado
+  // viene en stops_json[0] y se pinta con su rótulo ("Se compra en:
+  // <texto>") para que el chofer sepa a dónde ir a comprar. Sin
+  // coincidencia no hay pin, solo el texto en el resumen y el chat para
+  // preguntar. Sale en el mapa del chofer y en el del pasajero.
+  if(r.kind==='mandado'){
+    try {
+      const stops79 = JSON.parse(r.stops_json||'[]');
+      const s0 = stops79[0];
+      if(s0 && s0.lat!=null && s0.lng!=null && (s0.zone||s0.detail)){
+        const buyWrap = document.createElement('div');
+        buyWrap.className = 'pickup-pin';
+        const buyLbl = document.createElement('div');
+        buyLbl.className = 'pickup-lbl';
+        buyLbl.textContent = 'Se compra en: ' + (s0.zone||s0.detail);
+        const buyDot = document.createElement('div');
+        buyDot.className = 'pickup-dot';
+        buyDot.style.background = '#f59e0b';
+        buyWrap.appendChild(buyLbl); buyWrap.appendChild(buyDot);
+        liveMarkers.buy = new maplibregl.Marker({ element: buyWrap, anchor: 'bottom' }).setLngLat([s0.lng, s0.lat]).addTo(liveMap);
+      }
+    } catch(e){}
+  }
   // v1.4.61: la mototaxi se pinta en la posición MÁS FRESCA del chofer
   // (el sondeo pudo actualizarla mientras este render esperaba la ruta):
   // si no, nacía en un punto viejo y parecía no moverse. Y si por lo que
@@ -4725,79 +4756,63 @@ function showTaxiRun(idx){
 
 /* ===== MANDADOS — rediseño completo ===== */
 let md = null; // estado del flujo de mandado
-function newMandado(){ return { kind:null, step:0, items:[''], singlePlace:true, stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', recipientName:'', waDest:null, description:'', orderPay:'', orderAmount:'', carryAmount:150, km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
-let mdMap = null, mdSearchLists = {};
+function newMandado(){ return { kind:null, step:0, items:[''], stops:[{zone:'', detail:'', ref:'', lat:null, lng:null}], dest:null, destZone:'', destFromGps:false, destRef:'', pickupRef:'', vehicle:'mototaxi', recipient:'', recipientName:'', waDest:null, description:'', orderPay:'', orderAmount:'', carryAmount:150, km:0, eta:0, suggested:0, price:0, payment:'efectivo', requestId:null }; }
+let mdMap = null;
 function mdVehicleHtml(){
   return '<label class="mt">¿En qué vehículo?</label>'
     + '<div class="btnrow"><button type="button" class="veh-opt '+(md.vehicle==='mototaxi'?'sel':'')+'" onclick="md.vehicle=\'mototaxi\';renderMandados()">🛺 Mototaxi</button>'
     + '<button type="button" class="veh-opt '+(md.vehicle==='moto'?'sel':'')+'" onclick="md.vehicle=\'moto\';renderMandados()">🏍️ Moto</button></div>'
     + '<p class="muted mt">Para mandados sí puedes elegir moto de dos ruedas o mototaxi.</p>';
 }
-/* v1.4.78: tiendas fijas donde comprar, sin ubicación exacta — el chofer
-   solo necesita saber dónde comprar. "Abarrotes Castillejo" viene del
-   registro de lugares de Meta ("Abarrotes Castillejos", 16.87025,
-   -93.20678). "Farmacia del Súper Descuento" y "Bodega Aurrerá" NO están
-   en el registro: van al centro del pueblo (16.87137, -93.20652) como
-   punto APROXIMADO — el usuario debe confirmar su ubicación real. */
-const MD_PRESET_STORES = [
-  { name:'Abarrotes Castillejo', lat:16.87025, lng:-93.20678 },
-  { name:'Farmacia del Súper Descuento', lat:16.87137, lng:-93.20652, approx:true },
-  { name:'Bodega Aurrerá', lat:16.87137, lng:-93.20652, approx:true },
-];
-function mdChoosePresetStore(i, j){
-  const s = MD_PRESET_STORES[j]; if(!s) return;
-  md.stops[i].zone = s.name; md.stops[i].lat = s.lat; md.stops[i].lng = s.lng; md.stops[i].detail = '';
-  renderMandados();
-}
-function mdStopPlaceHtml(i){
-  const st = md.stops[i];
-  const chosen = st.zone && st.lat!=null;
-  return '<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b>'
-    + '<div class="muted mt">¿Dónde se compra?</div>'
-    + '<div class="btnrow" style="margin-top:8px">'
-    + MD_PRESET_STORES.map((s,j)=>'<button type="button" class="pay-opt '+(st.zone===s.name?'sel':'')+'" onclick="mdChoosePresetStore('+i+','+j+')">'+esc(s.name)+'</button>').join('')
-    + '</div>'
-    + '<label class="mt">O escribe un lugar: Centro, Progreso, Madero…</label>'
-    + '<input id="md-stop-q-'+i+'" placeholder="Escribe un lugar: Centro, Mercado, Progreso…" autocomplete="off" value="'+esc(st.zone||'')+'" oninput="mdStopSearch('+i+', this.value)">'
-    + '<div id="md-stop-res-'+i+'"></div>'
-    + (chosen ? '<p class="muted mt">✓ Se compra en: <b>'+esc(st.zone)+'</b></p>' : '')
-    + ((!md.singlePlace) && md.stops.length>2 ? '<button class="btn ghost small" onclick="md.stops.splice('+i+',1);renderMandados()">Quitar</button>' : '')
-    + '</div>';
-}
-function mdStopSearch(i, q){
-  const box = document.getElementById('md-stop-res-'+i); if(!box) return;
-  if(!normStr(q)){ box.innerHTML = ''; mdSearchLists[i] = []; return; }
-  const list = searchPlaces(q);
-  mdSearchLists[i] = list;
-  box.innerHTML = list.length ? list.map((p,j)=>'<button class="pickres" onclick="mdChooseStopPlace('+i+','+j+')"><span style="color:#14532d">📍</span> '+esc(p.name)+'</button>').join('')
-    : '<div class="muted" style="padding:10px 12px">No encontramos ese lugar.</div>';
-}
-function mdChooseStopPlace(i, j){
-  const p = (mdSearchLists[i]||[])[j]; if(!p) return;
-  md.stops[i].zone = p.name; md.stops[i].lat = p.lat; md.stops[i].lng = p.lng;
-  const inp = document.getElementById('md-stop-q-'+i); if(inp) inp.value = p.name;
-  const box = document.getElementById('md-stop-res-'+i); if(box) box.innerHTML = '';
-  renderMandados();
+/* v1.4.79: "Quiero un mandado" ya no tiene ubicación exacta de compra:
+   la parada es SOLO el texto que escribe el pasajero (una tienda o un
+   lugar). Para estimar el precio se intenta emparejar ese texto con el
+   registro de lugares (zonas + negocios, sin acentos ni mayúsculas):
+   si coincide, se usan sus coordenadas APROXIMADAS; si no coincide, la
+   estimación usa el punto de entrega (distancia 0 → precio mínimo $30).
+   El chofer solo necesita saber dónde comprar: el texto tal cual se
+   escribió viaja en stops_json y se muestra como "Se compra en: <texto>".
+   Las tiendas fijas y el buscador de parada de v1.4.78 se quitaron por
+   petición del usuario (el usuario: las instrucciones son texto, no
+   botones para seleccionar). */
+function mdMatchBuyPlace(text){
+  const q = normStr(text); if(!q) return null;
+  const all = allPlaces().concat(LANDMARKS||[]);
+  // 1) el nombre del lugar empieza con lo escrito; 2) lo contiene;
+  // 3) lo escrito contiene el nombre del lugar ("Abarrotes Castillejo"
+  // empareja "Abarrotes Castillejos"; "Progreso" empareja "El Progreso").
+  return all.find(p=>normStr(p.name).startsWith(q))
+    || all.find(p=>normStr(p.name).includes(q))
+    || all.find(p=>q.includes(normStr(p.name)))
+    || null;
 }
 function mdResolveStops(){
-  // Una parada con solo el nombre del lugar resuelve su punto conocido.
+  // Una parada con solo el texto resuelve su punto aproximado del
+  // registro; sin coincidencia queda sin coordenadas (el precio se estima
+  // desde el punto de entrega y el chofer ve solo el texto).
   for(const st of md.stops){
-    if(st.lat==null && st.zone){ const p = placeByName(st.zone); if(p){ st.lat = p.lat; st.lng = p.lng; } }
+    if(st.lat==null && st.zone){ const p = mdMatchBuyPlace(st.zone); if(p){ st.lat = p.lat; st.lng = p.lng; } }
   }
 }
 function drawMdMap(){
   const el = document.getElementById('md-map');
   if(!el) return;
   const first = md.stops[0], dest = md.dest;
-  if(!first || first.lat==null || !dest || dest.lat==null) return;
+  // v1.4.79: sin punto de compra (el texto no emparejó con el registro)
+  // igual se dibuja el mapa con el punto de entrega; la ruta y el punto
+  // de compra solo salen cuando el texto sí resolvió coordenadas.
+  if(!dest || dest.lat==null) return;
   if(mdMap){ mdMap.remove(); mdMap = null; }
   mdMap = makeMap('md-map', false, true); // v1.4.78: el mapa de mandados es el divertido (Voyager)
   mdMap.on('load', async ()=>{
-    new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([first.lng, first.lat]).addTo(mdMap);
+    const pts = [];
+    if(first && first.lat!=null){ new maplibregl.Marker({ element: dotEl('#22c55e', 16) }).setLngLat([first.lng, first.lat]).addTo(mdMap); pts.push([first.lng, first.lat]); }
     new maplibregl.Marker({ element: dotEl('#dc2626', 16) }).setLngLat([dest.lng, dest.lat]).addTo(mdMap);
-    let rt = null; try { rt = await osrmRoute(first, dest); } catch(e){}
+    pts.push([dest.lng, dest.lat]);
+    let rt = null;
+    if(first && first.lat!=null){ try { rt = await osrmRoute(first, dest); } catch(e){} }
     if(rt) setRouteLine(mdMap, 'route', rt.coords, '#2b7de9', 5);
-    fitPoints(mdMap, [[first.lng, first.lat], [dest.lng, dest.lat]]);
+    fitPoints(mdMap, pts);
   });
   setTimeout(()=>mdMap.resize(), 100);
 }
@@ -4830,6 +4845,16 @@ async function renderMandados(){
     renderMandadoSearching(active);
     return;
   }
+  // v1.4.79: candado de Mandados (espejo de Negocios v1.4.64) — solo el
+  // dueño y el admin entran a pedir mandados nuevos; los demás ven el
+  // candado con «Próximamente». Los mandados en curso (arriba) se siguen
+  // viendo para no dejar a nadie a medias.
+  if(!mandadosCanEnter()){
+    setPageNoScroll('mandados-page', true);
+    page.innerHTML = backPill('Regresar al inicio', "go('home')")
+      + '<div class="card white center" style="padding:28px 16px"><div style="font-size:40px">🔒</div><h3 class="mt">Mandados bloqueado por ahora</h3><p class="muted mt">Próximamente volverán los encargos y paquetes en moto o mototaxi.</p></div>';
+    return;
+  }
   if(md.step===0){
     setPageNoScroll('mandados-page', true);
     // v1.4.70: igual que Viajes (v1.4.69): si el perfil está incompleto,
@@ -4847,6 +4872,9 @@ async function renderMandados(){
   else renderMandadoEnviar();
 }
 function startMandado(kind){
+  // v1.4.79: con el candado de Mandados puesto, solo el dueño y el admin
+  // entran a ningún flujo de mandado.
+  if(!mandadosCanEnter()){ toast('Mandados está bloqueado por ahora.'); return; }
   // v1.4.70: igual que startTripRequest() (v1.4.69): sin perfil completo
   // (nombre + teléfono + foto, lo mismo que exige publicar) no se entra a
   // ningún flujo de mandado: se avisa y se lleva al usuario a completar
@@ -4862,6 +4890,19 @@ function startMandado(kind){
   // defecto (se respeta lo ya elegido si es ≥$100). Enviar NO toca esto:
   // su pago del pedido sigue en su paso 3.
   if(kind==='quiero' && !(Number(md.carryAmount)>=100)) md.carryAmount = 150;
+  // v1.4.79 (ADD 4): la entrega de "Quiero un mandado" es la ubicación
+  // actual por defecto: el GPS se captura solo al entrar al flujo, sin
+  // pedirle nada al pasajero. Si ya hay un punto (lo cambió en el mapa),
+  // se respeta; si el GPS falla, el paso 2 ofrece activarlo a mano.
+  if(kind==='quiero' && !md.dest){
+    myLocation().then(pos=>{
+      if(md.kind==='quiero' && !md.dest){
+        md.dest = { lat: pos.lat, lng: pos.lng, label:'Mi ubicación actual', zone:'' };
+        md.destFromGps = true;
+        if(md.step===2) renderMandados();
+      }
+    }).catch(()=>{});
+  }
   renderMandados();
 }
 function mdBack(step){ md.step = step; renderMandados(); }
@@ -4873,39 +4914,38 @@ function renderMandadoQuiero(){
   const page = $('#mandados-page');
   if(md.step===1){
     page.innerHTML = backPill('Regresar', "mdBack(0)")
-      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 1 de 4 · Escribe tu lista de cosas.</p>'
+      + '<h2>Quiero un mandado</h2><p class="muted mt">Paso 1 de 3 · Escribe tu lista de cosas.</p>'
       + mdVehicleHtml()
       + '<div class="card white"><b>¿Qué quieres que te traigan?</b><p class="muted mt">Una cosa por renglón: la mototaxi compra y te trae todo a tu ubicación.</p>'
       + mdItemsHtml() + '</div>'
       + '<div class="err hidden" id="md-err1">Escribe al menos una cosa que quieres que te traigan.</div>'
       + '<button class="btn" onclick="if(!md.items.some(i=>i.trim())){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(2)">Continuar</button>';
   } else if(md.step===2){
-    // v1.4.78: los pasos 2 y 3 son UNO solo: en la misma pantalla se
-    // elige si es un solo lugar o varios lados Y dónde se compra en cada
-    // parada, sin ubicación exacta (el chofer solo necesita saber dónde
-    // comprar). Sin pegar ubicación de WhatsApp ni marcar punto en mapa.
-    const multi = !md.singlePlace;
-    page.innerHTML = backPill('Regresar', "mdBack(1)")
-      + '<h2>¿Dónde se compra?</h2><p class="muted mt">Paso 2 de 4 · Indícale al chofer dónde tiene que comprar tu mandado.</p>'
-      + '<button class="bigopt" style="height:88px;'+(md.singlePlace?'background:#14532d;color:#fff;border-color:#14532d':'')+'" onclick="md.singlePlace=true;md.stops=md.stops.slice(0,1);renderMandados()"><span class="row"><span style="font-size:28px">📍</span><span class="tx"><b>Un solo lugar</b><div class="'+(md.singlePlace?'':'muted')+'">Todas las compras son en el mismo lugar: una sola recogida.</div></span></span></button>'
-      + '<button class="bigopt" style="height:88px;'+(!md.singlePlace?'background:#14532d;color:#fff;border-color:#14532d':'')+'" onclick="md.singlePlace=false;if(md.stops.length<2)md.stops.push({zone:\'\',detail:\'\',ref:\'\',lat:null,lng:null});renderMandados()"><span class="row"><span style="font-size:28px">🗺️</span><span class="tx"><b>Varios lados</b><div class="'+(!md.singlePlace?'':'muted')+'">Las compras son en lugares distintos: una parada por lugar. Cada parada extra suma $10 al precio.</div></span></span></button>'
-      + md.stops.map((st,i)=>mdStopPlaceHtml(i)).join('')
-      + (multi ? '<button class="btn ghost" onclick="md.stops.push({zone:\'\',detail:\'\',ref:\'\',lat:null,lng:null});renderMandados()">+ Agregar otro lugar (+$10)</button><p class="muted center mt">Cada parada extra suma $10 al precio sugerido: se ve desglosado en el paso del precio.</p>' : '')
-      + '<div class="err hidden" id="md-err2">Elige dónde se compra en cada parada: toca una tienda o escribe el lugar y elige una coincidencia.</div>'
-      + '<button class="btn" onclick="mdResolveStops();if(md.stops.some(x=>x.lat==null)){document.getElementById(\'md-err2\').classList.remove(\'hidden\');return;}mdBack(3)">Continuar</button>';
-  } else if(md.step===3){
+    // v1.4.79: sin tarjetas "Un solo lugar / Varios lados", sin tiendas
+    // fijas ni buscador, sin paso aparte de entrega — en ESTA pantalla van
+    // las dos cosas: (1) dónde se compra, con dos instrucciones cortas y
+    // UN campo de texto libre (el usuario: las instrucciones son texto,
+    // no botones para seleccionar); (2) a dónde se entrega, que ya viene
+    // en la ubicación actual por GPS, con botón para cambiar el punto en
+    // el mapa. Un solo lugar de compra.
+    const buyText = (md.stops[0] && md.stops[0].zone) || '';
     const dz = md.dest ? nearestZoneName(md.dest) : null;
-    page.innerHTML = backPill('Regresar', "mdBack(2)")
-      + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 3 de 4 · Marca tu punto de entrega en el mapa.</p>'
-      + '<p class="muted mt">La entrega es en el punto que marques en el mapa: ahí te llevan tus cosas. El mapa abre en tu ubicación actual para que dejes el pin justo donde te lo entregan.</p>'
-      + (md.dest ? '<div class="card white" style="border:2px solid #16a34a;background:#f0fdf4"><b>📍 Punto de entrega marcado</b><div class="muted mt">'+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(dz ? ' · cerca de '+esc(dz) : '')+'</div></div>'
-        + '<button class="btn ghost" style="border-color:var(--green);color:var(--green)" onclick="openPick(\'mdest\',\'mandados\')">Cambiar mi punto</button>'
-        : '<button class="btn ghost" style="border-color:var(--green);color:var(--green)" onclick="openPick(\'mdest\',\'mandados\')">📍 Marcar mi punto</button>'
-        + '<p class="muted center mt">Abre el mapa en tu ubicación actual: ajusta el pin y confirma tu punto</p>')
+    page.innerHTML = backPill('Regresar', "mdBack(1)")
+      + '<h2>¿Dónde se compra?</h2><p class="muted mt">Paso 2 de 3 · Dónde se compra y a dónde se entrega.</p>'
+      + '<p class="muted mt">Instrucción 1: si es en un establecimiento, escribe el nombre de la tienda (por ejemplo: Abarrotes Castillejo, Farmacia del Súper Descuento, Bodega Aurrerá).</p>'
+      + '<p class="muted mt">Instrucción 2: si es en un lugar, escribe cuál (por ejemplo: Centro, Progreso, Madero).</p>'
+      + '<label class="mt">¿Dónde se compra?</label>'
+      + '<input id="md-buy-where" placeholder="Escribe la tienda o el lugar…" value="'+esc(buyText)+'" oninput="md.stops[0].zone=this.value">'
+      + '<div class="card white mt"><b>¿A dónde se entrega?</b>'
+      + (md.dest
+        ? '<p class="muted mt">📍 '+(md.destFromGps ? 'Se entrega en tu ubicación actual' : 'Punto de entrega marcado')+'</p><p class="muted">'+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(dz ? ' · cerca de '+esc(dz) : '')+'</p>'
+        : '<p class="muted mt">Aún no hay punto de entrega.</p><button class="btn ghost" style="border-color:var(--green);color:var(--green)" onclick="mdActivateDelivery()">📍 Usar mi ubicación actual</button>')
+      + '<button class="btn ghost small" onclick="openPick(\'mdest\',\'mandados\')">📍 Cambiar punto</button></div>'
       + '<label class="mt">Referencia extra (opcional)</label><input id="md-dest-ref" placeholder="Ej. casa de portón verde, junto a la tienda" value="'+esc(md.destRef||'')+'" oninput="md.destRef=this.value">'
-      + '<div class="err hidden" id="md-err4">Marca tu punto para seguir: toca «Marcar mi punto», ajusta el pin donde te lo entregan y toca «Confirmar este punto».</div>'
-      + '<button class="btn" onclick="if(!md.dest||md.dest.lat==null){document.getElementById(\'md-err4\').classList.remove(\'hidden\');return;}mdComputePrice()">Continuar</button>';
-  } else if(md.step===4){
+      + '<div class="err hidden" id="md-err2">Escribe dónde se compra: la tienda o el lugar.</div>'
+      + '<div class="err hidden" id="md-err2b">Falta el punto de entrega: toca «Usar mi ubicación actual» o «Cambiar punto».</div>'
+      + '<button class="btn" onclick="mdNextQuiero2()">Continuar</button>';
+  } else if(md.step===3){
     // Precio (app real): mapa a pantalla completa con ruta + pastilla y
     // hoja inferior "Precio y publicar" (ver sección 7).
     page.innerHTML = '<div class="fullmap" style="position:fixed"><div class="map" id="md-map"></div>'
@@ -4915,27 +4955,50 @@ function renderMandadoQuiero(){
     setTimeout(()=>drawMdMap(), 60);
   }
 }
-let mdPickStop = 0;
-function mdStopEditor(i){
-  const s = md.stops[i];
-  return '<div class="card white"><b>Parada '+(i+1)+(i>0?' · +$10':'')+'</b><div class="muted mt">Lugar: <b>'+esc(s.zone)+'</b>'+(s.lat!=null?' · 📍 punto marcado':'')+'</div>'
-    + '<button class="btn ghost small" onclick="openPick(\'morigin\',\'mandados\');mdPickStop='+i+'">🔍 Buscar lugar / marcar punto en el mapa</button></div>';
+async function mdActivateDelivery(){
+  // v1.4.79 (ADD 4): la entrega es la ubicación actual — se captura el
+  // GPS a mano cuando el automático del inicio del flujo no llegó.
+  try {
+    const pos = await myLocation();
+    md.dest = { lat: pos.lat, lng: pos.lng, label:'Mi ubicación actual', zone:'' };
+    md.destFromGps = true;
+    renderMandados();
+  } catch(e){
+    toast('Activa tu ubicación para seguir: la entrega es en tu ubicación actual. Toca «Usar mi ubicación actual» y acepta el permiso.');
+  }
+}
+function mdNextQuiero2(){
+  // Paso 2 de "Quiero un mandado" (v1.4.79): el texto de dónde se compra
+  // es obligatorio y el punto de entrega también (el GPS automático ya
+  // cuenta como punto).
+  const e2 = document.getElementById('md-err2'); if(e2) e2.classList.add('hidden');
+  const e2b = document.getElementById('md-err2b'); if(e2b) e2b.classList.add('hidden');
+  const buy = ((md.stops[0] && md.stops[0].zone) || '').trim();
+  if(!buy){ if(e2) e2.classList.remove('hidden'); return; }
+  md.stops[0].zone = buy;
+  if(!md.dest || md.dest.lat==null){ if(e2b) e2b.classList.remove('hidden'); return; }
+  mdComputePrice();
 }
 async function mdComputePrice(){
   mdResolveStops();
   const first = md.stops[0];
-  if(first.lat==null){ toast('Elige dónde se compra en la primera parada.'); return; }
-  for(const st of md.stops){ if(st.lat==null){ toast('Elige dónde se compra en cada parada.'); return; } }
-  // La entrega es el punto confirmado en el mapa, nunca el GPS ni Centro.
+  if(!first.zone || !first.zone.trim()){ toast('Escribe dónde se compra.'); return; }
+  // La entrega es el punto confirmado (ubicación actual o el del mapa),
+  // nunca el GPS en vivo ni Centro.
   const dest = md.dest;
-  if(!dest || dest.lat==null){ toast('Marca tu punto de entrega en el mapa.'); return; }
-  const est = await estimateKm(first, dest);
+  if(!dest || dest.lat==null){ toast('Marca tu punto de entrega.'); return; }
+  // v1.4.79: el origen de la estimación es el punto aproximado del texto
+  // (registro) y, si el texto no emparejó con nada, el propio punto de
+  // entrega: la distancia estimada es 0 y el precio queda en el mínimo
+  // $30 (la tarifa y el mínimo no cambian).
+  const origin = (first.lat!=null) ? first : dest;
+  const est = await estimateKm(origin, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
   const extra = (md.stops.length-1) * MANDADO_EXTRA_STOP;
   md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km) + extra);
   md.price = md.suggested;
-  mdBack(4);
+  mdBack(3);
 }
 function renderMandadoEnviar(){
   const page = $('#mandados-page');
@@ -5086,11 +5149,12 @@ async function mdComputeEnviarPrice(){
   mdBack(4);
 }
 function mandadoPickDone(which, pos, label){
-  if(which==='morigin'){
-    md.stops[mdPickStop].lat = pos.lat; md.stops[mdPickStop].lng = pos.lng; md.stops[mdPickStop].detail = label;
-    if(pickLabel) md.stops[mdPickStop].zone = pickLabel;
-  } else if(which==='mdest'){
+  // v1.4.79: 'morigin' (marcar punto exacto de compra) ya no existe — la
+  // compra es solo texto. Solo queda 'mdest' (cambiar el punto de entrega
+  // en el mapa); ese punto ya no es la ubicación actual.
+  if(which==='mdest'){
     md.dest = { lat: pos.lat, lng: pos.lng, label, zone: pickLabel || md.destZone };
+    md.destFromGps = false;
     if(pickLabel) md.destZone = pickLabel;
   }
   go('mandados');
@@ -5108,7 +5172,7 @@ async function publishMandado(){
     let body;
     if(md.kind==='quiero'){
       const first = md.stops[0];
-      body = { passenger_id: myPassenger.id, kind:'mandado',
+      body = { passenger_id: myPassenger.id, kind:'mandado', token: store.token,
         origin_zone: first.zone, origin_detail: first.detail||first.zone, origin_lat: first.lat, origin_lng: first.lng,
         dest_zone: md.dest.zone||'Punto de entrega', dest_detail: (md.dest.label||'Entrega en mi punto') + (md.destRef ? ' · '+md.destRef : ''), dest_lat: md.dest.lat, dest_lng: md.dest.lng,
         distance_km: md.km, eta_minutes: md.eta, price, payment_method: pay, paymentMethod: pay,
@@ -5122,7 +5186,7 @@ async function publishMandado(){
         order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150 };
     } else {
       const dest = md.dest;
-      body = { passenger_id: myPassenger.id, kind:'mandado', type:'enviar',
+      body = { passenger_id: myPassenger.id, kind:'mandado', type:'enviar', token: store.token,
         origin_zone:'Mi ubicación', origin_detail:'Recogida en mi ubicación' + (md.pickupRef ? ' · '+md.pickupRef : ''), origin_lat: md.myLoc.lat, origin_lng: md.myLoc.lng,
         dest_zone: dest.zone, dest_detail: (dest.label||dest.zone) + (md.destRef ? ' · '+md.destRef : ''), dest_lat: dest.lat, dest_lng: dest.lng,
         distance_km: md.km, eta_minutes: md.eta, price, payment_method: pay, paymentMethod: pay,
@@ -5483,7 +5547,7 @@ function mandadoDriverSummaryHtml(r){
   try {
     const stops = JSON.parse(r.stops_json||'[]');
     const names = stops.map(s=>s && (s.zone||s.detail||'')).filter(Boolean);
-    if(names.length) rows.push(['Se compra en', esc(names.join(' · '))]);
+    if(names.length) rows.push(['📍 Se compra en', esc(names.join(' · '))]);
   } catch(e){}
   if(r.recipient_name||r.recipient_phone) rows.push(['Recibe', esc(r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')]);
   if(r.order_payment==='pagado') rows.push(['Pedido', 'Ya pagado']);
@@ -6055,6 +6119,8 @@ function renderAdminGrid(){
     + '<p class="muted" style="font-size:12px;margin-top:6px">Descarga una copia completa de la base de datos (cuentas, choferes, viajes, negocios y anuncios) para guardarla fuera del servidor.</p>'
     // v1.4.75: el candado de Negocios bajó hasta abajo, junto con las otras tarjetas de abajo (promo de viajes gratis y respaldo), arriba de Cerrar sesión. El contenido y el botón no cambian. (Antes estaba arriba, bajo la tarjeta de credenciales; v1.4.64 lo creó y v1.4.70 lo apiló en vertical.)
     + '<div class="card white mt" style="padding:12px"><b>🔒 Negocios ' + (negociosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (negociosLocked ? 'Solo tu perfil (@thegrafferz10) puede entrar a Negocios. Los demás ven el candado con «Próximamente».' : 'Todos pueden entrar a Negocios.') + '</div><button class="btn small" onclick="toggleNegociosLock()">' + (negociosLocked ? 'Abrir Negocios' : 'Bloquear Negocios') + '</button></div>'
+    // v1.4.79: el candado de Mandados, espejo del de Negocios — mismo lugar (abajo, antes de Cerrar sesión) y mismo comportamiento.
+    + '<div class="card white mt" style="padding:12px"><b>🔒 Mandados ' + (mandadosLocked ? 'bloqueado' : 'abierto') + '</b><div class="muted" style="font-size:12px;line-height:1.4">' + (mandadosLocked ? 'Solo tu perfil (@thegrafferz10) puede pedir mandados. Los demás ven el candado con «Próximamente».' : 'Todos pueden pedir mandados.') + '</div><button class="btn small" onclick="toggleMandadosLock()">' + (mandadosLocked ? 'Abrir Mandados' : 'Bloquear Mandados') + '</button></div>'
     + '<button class="btn" style="border:2px solid #374151;color:#374151;background:#fff" onclick="doLogout()">‹ Cerrar sesión</button>';
   loadAdminOverview();
   loadReferralStats(); // v1.4.67: estadísticas de la promo de viajes gratis
@@ -6086,6 +6152,14 @@ async function toggleNegociosLock(){ // v1.4.64: abre/cierra el candado de Negoc
     const j = await api('/api/admin/set-negocios-locked', { token: store.token, locked: !negociosLocked });
     negociosLocked = !!j.negocios_locked;
     toast(negociosLocked ? 'Negocios bloqueado. Solo tu perfil puede entrar.' : 'Negocios abierto para todos.');
+    renderAdminGrid();
+  } catch(e){ toast(e.message); }
+}
+async function toggleMandadosLock(){ // v1.4.79: abre/cierra el candado de Mandados desde el panel (solo admin), espejo de toggleNegociosLock (v1.4.64)
+  try {
+    const j = await api('/api/admin/set-mandados-locked', { token: store.token, locked: !mandadosLocked });
+    mandadosLocked = !!j.mandados_locked;
+    toast(mandadosLocked ? 'Mandados bloqueado. Solo tu perfil puede pedir mandados.' : 'Mandados abierto para todos.');
     renderAdminGrid();
   } catch(e){ toast(e.message); }
 }
@@ -6672,6 +6746,7 @@ function bizZoneOptions(sel){
   return (PLACES||[]).map(p=>'<option value="'+esc(p.name)+'"'+(sel===p.name?' selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
 function openNegocios(){ if(!negociosCanEnter()){ toast('Negocios está bloqueado por ahora.'); return; } bizScreen = 'main'; bizCurrent = null; bizFromAdmin = false; go('negocios'); }
+function openMandados(){ if(!mandadosCanEnter()){ toast('Mandados está bloqueado por ahora.'); return; } go('mandados'); } // v1.4.79: espejo de openNegocios (v1.4.64)
 let bizDetailMenu = false; // (v1.4.58) al abrir desde un anuncio, la ficha baja directo al menú (sus productos/servicios)
 function openBusiness(id, toMenu){ bizDetailMenu = !!toMenu; bizScreen = 'detail'; bizCurrent = id; bizCart = {}; bizFromAdmin = false; bizOrderShow = false; bizBookId = null; bizOrderDone = null; go('negocios'); }
 function scrollBizMenu(){ if(!bizDetailMenu) return; bizDetailMenu = false; const el = document.getElementById('biz-menu'); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
