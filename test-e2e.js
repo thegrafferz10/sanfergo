@@ -371,7 +371,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.77 en /api/health', h.ok && h.version === '1.4.77', JSON.stringify(h));
+  check('versión 1.4.78 en /api/health', h.ok && h.version === '1.4.78', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -472,7 +472,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.77', h134.ok && h134.version === '1.4.77', JSON.stringify(h134));
+  check('versión 1.4.78', h134.ok && h134.version === '1.4.78', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -634,7 +634,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.77)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.77';") && h.version === '1.4.77', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.78)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.78';") && h.version === '1.4.78', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1089,9 +1089,9 @@ async function api(path, body) {
     const r = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', extra_stops: extraStops });
     return r.ok ? r.request.price : null;
   }
-  check('mandado sin precio, 1.0 km, 0 paradas extra sugiere $20', (await suggestedMandado(0)) === 20);
-  check('mandado sin precio, 1.0 km, 1 parada extra sugiere $30', (await suggestedMandado(1)) === 30);
-  check('mandado sin precio, 1.0 km, 2 paradas extra sugiere $40', (await suggestedMandado(2)) === 40);
+  check('v1.4.78: mandado sin precio, 1.0 km, 0 paradas extra sugiere $30 (mínimo de mandado)', (await suggestedMandado(0)) === 30);
+  check('v1.4.78: mandado sin precio, 1.0 km, 1 parada extra sugiere $40', (await suggestedMandado(1)) === 40);
+  check('v1.4.78: mandado sin precio, 1.0 km, 2 paradas extra sugiere $50', (await suggestedMandado(2)) === 50);
   const manFixed = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 40, payment_method: 'efectivo', extra_stops: 2 });
   check('mandado con precio puesto ($40) no suma paradas extra', manFixed.ok && manFixed.request.price === 40, JSON.stringify(manFixed));
   // (5) Viaje corto (menos de 0.5 km) sí se puede publicar a $20.
@@ -1428,7 +1428,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.77 en /api/health (sección)', h27.ok && h27.version === '1.4.77', JSON.stringify(h27));
+  check('versión 1.4.78 en /api/health (sección)', h27.ok && h27.version === '1.4.78', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1473,7 +1473,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.77 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.77', JSON.stringify(h28));
+  check('versión 1.4.78 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.78', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1487,7 +1487,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.77 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.77', JSON.stringify(h29));
+  check('versión 1.4.78 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.78', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1496,7 +1496,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.77 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.77', JSON.stringify(h30));
+  check('versión 1.4.78 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.78', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1677,12 +1677,12 @@ async function api(path, body) {
   check('v1.4.42: una carga fallida ya no deja "Cargando..." para siempre: la bandeja y los viajes del chofer traen botón Reintentar', html.includes('onclick="loadDriverInbox(true)">Reintentar</button>') && html.includes('onclick="loadDriverTrips()">Reintentar</button>') && html.includes('onclick="loadDriverHist()">Reintentar</button>'));
   check('v1.4.42: el detalle trae la foto del pasajero con una descarga aparte por id (la bandeja ligera no la trae)', html.includes("api('/api/requests?id='+rid).then(j=>{") && html.includes("inboxOvSig=''; renderInboxOverlay(inboxLastList);"));
   // --- v1.4.42 (en vivo): aceptar el mandado, segundo Aceptar, lista ligera sin fotos ---
-  const req42 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
-  const acc42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 20 });
-  check('v1.4.42: aceptar el mandado como chofer lo confirma al instante (sin segundo paso del pasajero)', req42.ok && acc42.ok && acc42.request.status === 'aceptado' && acc42.request.final_price === 20 && acc42.request.driver_id === drv.driver.id, JSON.stringify(acc42));
+  const req42 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const acc42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.42: aceptar el mandado como chofer lo confirma al instante (sin segundo paso del pasajero)', req42.ok && acc42.ok && acc42.request.status === 'aceptado' && acc42.request.final_price === 30 && acc42.request.driver_id === drv.driver.id, JSON.stringify(acc42));
   const one42 = await api('/api/requests?id=' + req42.request.id);
   check('v1.4.42: /api/requests?id= devuelve UNA solicitud, la aceptada con su chofer (lo que abre el mapa en vivo, sin bajar la lista de 2.5 MB)', one42.ok && one42.requests.length === 1 && one42.requests[0].id === req42.request.id && one42.requests[0].status === 'aceptado' && one42.requests[0].driver_id === drv.driver.id, JSON.stringify(one42.requests && one42.requests[0]));
-  const dup42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 20 });
+  const dup42 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: req42.request.id, kind: 'acepta', price: 30 });
   check('v1.4.42: un segundo Aceptar (doble toque) rebota en el servidor ("ya no está buscando conductor." porque el viaje ya quedó aceptado) y el viaje sigue aceptado (el cliente ya no muestra ese error: verifica y va al mapa)', !dup42.ok && /Ya respondiste|ya no está buscando/.test(dup42.error || '') && one42.requests[0].status === 'aceptado', JSON.stringify(dup42));
   const light42 = await api('/api/requests?driver_id=' + drv.driver.id + '&light=1');
   const row42 = light42.requests.find(r=>r.id===req42.request.id);
@@ -1710,15 +1710,15 @@ async function api(path, body) {
   const row39 = open39.requests.find(r=>r.id===req39.request.id);
   check('v1.4.39: en vivo, la solicitud con zonas genéricas trae las coordenadas (origen en Madero, destino en Centro) que la fila usa para resolver el nombre', req39.ok && open39.ok && row39 && row39.origin_zone==='Mi ubicación' && row39.dest_zone==='Punto de entrega' && row39.origin_lat===16.87291 && row39.origin_lng===-93.21374 && row39.dest_lat===16.87137 && row39.dest_lng===-93.20652, JSON.stringify(row39 && {oz: row39.origin_zone, dz: row39.dest_zone, olat: row39.origin_lat, olng: row39.origin_lng, dlat: row39.dest_lat, dlng: row39.dest_lng}));
   // --- v1.4.40 (en vivo): el mandado Enviar trae en los datos lo que la fila compacta muestra ---
-  const req40 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
-  const req40b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'transferencia', description: 'Otro paquete', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado', order_amount: 0 });
+  const req40 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const req40b = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 30, payment_method: 'transferencia', description: 'Otro paquete', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado', order_amount: 0 });
   const open40 = await api('/api/requests?open=1');
   const row40 = open40.requests.find(r=>r.id===req40.request.id);
   const row40b = open40.requests.find(r=>r.id===req40b.request.id);
   check('v1.4.40: en vivo, el mandado por pagar trae distancia, ETA, pago y "Lleva $200", y el ya pagado trae pedido pagado sin monto por llevar', req40.ok && req40b.ok && open40.ok && row40 && row40.distance_km===0.9 && row40.eta_minutes===5 && row40.payment_method==='efectivo' && row40.order_payment==='por_pagar' && row40.order_amount===200 && row40b && row40b.order_payment==='pagado' && !(row40b.order_amount>0), JSON.stringify({row: row40 && {d: row40.distance_km, e: row40.eta_minutes, p: row40.payment_method, op: row40.order_payment, oa: row40.order_amount}, rowb: row40b && {op: row40b.order_payment, oa: row40b.order_amount}}));
   check('v1.4.34: publicar Enviar manda nombre, pago del pedido y cantidad', html.includes("type:'enviar'") && html.includes('recipient_name: md.recipientName') && html.includes('order_payment: md.orderPay') && html.includes("order_amount: md.orderPay==='por_pagar'"));
   const quieroSec = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
-  check('v1.4.34: "Quiero un mandado" sigue en 5 pasos', quieroSec.includes('Paso 1 de 5') && quieroSec.includes('Paso 4 de 5') && quieroSec.includes('md.step===5'));
+  check('v1.4.78: "Quiero un mandado" ahora es en 4 pasos (2+3 fusionados)', quieroSec.includes('Paso 1 de 4') && quieroSec.includes('Paso 2 de 4') && quieroSec.includes('Paso 3 de 4') && quieroSec.includes('md.step===4') && !quieroSec.includes('Paso 1 de 5') && !quieroSec.includes('md.step===5'));
   // Limpieza: los dos anuncios de la prueba se borran (quedan los de otras secciones).
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adF.ad.id });
   await api('/api/delete-ad', { token: admLogin.token, ad_id: adP.ad.id });
@@ -1727,12 +1727,12 @@ async function api(path, body) {
   // Estáticas: el servidor confirma en camino, el mapa de transiciones y la
   // idempotencia; el cliente con los botones nuevos y la tira despejada.
   check('v1.4.43: al aceptar el servidor deja el servicio automáticamente en camino (sin botón "Voy en camino")', srv.includes("trip_stage='en_camino', trip_stage_at=datetime('now')"));
-  check('v1.4.43: el mapa de transiciones salta las etapas viejas pero las sigue aceptando (servicios en curso)', srv.includes("en_camino: ['llego', 'en_viaje']") && srv.includes("llego: ['recogido', 'en_viaje']") && srv.includes("recogido: ['en_viaje', 'entregado']"));
+  check('v1.4.43: el mapa de transiciones salta las etapas viejas pero las sigue aceptando (servicios en curso)', srv.includes("en_camino: ['llego', 'en_viaje']") && srv.includes("llego: ['recogido', 'comprado', 'en_viaje']") && srv.includes("recogido: ['en_viaje', 'entregado']") && srv.includes("comprado: ['en_viaje', 'entregado']"));
   check('v1.4.43: avanzar a la etapa en la que ya está es éxito (doble toque no es error)', srv.includes("if (stage === r.trip_stage) return send(res, 200, { ok: true, request: r });"));
   check('v1.4.43: el cliente simplificó los botones ("Ya estoy afuera" → "Iniciar recorrido" → "Llegué a destino" en viajes; "Ya estoy afuera para recoger el paquete" → "Ya voy en camino" → "Entregado" en mandados) y ya no trae los viejos', html.includes("if(r.trip_stage==='confirmado' || r.trip_stage==='en_camino') return 'llego';") && html.includes("if(r.trip_stage==='llego') return 'en_viaje';") && html.includes("llego:'Ya estoy afuera'") && html.includes("en_viaje:'Iniciar recorrido'") && html.includes("finalizado:'Llegué a destino'") && html.includes("llego:'Ya estoy afuera para recoger el paquete'") && html.includes("en_viaje:'Ya voy en camino'") && html.includes("entregado:'Entregado'") && !html.includes("'Voy en camino'") && !html.includes("'Iniciar viaje'") && !html.includes("'Ya llegué a recoger'") && !html.includes("'Ya recogí el encargo'") && !html.includes("'En camino a entregarlo'") && !html.includes("'Ya lo entregué'") && !html.includes("'Voy por el encargo'"));
   const liveSec43 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
   check('v1.4.43: la pantalla en vivo del chofer ya no trae la caja verde de resumen ni el botón ancho de pegar ubicación: Recibe y Pedido son renglones chicos y pegar ubicación es un enlace chico', liveSec43.includes('live-mini') && liveSec43.includes('minilink') && liveSec43.includes('Recibe: ') && !liveSec43.includes('mandadoDriverSummaryHtml(r)') && !liveSec43.includes('class="ghostb"') && !liveSec43.includes('Pedir ubicación por WhatsApp a quien recibe') && !liveSec43.includes('Punto de entrega marcado en el mapa'));
-  check('v1.4.43: la ruta azul ya va al destino cuando el servicio empezó (recogido/en_viaje) y no de vuelta a la recogida', html.includes('function liveHeadingToDest(r){') && html.includes("return ['recogido','en_viaje','entregado'].includes(r.trip_stage||'');") && html.includes('const inTrip = liveHeadingToDest(r);'));
+  check('v1.4.43: la ruta azul ya va al destino cuando el servicio empezó (recogido/comprado/en_viaje) y no de vuelta a la recogida', html.includes('function liveHeadingToDest(r){') && html.includes("return ['recogido','comprado','en_viaje','entregado'].includes(r.trip_stage||'');") && html.includes('const inTrip = liveHeadingToDest(r);'));
   check('v1.4.43: la ruta pasa por las paradas de "Varios lados" y se encuadra COMPLETA en la franja libre', html.includes('function liveRouteWaypoints(r, toDest){') && html.includes('stops.slice(1)') && html.includes('osrmRoute(from, target, liveRouteWaypoints(r, inTrip))') && html.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())'));
   check('v1.4.43: el pasajero ve los estados del flujo nuevo (va en camino / ya está afuera / va a entregarte / entregado)', html.includes("en_camino:'Tu mototaxi va en camino'") && html.includes("en_viaje:'Viaje en curso · vas rumbo a tu destino'") && html.includes("en_viaje:'Tu encargo va en camino a su destino'") && html.includes("entregado:'Tu encargo fue entregado'") && html.includes("r.trip_stage==='en_viaje' && prev.indexOf('en_viaje')<0"));
   check('v1.4.43: advanceLive tiene guardia contra doble toque (seis toques mandan un solo avance)', html.includes('liveAdvancing = false') && html.includes('if(liveAdvancing) return;') && html.includes('finally { liveAdvancing = false; }'));
@@ -1756,8 +1756,8 @@ async function api(path, body) {
   const fin43 = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: req43.request.id, stage: 'finalizado' });
   check('v1.4.43: "Llegué a destino" finaliza el viaje', fin43.ok && fin43.request.trip_stage === 'finalizado' && fin43.request.status === 'finalizado' && !!fin43.request.finished_at, JSON.stringify(fin43.request && { st: fin43.request.trip_stage, fin: fin43.request.finished_at }));
   // En vivo: mandado con el flujo nuevo (el pasajero ve cada etapa igual).
-  const man43 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
-  const macc43 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: man43.request.id, kind: 'acepta', price: 20 });
+  const man43 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.9, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete de shein', vehicle: 'mototaxi', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'por_pagar', order_amount: 200 });
+  const macc43 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: man43.request.id, kind: 'acepta', price: 30 });
   check('v1.4.43: al aceptar el mandado ya va en camino a recoger (sin botón)', man43.ok && macc43.ok && macc43.request.status === 'aceptado' && macc43.request.trip_stage === 'en_camino', JSON.stringify(macc43.request && macc43.request.trip_stage));
   const mLlego = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: man43.request.id, stage: 'llego' });
   const paxLlego = (await api('/api/requests?passenger_id=' + pax.passenger.id)).requests.find(r=>r.id===man43.request.id);
@@ -1774,8 +1774,8 @@ async function api(path, body) {
   const legVv = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legV.request.id, stage: 'en_viaje' });
   const legVf = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legV.request.id, stage: 'finalizado' });
   check('v1.4.43: un viaje en curso con la etapa vieja "llego" sigue avanzando (llego → en_viaje → finalizado)', legV.ok && legVl.ok && legVl.request.trip_stage === 'llego' && legVv.ok && legVf.ok && legVf.request.trip_stage === 'finalizado', JSON.stringify({ llego: legVl.ok, viaje: legVv.ok, fin: legVf.ok }));
-  const legM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete viejo' });
-  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: legM.request.id, kind: 'acepta', price: 20 });
+  const legM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete viejo' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: legM.request.id, kind: 'acepta', price: 30 });
   const legMl = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'llego' });
   const legMr = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'recogido' });
   const legMv = await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: legM.request.id, stage: 'en_viaje' });
@@ -1830,8 +1830,8 @@ async function api(path, body) {
   await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: pkV.request.id, lat: 16.8727, lng: -93.2081 });
   const pkVRow = (await api('/api/requests?id=' + pkV.request.id)).requests[0];
   check('v1.4.44: en vivo, el viaje aceptado está en camino a recoger con la ubicación del chofer (la línea chofer → recogida tiene de dónde salir)', pkV.ok && pkVRow && pkVRow.trip_stage === 'en_camino' && pkVRow.driver_lat === 16.8727 && pkVRow.driver_lng === -93.2081, JSON.stringify(pkVRow && { stage: pkVRow.trip_stage, lat: pkVRow.driver_lat, lng: pkVRow.driver_lng }));
-  const pkM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'efectivo', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
-  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pkM.request.id, kind: 'acepta', price: 20 });
+  const pkM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: pkM.request.id, kind: 'acepta', price: 30 });
   await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: pkM.request.id, lat: 16.8685, lng: -93.2095 });
   const pkMRow = (await api('/api/requests?id=' + pkM.request.id)).requests[0];
   check('v1.4.44: en vivo, el mandado aceptado está en camino a recoger con la ubicación del chofer (misma línea chofer → recogida)', pkM.ok && pkMRow && pkMRow.trip_stage === 'en_camino' && pkMRow.driver_lat === 16.8685 && pkMRow.driver_lng === -93.2095, JSON.stringify(pkMRow && { stage: pkMRow.trip_stage, lat: pkMRow.driver_lat, lng: pkMRow.driver_lng }));
@@ -1875,8 +1875,8 @@ async function api(path, body) {
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finV.request.id, stage: 'en_viaje' });
   const finVRow = (await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finV.request.id, stage: 'finalizado' })).request;
   check('v1.4.45: en vivo, el viaje finalizado en efectivo trae todo lo del resumen flotante (y la nota de cambio aplica)', finVRow && finVRow.status === 'finalizado' && !!finVRow.finished_at && finVRow.payment_method === 'efectivo' && finVRow.origin_lat === 16.8709 && finVRow.dest_lat === 16.8675 && finVRow.driver_lat === 16.8727 && cashFn(finVRow) === 'Recuerda pagar con cambio al conductor', JSON.stringify(finVRow && { st: finVRow.status, pago: finVRow.payment_method, fin: finVRow.finished_at }));
-  const finM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 20, payment_method: 'transferencia', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
-  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: finM.request.id, kind: 'acepta', price: 20 });
+  const finM = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'transferencia', description: 'Paquete de prueba', recipient_phone: '9614868605', recipient_name: 'Juan Perez', order_payment: 'pagado' });
+  await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: finM.request.id, kind: 'acepta', price: 30 });
   await api('/api/update-driver-location', { driver_id: drv.driver.id, request_id: finM.request.id, lat: 16.8685, lng: -93.2095 });
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'llego' });
   await api('/api/advance-stage', { driver_id: drv.driver.id, request_id: finM.request.id, stage: 'en_viaje' });
@@ -2039,7 +2039,7 @@ async function api(path, body) {
   const man3Row = man3.ok && (await api('/api/requests?id=' + man3.request.id)).requests[0];
   check('v1.4.48: en vivo, el mandado con passenger_count=3 se guarda como 1 (los mandados no tienen personas)', man3.ok && man3Row && man3Row.passenger_count === 1, JSON.stringify(man3Row && { p: man3Row.passenger_count }));
   const manLow = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 15, payment_method: 'efectivo', description: 'Recoger un paquete' });
-  check('v1.4.48: en vivo, el mandado a $15 sigue rechazado (su mínimo sigue $20)', !manLow.ok, JSON.stringify(manLow));
+  check('v1.4.48: en vivo, el mandado a $15 sigue rechazado (su mínimo es $30)', !manLow.ok, JSON.stringify(manLow));
   // Compatibilidad: un viaje viejo por transferencia sigue publicándose
   // (el servidor lo acepta para los viajes en curso), aunque el cliente
   // ya no ofrece ese botón.
@@ -2065,7 +2065,7 @@ async function api(path, body) {
   const tripSec49 = html.slice(html.indexOf('async function renderViajes(){'), html.indexOf('function drawWizMap(){'));
   check('v1.4.49: auditoría del viaje — los pasos 0, 1, 3 y 5 tienen su píldora Regresar/Volver y el paso 4 el botón de dentro de la hoja', tripSec49.includes("backPill('Regresar al inicio'") && tripSec49.includes("backPill('Regresar', \"wiz.step=0;renderViajes()\")") && tripSec49.includes('onclick="wiz.step=2;renderViajes()">‹ Regresar</button>') && tripSec49.includes("backPill('Volver al inicio'"));
   const mdSec49 = html.slice(html.indexOf('async function renderMandados(){'), html.indexOf('function mdNextEnviar2(){'));
-  check('v1.4.49: auditoría del mandado — el inicio, la pantalla de buscando y cada paso (Quiero 1-4 y Enviar 1-3) tienen su Regresar, y el precio el botón de dentro', mdSec49.includes("backPill('Regresar al inicio'") && mdSec49.includes("backPill('Regresar', \"mdBack(0)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(1)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(2)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(3)\")"));
+  check('v1.4.49: auditoría del mandado — el inicio, la pantalla de buscando y cada paso (Quiero 1-4 y Enviar 1-3) tienen su Regresar, y el precio el botón de dentro', mdSec49.includes("backPill('Regresar al inicio'") && mdSec49.includes("backPill('Regresar', \"mdBack(0)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(1)\")") && mdSec49.includes("backPill('Regresar', \"mdBack(2)\")") && html.includes("mdBack(md.step-1)"));
   const pickSec49 = html.slice(html.indexOf('function openPick(which, ret, startPos){'), html.indexOf('function closePickToViajes(){'));
   check('v1.4.49: auditoría del selector de punto en el mapa — su franja de arriba trae "‹ Regresar" y la de abajo es solo el botón de confirmar (no hay hoja que lo tape)', pickSec49.includes('onclick="closePick()">‹ Regresar</button>') && pickSec49.includes("bot.innerHTML = '<div class=\"pickzone-wrap\""));
   // Evaluando el botón real de la hoja: se extrae su onclick del código
@@ -2168,7 +2168,7 @@ async function api(path, body) {
   check('v1.4.50: en vivo, el viaje se cancela antes de empezar', can50.ok, JSON.stringify(can50));
   const list50c = await api('/api/requests?passenger_id=' + pax50.passenger.id + '&light=1');
   check('v1.4.50: en vivo, tras cancelar ya no hay viaje en espera ni activo: el candado se levanta y Mandados abre normal', list50c.ok && !list50c.requests.some(r=>r.kind==='viaje' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(list50c.requests && list50c.requests.map(r=>r.status)));
-  const man50 = await api('/api/create-request', { passenger_id: pax50.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', description: 'Recoger un paquete' });
+  const man50 = await api('/api/create-request', { passenger_id: pax50.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete' });
   check('v1.4.50: en vivo, tras cancelar el viaje el mandado sí se publica (el formulario vuelve a estar disponible)', man50.ok && man50.request.status === 'buscando', JSON.stringify(man50.request && man50.request.status));
 
   // --- v1.4.51: la fila compacta del chofer (Recibir Viajes) muestra
@@ -2207,7 +2207,7 @@ async function api(path, body) {
   check('v1.4.51: en vivo, viaje de 2 personas a $25 se publica con passenger_count=2', t2.ok && t2.request.passenger_count === 2, JSON.stringify(t2.request && { p: t2.request.passenger_count }));
   const t3 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', passenger_count: 3 });
   check('v1.4.51: en vivo, viaje de 3 personas a $30 se publica con passenger_count=3 (como la captura del usuario)', t3.ok && t3.request.passenger_count === 3, JSON.stringify(t3.request && { p: t3.request.passenger_count, precio: t3.request.price }));
-  const m51 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 25, payment_method: 'efectivo', description: 'Recoger un paquete', passenger_count: 3 });
+  const m51 = await api('/api/create-request', { passenger_id: pax51.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 0.8, eta_minutes: 5, price: 30, payment_method: 'efectivo', description: 'Recoger un paquete', passenger_count: 3 });
   check('v1.4.51: en vivo, el mandado con passenger_count=3 se guarda como 1 (los mandados no tienen personas)', m51.ok && m51.request.passenger_count === 1, JSON.stringify(m51.request && { p: m51.request.passenger_count }));
   const open51 = await api('/api/requests?open=1&light=1');
   const mine51 = open51.ok ? open51.requests.filter(r=>r.passenger_id===pax51.passenger.id) : [];
@@ -2692,7 +2692,7 @@ async function api(path, body) {
   check('v1.4.56: el detalle distingue la oferta VIVA de la rechazada (mineLive: solo la pendiente decide los botones; la rechazada solo deja su aviso naranja)', detailSec56.includes("const mineLive = mine && mine.status!=='rechazada' ? mine : null;") && detailSec56.includes('const counter = mineLive && mineLive.passenger_counter_price;'));
   check('v1.4.56: el aviso naranja ya no quita los botones (es solo informativo y el flujo sigue a Aceptar/Contraofertar)', detailSec56.includes("if(rejectedD){") && detailSec56.indexOf('if(counter){') > detailSec56.indexOf("if(rejectedD){"));
   check('v1.4.56: driverRespond borra el borrador de contraoferta al enviar (la respuesta ya salió; no queda el formulario viejo)', html.includes('// (v1.4.56) La respuesta ya se envió: el borrador de contraoferta') && html.slice(html.indexOf('async function driverRespond(rid, kind, price){'), html.indexOf('async function driverAcceptCounter')).includes('driverCounter = null;'));
-  check('v1.4.56: el formulario de contraoferta nunca se pre-llena por debajo del precio actual del pasajero (ni del mínimo por personas)', detailSec56.includes("driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_TRIP);"));
+  check('v1.4.56: el formulario de contraoferta nunca se pre-llena por debajo del precio actual del pasajero (ni del mínimo por personas)', detailSec56.includes("driverCounter.price = Math.max(driverCounter.price, r.price, r.kind==='viaje'?minForPax(r.passenger_count):MIN_MANDADO);"));
   // Evaluando el detalle real (inboxDetailHtml) con estado de mentira:
   // se extrae la función y se ejecuta con la bandeja del chofer 777.
   function runDetail56(r, driverCounter){
@@ -3192,13 +3192,14 @@ async function api(path, body) {
     const liveSec60 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
     const stageLabelSrc60 = html.slice(html.indexOf('const STAGE_LABEL'), html.indexOf('/* Hacia el destino'));
     const htdSrc60 = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+    const quieroSrc60 = html.slice(html.indexOf('function isQuieroMandado(r){'), html.indexOf('function nextStage(r){'));
     const nextSrc60 = html.slice(html.indexOf('function nextStage(r){'), html.indexOf('function passengerStageTitle(r){'));
     const compassSrc60 = html.slice(html.indexOf('function compassDir(from, to){'), html.indexOf('async function cancelLiveRequest(rid){'));
     function runStrips60(r) {
       const mkEl = () => ({ classList: { add(){}, remove(){} }, style: {}, innerHTML: '', textContent: '' });
       const top = mkEl(), bot = mkEl(), pill = mkEl(), compass = mkEl(), recenter = mkEl();
       const els = { '#live-top': top, '#live-bottom': bot, '#live-pill': pill, '#live-compass': compass, '#live-recenter': recenter };
-      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = true;\nlet liveReq = null;\n' + stageLabelSrc60 + '\n' + htdSrc60 + '\n' + nextSrc60 + '\n' + compassSrc60 + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec60 + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
+      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = true;\nlet liveReq = null;\nfunction chatShowBtn(){}\n' + stageLabelSrc60 + '\n' + htdSrc60 + '\n' + quieroSrc60 + '\n' + nextSrc60 + '\n' + compassSrc60 + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec60 + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
       const h = f(sel => els[sel] || mkEl(), top, bot);
       h.run(r);
       return { top: top.innerHTML, bot: bot.innerHTML };
@@ -4226,7 +4227,7 @@ async function api(path, body) {
   const acc70 = await newMailAccount('nora');
   const me70a = await api('/api/me?token=' + acc70.li.token);
   check('v1.4.70: en vivo, cuenta nueva solo-correo (sin teléfono) nace con pasajero de teléfono vacío', acc70.acc.ok && me70a.ok && me70a.passenger && me70a.passenger.phone === '' && me70a.passenger.name === 'Nora Correo', JSON.stringify(me70a.passenger));
-  const md70bad = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const md70bad = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
   check('v1.4.70: en vivo, con el teléfono vacío el servidor también rechaza publicar el mandado (400)', !md70bad.ok && /teléfono/.test(md70bad.error || ''), JSON.stringify(md70bad));
   // Completar nombre + teléfono SIN foto (v1.4.71): tampoco guarda.
   const phone70 = '961692' + RUN.slice(0, 4);
@@ -4236,8 +4237,8 @@ async function api(path, body) {
   const upd70 = await api('/api/update-passenger', { passenger_id: me70a.passenger.id, name: 'Nora Correo', phone: phone70, face_photo: PHOTO });
   const me70b = await api('/api/me?token=' + acc70.li.token);
   check('v1.4.70: en vivo, al completar nombre + teléfono + foto el perfil queda completo', set70.ok && upd70.ok && me70b.ok && me70b.passenger.phone === phone70 && me70b.passenger.name === 'Nora Correo' && !!me70b.passenger.face_photo, JSON.stringify(me70b.passenger));
-  const md70ok = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
-  check('v1.4.70: en vivo, con el perfil completo el mandado se publica normal (buscando, $25)', md70ok.ok && md70ok.request.status === 'buscando' && md70ok.request.price === 25, JSON.stringify(md70ok.request && { st: md70ok.request.status, p: md70ok.request.price }));
+  const md70ok = await api('/api/create-request', { passenger_id: me70a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
+  check('v1.4.70: en vivo, con el perfil completo el mandado se publica normal (buscando, $30)', md70ok.ok && md70ok.request.status === 'buscando' && md70ok.request.price === 30, JSON.stringify(md70ok.request && { st: md70ok.request.status, p: md70ok.request.price }));
   await api('/api/cancel-request', { request_id: md70ok.request.id });
   // Perfil con nombre + teléfono desde el registro, pero SIN foto: el
   // registro crea el pasajero automático sin foto (v1.4.71: nace
@@ -4245,10 +4246,10 @@ async function api(path, body) {
   const acc70b = await api('/api/register-account', { name: 'Paco Completo', username: 'paco_' + RUN, phone: '961693' + RUN.slice(0, 4), password: 'secreta123' });
   const me70c = await api('/api/me?token=' + acc70b.token);
   check('v1.4.70: en vivo, una cuenta registrada con teléfono nace con nombre + teléfono pero SIN foto (perfil incompleto, v1.4.71)', acc70b.ok && me70c.ok && me70c.passenger && me70c.passenger.phone === '961693' + RUN.slice(0, 4) && !me70c.passenger.face_photo, JSON.stringify(me70c.passenger));
-  const md70cNoFoto = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const md70cNoFoto = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
   check('v1.4.71: en vivo, con nombre + teléfono pero sin foto el servidor también rechaza publicar el mandado (400)', !md70cNoFoto.ok && /foto/.test(md70cNoFoto.error || ''), JSON.stringify(md70cNoFoto));
   const up70c = await api('/api/upload-passenger-photo', { passenger_id: me70c.passenger.id, photo: PHOTO });
-  const md70c = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const md70c = await api('/api/create-request', { passenger_id: me70c.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
   check('v1.4.70: en vivo, con la foto subida el mandado se publica sin trabas', up70c.ok && md70c.ok && md70c.request.status === 'buscando', JSON.stringify(md70c.request && { st: md70c.request.status, p: md70c.request.price }));
   await api('/api/cancel-request', { request_id: md70c.request.id });
 
@@ -4341,8 +4342,8 @@ async function api(path, body) {
   const trip71ok = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
   check('v1.4.71: en vivo, con el perfil completo el viaje se publica normal (buscando, $25)', trip71ok.ok && trip71ok.request.status === 'buscando' && trip71ok.request.price === 25, JSON.stringify(trip71ok.request && { st: trip71ok.request.status, p: trip71ok.request.price }));
   await api('/api/cancel-request', { request_id: trip71ok.request.id });
-  const md71ok = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
-  check('v1.4.71: en vivo, con el perfil completo el mandado también se publica normal (buscando, $25)', md71ok.ok && md71ok.request.status === 'buscando' && md71ok.request.price === 25, JSON.stringify(md71ok.request && { st: md71ok.request.status, p: md71ok.request.price }));
+  const md71ok = await api('/api/create-request', { passenger_id: me71a.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 30, payment_method: 'efectivo' });
+  check('v1.4.71: en vivo, con el perfil completo el mandado también se publica normal (buscando, $30)', md71ok.ok && md71ok.request.status === 'buscando' && md71ok.request.price === 30, JSON.stringify(md71ok.request && { st: md71ok.request.status, p: md71ok.request.price }));
   await api('/api/cancel-request', { request_id: md71ok.request.id });
 
   // ===== v1.4.72 (2026-11-25): registro de chofer — cada foto ofrece
@@ -4444,6 +4445,94 @@ async function api(path, body) {
   check('v1.4.75: la pantalla de Viajes muestra Solicitados y Aceptados con su definición', tripsSec.includes('Solicitados') && tripsSec.includes('Aceptados') && tripsSec.includes('/api/admin/trips') && tripsSec.includes('incluye los cancelados') && tripsSec.includes('aceptados o terminados'), tripsSec.slice(0, 200));
   check('v1.4.75: cada fila trae pasajero, chofer (o "Sin chofer"), ruta, precio, fecha y estado', tripsSec.includes('Chofer: ') && tripsSec.includes('Sin chofer') && tripsSec.includes('origin_zone') && tripsSec.includes('fmt$(r.final_price || r.price)') && tripsSec.includes('fmtDateTime(r.created_at)') && tripsSec.includes('adminTripStatusLabel'), '');
   check('v1.4.75: la tarjeta del candado de Negocios está abajo, después del respaldo y antes de Cerrar sesión', gridSec.indexOf('🔒 Negocios') > gridSec.indexOf('Respaldar base de datos') && gridSec.indexOf('🔒 Negocios') < gridSec.indexOf('‹ Cerrar sesión'), '');
+
+  console.log('== v1.4.78: pasos fusionados, chat, mapa divertido, $30 mínimo, ticket ==');
+  // --- Mínimo $30 de mandado (servidor; el viaje sigue en $20) ---
+  const man25 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
+  check('v1.4.78: publicar mandado a $25 se rechaza (mínimo $30)', !man25.ok && /30/.test(man25.error || ''), JSON.stringify(man25));
+  const man30 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
+  check('v1.4.78: publicar mandado a $30 sí se puede', man30.ok && man30.request.price === 30, JSON.stringify(man30));
+  // --- Cliente: paso fusionado, tiendas fijas, dinero para comprar, mapa divertido ---
+  const quieroSec78 = html.slice(html.indexOf('function renderMandadoQuiero(){'), html.indexOf('function renderMandadoEnviar(){'));
+  check('v1.4.78: el paso 2 fusionado se titula "¿Dónde se compra?" y trae las 3 tiendas fijas', quieroSec78.includes('¿Dónde se compra?') && quieroSec78.includes('mdStopPlaceHtml') && html.includes('Abarrotes Castillejo') && html.includes('Farmacia del Súper Descuento') && html.includes('Bodega Aurrerá') && html.includes('function mdChoosePresetStore'));
+  check('v1.4.78: el paso fusionado ya no tiene búsqueda de punto exacto ni pegar ubicación de WhatsApp', !quieroSec78.includes('mdStopSearchHtml') && !quieroSec78.includes('mdResolveWa(') && !quieroSec78.includes('md-wa-0'), '');
+  check('v1.4.78: el resumen del chofer muestra "Se compra en" con el nombre de la tienda/lugar', html.includes("rows.push(['Se compra en'") && html.includes('stops_json'), '');
+  check('v1.4.78: el paso de precio muestra el dinero para comprar con steppers de $50 ($150 por defecto, mínimo $100)', html.includes('¿Cuánto dinero lleva el chofer para comprar?') && html.includes('mdCarryStep(-50)') && html.includes('mdCarryStep(50)') && html.includes('carryAmount:150') && html.includes('Math.max(100,'), '');
+  check('v1.4.78: publicar "Quiero" manda por_pagar con el dinero para comprar', html.includes("order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150"), '');
+  check('v1.4.78: el mapa de mandados usa el estilo divertido Voyager y Viajes sigue con Meta', html.includes('basemaps.cartocdn.com/gl/voyager-gl-style/style.json') && html.includes("makeMap('md-map', false, true)") && html.includes("pickReturn==='mandados'") && html.includes("liveReq.kind==='mandado'") && html.includes('style: fun ? FUN_STYLE_URL : META_STYLE_URL'), '');
+  check('v1.4.78: el mapa en vivo cambia de estilo entre viaje (Meta) y mandado (Voyager)', html.includes('function setLiveMapStyle(fun)') && html.includes("setLiveMapStyle(liveReq.kind==='mandado')"), '');
+  check('v1.4.78: el mínimo de mandado es $30 en cliente (viaje sigue $20)', html.includes('MIN_MANDADO = 30') && html.includes("kind==='viaje' ? minForPax(st.pax) : MIN_MANDADO") && html.includes('El precio debe ir de cinco en cinco: $30, $35, $40'), '');
+  // --- Chat: cuentas enlazadas con su perfil ---
+  const chatPaxAcc = await api('/api/register-account', { name: 'Chat Pasajera', username: 'chatpax78_' + RUN, phone: '9610000078', password: 'secreta123' });
+  check('v1.4.78: cuenta de pasajera para el chat', chatPaxAcc.ok && !!chatPaxAcc.token && chatPaxAcc.passenger && chatPaxAcc.passenger.id, JSON.stringify(chatPaxAcc));
+  // v1.4.71: el pasajero automático nace sin foto y publicar exige la
+  // selfie: se sube antes de publicar el mandado del chat.
+  const chatPaxPhoto = await api('/api/upload-passenger-photo', { passenger_id: chatPaxAcc.passenger.id, photo: PHOTO });
+  check('v1.4.78: la pasajera del chat sube su foto de cara', chatPaxPhoto.ok, JSON.stringify(chatPaxPhoto));
+  const chatDrvAcc = await api('/api/register-account', { name: 'Chat Chofer', username: 'chatdrv78_' + RUN, phone: '9610000079', password: 'secreta123' });
+  const chatDrv = await api('/api/register-driver', { name: 'Chat Chofer', phone: '9610000079', vehicle: 'mototaxi', unit: 'C78', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(chatDrv.driver.id);
+  const linkDrv78 = await api('/api/link-profiles', { token: chatDrvAcc.token, driver_id: chatDrv.driver.id });
+  check('v1.4.78: cuenta de chofer enlazada a su perfil (para el chat)', chatDrvAcc.ok && chatDrv.ok && linkDrv78.ok && linkDrv78.account.driver_id === chatDrv.driver.id, JSON.stringify(linkDrv78));
+  const on78 = await api('/api/set-driver-online', { driver_id: chatDrv.driver.id, online: true });
+  check('v1.4.78: chofer del chat en línea', on78.ok && on78.driver.online === 1, JSON.stringify(on78));
+  // Mandado "Quiero" aceptado (con tienda y dinero para comprar).
+  const man78 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.78: mandado "Quiero" a $30 con "Lleva $150" y parada Bodega Aurrerá se publica', man78.ok && man78.request.price === 30 && man78.request.order_payment === 'por_pagar' && man78.request.order_amount === 150, JSON.stringify(man78));
+  const man78row = await api('/api/requests?id=' + man78.request.id);
+  check('v1.4.78: la parada guarda el nombre de la tienda en stops_json', man78row.ok && (man78row.requests[0].stops_json || '').includes('Bodega Aurrerá'), JSON.stringify(man78row.requests && man78row.requests[0].stops_json));
+  // Chat antes de aceptar: rechazado.
+  const chatEarly = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, text: 'Hola' });
+  check('v1.4.78: el chat no abre antes de aceptar el servicio', !chatEarly.ok && /aceptado/.test(chatEarly.error || ''), JSON.stringify(chatEarly));
+  const acc78 = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: man78.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.78: el chofer acepta el mandado', acc78.ok && acc78.request.status === 'aceptado' && acc78.request.trip_stage === 'en_camino', JSON.stringify(acc78));
+  // Chat texto pasajera -> chofer.
+  const ch78a = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, text: 'Compra 2 kg de tortillas por favor' });
+  check('v1.4.78: la pasajera manda texto en el chat', ch78a.ok && ch78a.message.kind === 'texto' && ch78a.message.sender_role === 'pasajero', JSON.stringify(ch78a));
+  await new Promise(r => setTimeout(r, 1100));
+  const ch78b = await api('/api/chat/send', { token: chatDrvAcc.token, request_id: man78.request.id, text: 'Claro, voy por ellas' });
+  check('v1.4.78: el chofer responde texto en el chat', ch78b.ok && ch78b.message.sender_role === 'chofer', JSON.stringify(ch78b));
+  // Tercero rechazado (el admin no es ni pasajera ni chofer de este servicio).
+  const ch78c = await api('/api/chat?request_id=' + man78.request.id + '&token=' + encodeURIComponent(ADM.token));
+  check('v1.4.78: un tercero no puede leer el chat', !ch78c.ok && /no es tuyo/.test(ch78c.error || ''), JSON.stringify(ch78c));
+  // Foto del chofer (ADD 3: ticket) — con espera por el límite de 1 msg/s.
+  await new Promise(r => setTimeout(r, 1100));
+  const ch78photo = await api('/api/chat/send', { token: chatDrvAcc.token, request_id: man78.request.id, photo: PHOTO });
+  check('v1.4.78: el chofer manda foto (ticket) por el chat', ch78photo.ok && ch78photo.message.kind === 'foto' && ch78photo.message.sender_role === 'chofer', JSON.stringify(ch78photo));
+  // La pasajera ve la foto en la lista.
+  const ch78list = await api('/api/chat?request_id=' + man78.request.id + '&token=' + encodeURIComponent(chatPaxAcc.token));
+  check('v1.4.78: la pasajera recibe texto y foto del chofer en la lista del chat', ch78list.ok && ch78list.messages.length === 3 && ch78list.messages.some(m => m.kind === 'foto' && m.sender_role === 'chofer') && ch78list.messages.some(m => m.kind === 'texto' && m.sender_role === 'pasajero'), JSON.stringify(ch78list.messages && ch78list.messages.map(m => ({ k: m.kind, r: m.sender_role }))));
+  // Foto de pasajera: rechazada.
+  const ch78paxphoto = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, photo: PHOTO });
+  check('v1.4.78: la pasajera NO puede mandar foto (solo el chofer)', !ch78paxphoto.ok && /Solo el chofer/.test(ch78paxphoto.error || ''), JSON.stringify(ch78paxphoto));
+  // Límite 1 msg/s: dos textos seguidos de la misma cuenta, el segundo se rechaza.
+  await new Promise(r => setTimeout(r, 1100));
+  const rl1 = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, text: 'primero' });
+  const rl2 = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, text: 'segundo' });
+  check('v1.4.78: anti-spam del chat (1 msg/s por cuenta)', rl1.ok && !rl2.ok && /segundo/.test(rl2.error || ''), JSON.stringify({ rl1: rl1.ok, rl2 }));
+  // --- ADD 3: etapas "Ya compré" ---
+  const advLlego = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man78.request.id, stage: 'llego' });
+  check('v1.4.78: el chofer marca "Ya estoy afuera" (llego)', advLlego.ok && advLlego.request.trip_stage === 'llego', JSON.stringify(advLlego));
+  const advComprado = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man78.request.id, stage: 'comprado' });
+  check('v1.4.78: "Sin ticket" avanza igual a "Ya compré" (comprado) sin foto', advComprado.ok && advComprado.request.trip_stage === 'comprado', JSON.stringify(advComprado));
+  const cancelComprado = await api('/api/cancel-request', { request_id: man78.request.id });
+  check('v1.4.78: ya comprado no se puede cancelar', !cancelComprado.ok && /ya empezó/.test(cancelComprado.error || ''), JSON.stringify(cancelComprado));
+  const advEnViaje = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man78.request.id, stage: 'en_viaje' });
+  check('v1.4.78: de comprado sigue "Ya voy en camino" (en_viaje)', advEnViaje.ok && advEnViaje.request.trip_stage === 'en_viaje', JSON.stringify(advEnViaje));
+  const advEntregado = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man78.request.id, stage: 'entregado' });
+  check('v1.4.78: el mandado se entrega y termina', advEntregado.ok && advEntregado.request.trip_stage === 'entregado' && advEntregado.request.status === 'finalizado', JSON.stringify(advEntregado));
+  // Enviar NO puede marcar comprado.
+  const env78 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Paquete', recipient_phone: '9610000099', recipient_name: 'Quien recibe', order_payment: 'pagado', order_amount: 0 });
+  const accEnv78 = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: env78.request.id, kind: 'acepta', price: 30 });
+  const advLlegoEnv = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: env78.request.id, stage: 'llego' });
+  const advCompradoEnv = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: env78.request.id, stage: 'comprado' });
+  check('v1.4.78: un "Enviar" NO puede marcar "Ya compré"', env78.ok && accEnv78.ok && advLlegoEnv.ok && !advCompradoEnv.ok && /no es de compras/.test(advCompradoEnv.error || ''), JSON.stringify(advCompradoEnv));
+  // Cliente: chat y ticket.
+  check('v1.4.78: el mapa en vivo trae el botón flotante 💬 Chat y la hoja con sondeo de 3 s', html.includes('id="live-chat-btn"') && html.includes('openChatSheet()') && html.includes('setInterval(chatFetch, 3000)') && html.includes('chatSetDot(true)'), '');
+  check('v1.4.78: la hoja del chat trae foto solo para el chofer (cámara + galería)', html.includes('Tomar foto') && html.includes('Subir de galería') && html.includes('chatSendPhoto') && html.includes('chat-cam'), '');
+  check('v1.4.78: la foto del chat se toca para verla grande', html.includes('chatZoomPhoto') && html.includes('cursor:zoom-in'), '');
+  check('v1.4.78: el chofer ve "Ya compré" y la hoja del ticket con "Sin ticket"', html.includes("comprado:'Ya compré'") && html.includes('askTicketPhoto()') && html.includes('Foto del ticket') && html.includes('Sin ticket'), '');
+  check('v1.4.78: "Ya compré" solo sale en "Quiero un mandado" (Enviar sigue directo a "Ya voy en camino")', html.includes('isQuieroMandado(r)') && html.includes("isQuieroMandado(r) ? 'comprado' : 'en_viaje'"), '');
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

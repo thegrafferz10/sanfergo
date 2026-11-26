@@ -155,6 +155,15 @@ CREATE TABLE IF NOT EXISTS taxi_runs (
   driver_id INTEGER NOT NULL, price REAL, km REAL, secs INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
 );
+-- v1.4.78: chat pasajero ⇄ chofer del servicio aceptado (texto y foto
+-- del chofer). Solo los dos del servicio pueden leer y escribir.
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id INTEGER NOT NULL, sender_account_id INTEGER NOT NULL, sender_role TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'texto', text TEXT, photo TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_chat_request ON chat_messages (request_id, id);
 CREATE TABLE IF NOT EXISTS lost_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_type TEXT NOT NULL, reporter_name TEXT, reporter_phone TEXT,
@@ -511,6 +520,7 @@ const LANDMARKS = [
 // El usuario cobra $50 los viajes a colonias desde Centro; cuadra porque
 // recoge un poco más arriba. NO cambiar la tarifa sin su orden.
 const BASE_FARE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
+const MIN_MANDADO = 30; // v1.4.78: el mandado empieza en $30 (el viaje sigue en $20).
 const MANDADO_EXTRA_STOP = 10;
 const FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 // v1.4.67: el viaje gratis por recomendación cubre hasta $30; si el viaje
@@ -545,7 +555,7 @@ const BIZ_DELIVERY_FEE = 20;
 const BIZ_TYPES = ['entrega', 'catalogo', 'citas'];
 const AD_ENTRIES = ['viajes', 'negocios', 'mandados'];
 const TRIP_STAGES = ['confirmado', 'en_camino', 'llego', 'en_viaje', 'finalizado'];
-const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'en_viaje', 'entregado']; // como la app real (v1.4.0): sin 'a_recoger'
+const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'comprado', 'en_viaje', 'entregado']; // como la app real (v1.4.0): sin 'a_recoger'; 'comprado' es v1.4.78 (ADD 3): el chofer ya compró en un "Quiero un mandado"
 // v1.4.43 — flujo simplificado del chofer: al aceptar el servicio ya va
 // automáticamente "en camino" (sin botón "Voy en camino"); "Ya estoy
 // afuera" confirma la recogida y en viajes inicia el recorrido;
@@ -555,7 +565,7 @@ const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'en_viaj
 // esta versión no se quedan atorados.
 const STAGE_NEXT = {
   viaje: { confirmado: ['en_camino'], en_camino: ['llego', 'en_viaje'], llego: ['en_viaje'], en_viaje: ['finalizado'] },
-  mandado: { confirmado: ['en_camino'], en_camino: ['llego'], llego: ['recogido', 'en_viaje'], recogido: ['en_viaje', 'entregado'], en_viaje: ['entregado'] },
+  mandado: { confirmado: ['en_camino'], en_camino: ['llego'], llego: ['recogido', 'comprado', 'en_viaje'], recogido: ['en_viaje', 'entregado'], comprado: ['en_viaje', 'entregado'], en_viaje: ['entregado'] }, // v1.4.78: 'comprado' es el "Ya compré" de un "Quiero un mandado" (llego → comprado → en_viaje)
 };
 
 function haversineKm(a, b, c, d) {
@@ -572,6 +582,8 @@ function fareFor(km) { return Math.round((BASE_FARE + (km / 0.3) * PER_300M) * 1
 // del taxímetro (fareFor) NO cambia: su cobro final sigue exacto.
 function roundUp5(x) { return Math.max(MIN_TRIP, Math.ceil(x / 5) * 5); }
 function validNegotiatedPrice(p) { return Number.isFinite(p) && p >= MIN_TRIP && p <= 1000 && p % 5 === 0; }
+// v1.4.78: el mandado tiene su propio mínimo ($30); la rejilla de $5 y el tope $1000 son los mismos.
+function validNegotiatedPriceMandado(p) { return Number.isFinite(p) && p >= MIN_MANDADO && p <= 1000 && p % 5 === 0; }
 // Mínimo por número de personas (v1.4.48, modelo B confirmado por el
 // usuario): 1 persona $20, 2 personas $25, 3 personas $30. SOLO sube el
 // mínimo; la tarifa NO cambia ($10 base + $2.50 cada 300 m + $1.25/min
@@ -583,12 +595,17 @@ function roundUp5For(x, pax) { return Math.max(minForPax(pax), Math.ceil(x / 5) 
 function validNegotiatedPriceFor(p, pax) { return Number.isFinite(p) && p >= minForPax(pax) && p <= 1000 && p % 5 === 0; }
 // Error de precio según el mínimo por personas del viaje: si el precio
 // está por debajo del mínimo se dice el mínimo; si no, el error de la
-// rejilla de $5 de siempre. Los mandados usan el mínimo de $20 de siempre.
+// rejilla de $5 de siempre. Los mandados usan su propio mínimo de $30
+// (v1.4.78); los viajes siguen en $20.
 function negotiatedPriceError(p, r) {
   if (r && r.kind === 'viaje') {
     const pax = Math.min(3, Math.max(1, Number(r.passenger_count) || 1));
     const min = minForPax(pax);
     if (!Number.isFinite(p) || p < min) return `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${min}.`;
+  }
+  if (r && r.kind === 'mandado') {
+    if (!Number.isFinite(p) || p < MIN_MANDADO) return 'El mínimo para un mandado es $30.';
+    return validNegotiatedPriceMandado(p) ? null : GRID_ERROR;
   }
   return validNegotiatedPrice(p) ? null : GRID_ERROR;
 }
@@ -841,6 +858,9 @@ async function resolveLocationText(text) {
   return { ok: false, error: 'No se entendió la ubicación. Pega el enlace de Google Maps o las coordenadas.' };
 }
 
+// v1.4.78: anti-spam del chat — última vez (ms) que cada cuenta mandó un mensaje (1 msg/s).
+const CHAT_LAST_SEND = new Map();
+
 // v1.4.76 (arreglo del crash de Railway 2026-11-25): los ids que llegan
 // del cliente (query o body) se validan ANTES de atarlos a un `?` de
 // SQLite. node:sqlite tira un TypeError no atrapado ("Provided value
@@ -860,7 +880,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.77' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.78' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -2154,11 +2174,12 @@ async function api(req, res, pathname) {
     const pax = kind === 'viaje' ? Math.min(3, Math.max(1, Number(passenger_count) || 1)) : 1;
     // Precio sugerido de mandado: tarifa + $10 por parada extra (solo en
     // la rama sugerida; si el pasajero pone su precio, se respeta tal cual).
+    // v1.4.78: el mandado sugiere mínimo $30 (la tarifa sola daba $20).
     const stopsFee = kind === 'mandado' ? MANDADO_EXTRA_STOP * (extra_stops || 0) : 0;
-    const finalPrice = price ?? (kind === 'viaje' ? roundUp5For(fareFor(km), pax) : suggestedPrice(km) + stopsFee);
+    const finalPrice = price ?? (kind === 'viaje' ? roundUp5For(fareFor(km), pax) : Math.max(MIN_MANDADO, suggestedPrice(km)) + stopsFee);
     if (price != null) {
       if (kind === 'viaje' && !validNegotiatedPriceFor(finalPrice, pax)) return send(res, 400, { ok: false, error: finalPrice < minForPax(pax) ? `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${minForPax(pax)}.` : GRID_ERROR });
-      if (kind === 'mandado' && !validNegotiatedPrice(finalPrice)) return send(res, 400, { ok: false, error: GRID_ERROR });
+      if (kind === 'mandado' && !validNegotiatedPriceMandado(finalPrice)) return send(res, 400, { ok: false, error: finalPrice < MIN_MANDADO ? 'El mínimo para un mandado es $30.' : GRID_ERROR });
     }
     // Sin mínimo de distancia: solo hay mínimo de precio ($20). Un viaje
     // corto a $20 se puede publicar.
@@ -2175,6 +2196,10 @@ async function api(req, res, pathname) {
       if (order_payment !== 'pagado' && order_payment !== 'por_pagar') return send(res, 400, { ok: false, error: 'Elige cómo se paga el pedido: ya pagado o se pagará.' });
       if (order_payment === 'por_pagar' && !(Number(order_amount) > 0)) return send(res, 400, { ok: false, error: 'Escribe la cantidad que el chofer necesita llevar para recoger el mandado.' });
     }
+    // v1.4.78: "Quiero un mandado" — el chofer lleva dinero para comprar:
+    // si se va a pagar, la cantidad mínima es $100 (el cliente la pone en
+    // pasos de $50 desde $150). No toca Enviar: ahí sigue el mínimo >$0.
+    if (kind === 'mandado' && body.type !== 'enviar' && order_payment === 'por_pagar' && !(Number(order_amount) >= 100)) return send(res, 400, { ok: false, error: 'La cantidad que lleva el chofer para comprar es mínimo $100.' });
     // v1.4.67: VIAJE GRATIS por recomendación — solo viajes (no
     // mandados), solo si el pasajero tiene viajes gratis sin gastar (los
     // que están buscando o en curso ya cuentan como apartados: el viaje
@@ -2246,6 +2271,54 @@ async function api(req, res, pathname) {
       return c;
     });
     return send(res, 200, { ok: true, requests: out });
+  }
+  // v1.4.78: chat del servicio aceptado (pasajero ⇄ chofer). Solo los dos
+  // del servicio pueden leer y escribir; un tercero (o sin sesión) recibe
+  // error. La foto solo la manda el chofer (el cliente la baja a 800 px
+  // JPEG 0.75; aquí se rechaza si pasa de ~1.5 MB). Sin acuses de lectura.
+  if (pathname === '/api/chat/send') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const rid = body.request_id;
+    if (!validId(rid)) return badId(res);
+    const r = db.prepare('SELECT * FROM requests WHERE id=?').get(rid);
+    if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
+    if (r.status !== 'aceptado') return send(res, 400, { ok: false, error: 'El chat abre cuando el servicio está aceptado.' });
+    const isDriver = a.driver_id && r.driver_id && Number(a.driver_id) === Number(r.driver_id);
+    const isPax = a.passenger_id && r.passenger_id && Number(a.passenger_id) === Number(r.passenger_id);
+    if (!isDriver && !isPax) return send(res, 403, { ok: false, error: 'Este chat no es tuyo.' });
+    const role = isDriver ? 'chofer' : 'pasajero';
+    const text = String(body.text || '').trim().slice(0, 500);
+    const photo = body.photo ? String(body.photo) : null;
+    if (role === 'pasajero' && photo) return send(res, 400, { ok: false, error: 'Solo el chofer puede mandar fotos.' });
+    if (!text && !photo) return send(res, 400, { ok: false, error: 'Escribe un mensaje o manda una foto.' });
+    if (photo && !/^data:image\/jpeg;base64,/.test(photo)) return send(res, 400, { ok: false, error: 'La foto no es válida.' });
+    if (photo && photo.length > 2000000) return send(res, 400, { ok: false, error: 'La foto es muy pesada.' });
+    const now = Date.now();
+    if (CHAT_LAST_SEND.get(a.id) && now - CHAT_LAST_SEND.get(a.id) < 1000) return send(res, 429, { ok: false, error: 'Espera un segundo antes de mandar otro mensaje.' });
+    CHAT_LAST_SEND.set(a.id, now);
+    const kind = photo ? 'foto' : 'texto';
+    const ins = db.prepare(`INSERT INTO chat_messages (request_id, sender_account_id, sender_role, kind, text, photo) VALUES (?,?,?,?,?,?)`).run(rid, a.id, role, kind, text || null, photo);
+    const msg = db.prepare('SELECT * FROM chat_messages WHERE id=?').get(ins.lastInsertRowid);
+    return send(res, 200, { ok: true, message: { ...msg, sender_name: a.name } });
+  }
+  if (pathname === '/api/chat') {
+    const a = accountFromToken(q.get('token') || body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const rid = q.get('request_id');
+    if (!validId(rid)) return badId(res);
+    const r = db.prepare('SELECT * FROM requests WHERE id=?').get(rid);
+    if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
+    const isDriver = a.driver_id && r.driver_id && Number(a.driver_id) === Number(r.driver_id);
+    const isPax = a.passenger_id && r.passenger_id && Number(a.passenger_id) === Number(r.passenger_id);
+    if (!isDriver && !isPax) return send(res, 403, { ok: false, error: 'Este chat no es tuyo.' });
+    const after = Number(q.get('after_id') || 0);
+    const rows = db.prepare(`SELECT * FROM chat_messages WHERE request_id=? AND id>? ORDER BY id ASC LIMIT 100`).all(rid, Number.isFinite(after) ? after : 0);
+    const names = {};
+    for (const m of rows) {
+      if (!names[m.sender_account_id]) { const ac = db.prepare('SELECT name FROM accounts WHERE id=?').get(m.sender_account_id); names[m.sender_account_id] = ac ? ac.name : ''; }
+    }
+    return send(res, 200, { ok: true, messages: rows.map(m => ({ ...m, sender_name: names[m.sender_account_id] || '' })) });
   }
   if (pathname === '/api/driver-respond') {
     const { driver_id, request_id, price, eta_minutes } = body;
@@ -2454,7 +2527,7 @@ async function api(req, res, pathname) {
     // chofer tocó "Iniciar viaje" (en_viaje) o ya recogió el mandado
     // (recogido en adelante) ya no se puede cancelar.
     const started = (r.kind === 'viaje' && r.trip_stage === 'en_viaje') ||
-      (r.kind === 'mandado' && ['recogido', 'en_viaje', 'entregado'].includes(r.trip_stage || ''));
+      (r.kind === 'mandado' && ['recogido', 'comprado', 'en_viaje', 'entregado'].includes(r.trip_stage || ''));
     if (r.status === 'aceptado' && started) {
       return send(res, 400, { ok: false, error: 'El servicio ya empezó y no se puede cancelar.' });
     }
@@ -2472,6 +2545,10 @@ async function api(req, res, pathname) {
     // curso no se tocan.
     const allowed = r.kind === 'viaje' ? TRIP_STAGES : MANDADO_STAGES;
     if (!allowed.includes(stage)) return send(res, 400, { ok: false, error: 'Etapa no válida.' });
+    // v1.4.78 (ADD 3): 'comprado' es solo para "Quiero un mandado" (el
+    // chofer compra). Un "Enviar" siempre trae recipient_phone (es
+    // obligatorio ahí) y nunca se compra nada: no puede marcar comprado.
+    if (stage === 'comprado' && r.kind === 'mandado' && r.recipient_phone) return send(res, 400, { ok: false, error: 'Este mandado no es de compras.' });
     // v1.4.43: avanzar a la etapa en la que ya está es éxito (doble toque
     // no es error) y las transiciones se leen del mapa STAGE_NEXT: el flujo
     // nuevo salta 'llego' en viajes y 'recogido' en mandados, pero las
