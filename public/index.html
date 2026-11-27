@@ -187,13 +187,18 @@ input[type=file]{padding:8px}
    como los demás: lista con scroll, foto del chofer a todo lo ancho,
    entrada de texto + Enviar; la foto solo la manda el chofer. */
 .chatbtn{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 216px);z-index:60;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:50%;width:44px;height:44px;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.chatbtn .dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
+.chatbtn .chatbadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;border-radius:10px;background:#ef4444;border:2px solid #fff;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px}
 /* v1.4.84: en MANDADOS el chat ya no es el botón redondo flotante: es un
    botón ancho verde al final de la columna de abajo (mockup aprobado
    2026-11-26: "Chat con el conductor" / "Chat con el pasajero"). El
    punto rojo avisa igual que en el botón redondo. En viajes sigue el
    botón redondo de siempre. */
 .chatwide{position:relative;width:100%;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:14px;padding:12px;font-size:16px;font-weight:800;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+/* v1.4.91 (detalle 3): el indicador de no leídos ya no es un punto: es
+   un círculo rojo con el CONTEO de mensajes sin leer, en la esquina del
+   botón ancho de chat (mockup aprobado 2026-11-27). También va en el
+   botón redondo de viajes (.chatbtn .chatbadge). */
+.chatwide .chatbadge{position:absolute;top:-9px;right:-9px;min-width:24px;height:24px;border-radius:12px;background:#ef4444;border:2px solid #fff;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px}
 /* v1.4.87: .strip button (ámbar, arriba) ganaba por especificidad y el
    botón ancho de chat salía NARANJA en vivo; esta regla lo devuelve a VERDE
    en los dos lados (pasajero y chofer). */
@@ -695,7 +700,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.90'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.91'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1789,8 +1794,8 @@ function googleSoon(){ toggleGoogleNote(); } // compatibilidad: el aviso de Goog
 let APP_CONFIG = null;
 async function loadAppConfig(){
   if(APP_CONFIG) return APP_CONFIG;
-  try { const j = await api('/api/config'); APP_CONFIG = { googleClientId: j.googleClientId || null, emailCode: !!j.emailCode }; }
-  catch(e){ APP_CONFIG = { googleClientId: null, emailCode: false }; }
+  try { const j = await api('/api/config'); APP_CONFIG = { googleClientId: j.googleClientId || null, emailCode: !!j.emailCode, vapidPublicKey: j.vapidPublicKey || null, pushEnabled: !!j.pushEnabled }; }
+  catch(e){ APP_CONFIG = { googleClientId: null, emailCode: false, vapidPublicKey: null, pushEnabled: false }; }
   return APP_CONFIG;
 }
 function afterRenderLogin(){
@@ -3239,12 +3244,15 @@ function isQuieroMandado(r){
 /* v1.4.82: FASE 1 de un "Quiero un mandado" en el mapa en vivo del
    PASAJERO — antes de que el chofer marque "Ya compré" (comprado).
    El mandado NO tiene punto exacto de recogida (solo el texto de dónde
-   comprar, p. ej. "Todo en el centro", y el chofer ya sabe la tienda):
-   el mapa no dibuja ruta ni pines hasta la entrega. v1.4.84: la
-   MOTOTAXI sí se pinta en su posición real (el usuario la quiere ver
-   donde anda, aunque quede abajo). Fase 2 (comprado / recogido /
-   en_viaje) usa el mapa normal con ruta al destino. Enviar (punto real
-   de recogida) y los viajes nunca son fase 1. */
+   comprar, p. ej. "Todo en el centro", y el chofer ya sabe la tienda).
+   v1.4.91 (detalle 4, CAMBIO DE REGLA aprobado por el usuario
+   2026-11-27): la fase 1 del pasajero ya NO lleva mapa — igual que la
+   del chofer, solo las tarjetas apiladas sobre fondo claro (mockup
+   aprobado "Arre"). La regla vieja (v1.4.82/v1.4.84: mototaxi visible
+   en el mapa mientras compraba) queda REEMPLAZADA: en fase 1 no se
+   pinta ni mototaxi ni ruta ni pines; el mapa vuelve en fase 2
+   (comprado / recogido / en_viaje) con ruta al destino. Enviar (punto
+   real de recogida) y los viajes nunca son fase 1. */
 function livePhase1Quiero(r){
   return !!r && !liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
 }
@@ -3256,6 +3264,46 @@ function livePhase1Quiero(r){
    y los viajes nunca son fase 1 del chofer. */
 function livePhase1QuieroDriver(r){
   return !!r && liveAsDriver && isQuieroMandado(r) && !liveHeadingToDest(r);
+}
+/* v1.4.91 (detalle 5): ¿el pasajero tiene BLOQUEADA la cancelación de
+   este mandado? Solo mandados aceptados, antes de 'comprado': los
+   primeros 30 minutos desde la aceptación no se puede cancelar. Sin
+   sello de aceptación (fila vieja) se trata como vencido (no se
+   bloquea). 'comprado' o más ya lo bloquea canCancel; buscando (sin
+   chofer) sigue libre. accepted_at viene del servidor en UTC
+   ("YYYY-MM-DD HH:MM:SS"), igual que trip_started_at. */
+function mandadoCancelLocked(r){
+  if(!r || r.kind!=='mandado' || r.status!=='aceptado') return false;
+  if(['comprado','recogido','en_viaje','entregado'].includes(r.trip_stage||'')) return false;
+  if(!r.accepted_at) return false;
+  const t = Date.parse(String(r.accepted_at).replace(' ','T')+'Z');
+  if(!isFinite(t)) return false;
+  return Date.now()-t < 30*60*1000;
+}
+/* v1.4.91 (detalle 6): conteo de 30 minutos del CHOFER en fase 1 de
+   Quiero — cuánto le queda para comprar antes de que el pasajero pueda
+   cancelar. Sin sello (fila vieja) se trata como vencido. */
+let mdCdTimer = null;
+function mandadoCountdownText(r){
+  if(!r || !r.accepted_at) return 'El pasajero ya puede cancelar';
+  const t = Date.parse(String(r.accepted_at).replace(' ','T')+'Z');
+  if(!isFinite(t)) return 'El pasajero ya puede cancelar';
+  const left = 30*60*1000 - (Date.now()-t);
+  if(left<=0) return 'El pasajero ya puede cancelar';
+  const s = Math.ceil(left/1000);
+  return 'Tienes '+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')+' para comprar · si se acaba el tiempo, el pasajero podrá cancelar';
+}
+function updateMandadoCountdown(){
+  // Sin document no hay nada que pintar (las pruebas evaluadas viejas
+  // corren renderLiveStrips en un sandbox sin document: el conteo es
+  // solo visual y nunca debe tumbar la pantalla ni la suite).
+  if(typeof document === 'undefined') return;
+  const el = document.getElementById('md-countdown');
+  if(!el || !liveReq) return;
+  el.textContent = mandadoCountdownText(liveReq);
+}
+function stopMandadoCountdown(){
+  if(mdCdTimer){ clearInterval(mdCdTimer); mdCdTimer = null; }
 }
 function nextStage(r){
   // Flujo del chofer (v1.4.60): Aceptar deja el servicio automáticamente
@@ -3350,6 +3398,7 @@ async function openLiveTrip(requestId, asDriver, tries){
   renderLiveStrips();
   startLivePolling();
   syncDriverGpsWatch();
+  ensurePushSubscription(); // v1.4.91 (detalle 2): el permiso de notificaciones SOLO se pide aquí, al abrir un viaje/mandado en vivo — nunca al entrar
 }
 async function renderLiveMap(){
   const r = liveReq; if(!r || !liveMap) return;
@@ -3373,6 +3422,16 @@ async function renderLiveMap(){
   // la fase 2 quita la clase y el mapa vuelve con su ruta.
   const phase1d = livePhase1QuieroDriver(r);
   if(phase1d){
+    document.getElementById('view-live').classList.add('nolive-map');
+    return;
+  }
+  // v1.4.91 (detalle 4): fase de compra del PASAJERO (Quiero) — SIN
+  // mapa, igual que el chofer: sin ruta, sin pines, sin mototaxi, sin
+  // encuadre. La pantalla son las tarjetas apiladas (renderLiveStrips
+  // las pinta). Al marcar "Ya compré" la fase 2 quita la clase y el
+  // mapa vuelve con su ruta. REEMPLAZA la regla v1.4.84 (mototaxi en el
+  // mapa mientras compraba).
+  if(livePhase1Quiero(r)){
     document.getElementById('view-live').classList.add('nolive-map');
     return;
   }
@@ -3521,7 +3580,7 @@ function renderLiveStrips(){
   const top = $('#live-top'), bot = $('#live-bottom'), pill = $('#live-pill');
   const stage = stageLabel(r);
   const inTrip = liveHeadingToDest(r);
-  const canCancel = r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','en_viaje','entregado'].includes(r.trip_stage||''));
+  const canCancel = r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','comprado','en_viaje','entregado'].includes(r.trip_stage||'')); // v1.4.91 (detalle 5): en 'comprado' ya no se puede cancelar (el chofer ya gastó); antes solo se bloqueaba desde 'recogido'
   if(liveAsDriver){
     // v1.4.87: FASE 1 del chofer (Quiero, antes de "Ya compré") — SIN mapa:
     // la pantalla es la lista de compra del mockup aprobado v2: tarjeta
@@ -3550,6 +3609,7 @@ function renderLiveStrips(){
       const dirTxt83 = buyTxt83 ? 'Dirígete a '+esc(buyTxt83)+' para hacer el mandado' : 'Dirígete a comprar el mandado';
       top.innerHTML = '<div class="backrow" style="align-items:center;gap:8px"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
         + '<div class="statuscard"><div class="row"><span class="chip amber">COMPRANDO</span></div>'
+        + '<div id="md-countdown" style="margin-top:8px;font-size:15px;font-weight:800;color:#b45309"></div>'
         + '<div style="font-size:20px;font-weight:800;margin-top:8px;line-height:1.25">'+dirTxt83+'</div>'
         + '<div class="row" style="margin-top:6px"><span>Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div></div>';
       bot.innerHTML = '<div class="drivercard"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:20px">🛒</span><b style="font-size:17px">Lista de compra</b></div>'
@@ -3560,9 +3620,15 @@ function renderLiveStrips(){
       pill.classList.add('hidden');
       $('#live-compass').classList.add('hidden');
       $('#live-recenter').classList.add('hidden');
+      // v1.4.91 (detalle 6): conteo en vivo 30:00 → 00:00 (1 s, sin
+      // sondeo nuevo: se calcula de accepted_at). Se crea una sola vez;
+      // stopMandadoCountdown lo apaga al salir de fase 1 o del viaje.
+      if(!mdCdTimer) mdCdTimer = setInterval(updateMandadoCountdown, 1000);
+      updateMandadoCountdown();
       return;
     }
     top.classList.remove('paxcol'); bot.classList.remove('paxbot');
+    stopMandadoCountdown(); // v1.4.91 (detalle 6): fuera de fase 1 ya no hay conteo
     $('#live-compass').style.top='';
     // v1.4.84: en mandados el botón ancho de chat engorda la columna de
     // abajo: el recentrar sube para no taparlo. En viajes queda el valor
@@ -3681,9 +3747,18 @@ function renderLiveStrips(){
         + (hintLine ? '<div class="row" style="margin-top:6px"><span>'+hintLine+'</span></div>' : '')+'</div>';
     }
     pill.classList.add('hidden');
+    // v1.4.91 (detalle 5): durante el bloqueo de 30 min el botón de
+    // cancelar no se muestra: va una notita corta. El servidor es el
+    // que manda (aquí solo se esconde el botón).
+    const cancelLock91 = mandadoCancelLocked(r);
+    const cancelHtml91 = canCancel
+      ? (cancelLock91
+        ? '<div class="center muted" style="font-size:13px;padding:4px 8px">Podrás cancelar a partir de los 30 minutos si el chofer aún no va a entregarte</div>'
+        : '<div class="cancelwrap"><button class="cancelbtn" onclick="cancelLiveRequest('+r.id+')">'+(r.kind==='mandado'?'Cancelar mandado':'Cancelar viaje')+'</button></div>')
+      : '';
     // Tarjeta del chofer (app real): nombre en su línea, vehículo · unidad,
     // WhatsApp, a la derecha "Precio final $X" con etiqueta, y línea de pago.
-    bot.innerHTML = (canCancel ? '<div class="cancelwrap"><button class="cancelbtn" onclick="cancelLiveRequest('+r.id+')">'+(r.kind==='mandado'?'Cancelar mandado':'Cancelar viaje')+'</button></div>' : '')
+    bot.innerHTML = cancelHtml91
       + arriveHtml
       + '<div class="drivercard"><div style="display:flex;gap:12px;align-items:flex-start">'+(r.driver_photo?'<img class="avatar" src="'+r.driver_photo+'">':'<div class="avatar"></div>')
       + '<div class="flex1"><b style="display:block;font-size:17px">'+esc(r.driver_name||'')+'</b>'
@@ -3701,7 +3776,10 @@ function renderLiveStrips(){
     $('#live-compass').style.top = '';
     $('#live-recenter').style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + (130 + (canCancel?54:0) + (arriveHtml?70:0) + (r.kind==='mandado'?60:0)) + 'px)'; // v1.4.84: +60 en mandados por el botón ancho de chat
   }
-  $('#live-compass').classList.remove('hidden');
+  // v1.4.91 (detalle 4): en fase 1 del pasajero SIN mapa no van ni
+  // brújula ni recentrar (flotan sobre fondo claro y no sirven sin mapa).
+  if(livePhase1Quiero(r)){ $('#live-compass').classList.add('hidden'); $('#live-recenter').classList.add('hidden'); }
+  else $('#live-compass').classList.remove('hidden');
 }
 function compassDir(from, to){
   const dirs = ['hacia el norte','hacia el noreste','hacia el este','hacia el sureste','hacia el sur','hacia el suroeste','hacia el oeste','hacia el noroeste'];
@@ -3714,6 +3792,7 @@ async function cancelLiveRequest(rid){
 }
 function exitLive(){
   releaseWakeLock();
+  stopMandadoCountdown(); // v1.4.91 (detalle 6): se apaga el conteo de 30 min al salir del viaje en vivo
   chatSeeded = false; chatCloseSheet(true); // v1.4.78: cierra la hoja del chat y su sondeo
   if(livePoll) { clearInterval(livePoll); livePoll = null; }
   // v1.4.65: salir del mapa en vivo ya NO apaga el GPS del chofer —
@@ -4161,7 +4240,9 @@ function startLivePolling(){
       // etapa. No reframa ni pide ruta: eso ya lo hace ensureLiveRoute.
       // v1.4.84: la fase 1 del PASAJERO ya no se excluye (ahí sí hay
       // mototaxi); la fase 1 del chofer sí (no hay mapa).
-      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){
+      // v1.4.91 (detalle 4): la fase 1 del pasajero TAMPOCO lleva
+      // mototaxi — sin mapa, no hay marcador que recrear.
+      if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){
         liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);
       }
       // v1.4.60: si el mapa abrió sin posición del chofer, la línea se
@@ -4206,16 +4287,55 @@ function startLivePolling(){
   }, 2000);
 }
 
+/* ===== WEB PUSH DEL CHAT (v1.4.91, detalle 2) =====
+   La suscripción push se crea SOLO cuando el usuario abre un viaje o
+   mandado en vivo (openLiveTrip): ahí se registra el service worker
+   (/sw.js), se pide permiso de notificaciones (solo si aún no se ha
+   decidido) y se guarda la suscripción en /api/push/subscribe. Nunca
+   se pide al entrar ni en otras pantallas. Si el navegador no lo
+   soporta o el servidor no tiene llaves VAPID, no pasa nada: el chat
+   en vivo sigue igual. LÍMITE: en iPhone Safari el push solo llega si
+   el sitio está agregado a la pantalla de inicio y con permiso. */
+function pushAppServerKey(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s);
+  const out = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+async function ensurePushSubscription(){
+  try {
+    if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+    if(!store || !store.token) return;
+    const cfg = await loadAppConfig();
+    if(!cfg.pushEnabled || !cfg.vapidPublicKey) return;
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      if(Notification.permission === 'denied') return;
+      const perm = await Notification.requestPermission();
+      if(perm !== 'granted') return;
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: pushAppServerKey(cfg.vapidPublicKey) });
+    }
+    if(sub) await api('/api/push/subscribe', { token: store.token, subscription: sub.toJSON() });
+  } catch(e){ /* sin push no se rompe nada: el chat en vivo sigue igual */ }
+}
+
 /* ===== CHAT PASAJERO ⇄ CHOFER (v1.4.78) =====
    Hoja inferior en el mapa en vivo de un servicio ACEPTADO (viaje o
    mandado). El pasajero y el chofer se escriben; el chofer además puede
    mandar foto de un producto (cámara o galería, mismo patrón verde/
    naranja que el registro de chofer) cuando algo no está claro. Sin
    acuses de lectura, sin push: con la hoja abierta se sondea cada 3 s;
-   con la hoja cerrada, el botón muestra un punto rojo cuando llega un
-   mensaje del otro lado (se revisa en el sondeo en vivo, máx. 1 vez/5 s).
-   La foto se baja a 800 px JPEG 0.75 antes de mandarse. */
-let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {}, chatUnread = false;
+   con la hoja cerrada, el botón muestra un distintivo rojo con el
+   conteo de mensajes sin leer del otro lado (v1.4.91, detalle 3: antes
+   era solo un punto; se revisa en el sondeo en vivo, máx. 1 vez/5 s).
+   La foto se baja a 800 px JPEG 0.75 antes de mandarse.
+   v1.4.91 (detalle 2): el push con la app cerrada es aparte — ver la
+   suscripción push de arriba (solo se pide permiso al abrir un viaje en
+   vivo, nunca al entrar). */
+let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {}, chatUnread = 0; // v1.4.91 (detalle 3): chatUnread es el CONTEO de mensajes sin leer (antes era solo sí/no)
 function chatMyRole(){ return liveAsDriver ? 'chofer' : 'pasajero'; }
 /* v1.4.84: botón ancho de chat al final de la columna de abajo en
    MANDADOS (mockup aprobado 2026-11-26): abre la misma hoja de chat
@@ -4225,7 +4345,9 @@ function chatWideBtnHtml(){
   // v1.4.88: sin manejador en línea aquí — el tap lo atiende la delegación en
   // #live-bottom (la columna se repinta cada 2 s y el nodo nuevo se
   // tragaba el primer toque).
-  return '<button class="chatwide" id="live-chat-btn-bottom">💬 '+label+(chatUnread?'<span class="dot"></span>':'')+'</button>';
+  // v1.4.91 (detalle 3): círculo rojo con el CONTEO de no leídos en la
+  // esquina del botón (mockup aprobado 2026-11-27).
+  return '<button class="chatwide" id="live-chat-btn-bottom">💬 '+label+(chatUnread>0?'<span class="chatbadge">'+chatUnread+'</span>':'')+'</button>';
 }
 function chatShowBtn(){
   const b = document.getElementById('live-chat-btn');
@@ -4238,22 +4360,21 @@ function chatShowBtn(){
   if(!accepted) chatCloseSheet(true);
   else if(!chatSeeded){ chatSeeded = true; chatSeed(); }
 }
-function chatSetDot(on){
+function chatSetDot(n){
   // v1.4.84: el punto rojo vive en el botón de chat que esté en
   // pantalla (redondo en viajes, ancho de abajo en mandados). Como la
   // columna de abajo se repinta en cada sondeo, el estado queda en
   // chatUnread y renderLiveStrips lo vuelve a pintar.
-  chatUnread = !!on;
-  const b = document.getElementById('live-chat-btn');
-  if(b){
-    const d = b.querySelector('.dot'); if(d) d.remove();
-    if(on) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
-  }
-  const wb = document.getElementById('live-chat-btn-bottom');
-  if(wb){
-    const d = wb.querySelector('.dot'); if(d) d.remove();
-    if(on) wb.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
-  }
+  // v1.4.91 (detalle 3): n es el conteo ABSOLUTO de no leídos (false/0
+  // lo limpia, p. ej. al abrir el chat). El distintivo muestra el número.
+  chatUnread = (n===false || n===0) ? 0 : (Number(n)||0);
+  const paint = (b)=>{
+    if(!b) return;
+    const d = b.querySelector('.chatbadge') || b.querySelector('.dot'); if(d) d.remove();
+    if(chatUnread>0) b.insertAdjacentHTML('beforeend', '<span class="chatbadge">'+chatUnread+'</span>');
+  };
+  paint(document.getElementById('live-chat-btn'));
+  paint(document.getElementById('live-chat-btn-bottom'));
 }
 async function chatSeed(){
   // Al entrar al mapa en vivo, marcar hasta dónde ya hay mensajes para
@@ -4301,8 +4422,12 @@ async function chatFetch(){
     if(chatOpen){
       chatList = chatList.concat(msgs);
       chatRenderList(chatList);
-    } else if(msgs.some(m=>m.sender_role!==chatMyRole())){
-      chatSetDot(true);
+    } else {
+      // v1.4.91 (detalle 3): cada mensaje nuevo DEL OTRO LADO suma al
+      // conteo del distintivo rojo del botón de chat (con la hoja
+      // cerrada). Los propios no cuentan.
+      const n = msgs.filter(m=>m.sender_role!==chatMyRole()).length;
+      if(n) chatSetDot(chatUnread+n);
     }
   } catch(e){}
 }
@@ -5203,7 +5328,7 @@ function startMandado(kind){
 }
 function mdBack(step){ mdCloseListPopup(); md.step = step; renderMandados(); }
 function mdItemsHtml(){
-  return md.items.map((it,i)=>'<div class="itemrow"><input data-item="'+i+'" value="'+esc(it)+'" placeholder="'+(i===0?'Ej. 2 kg de tortillas':'Ej. un refresco, pan, lo que sigue…')+'" oninput="md.items['+i+']=this.value"><button class="x" aria-label="Quitar" onclick="md.items.splice('+i+',1);if(!md.items.length)md.items=[\'\'];renderMandados()">🗑️</button></div>').join('')
+  return md.items.map((it,i)=>'<div class="itemrow"><input data-item="'+i+'" value="'+esc(it)+'" placeholder="'+(i===0?'Ej. 2 kg de tortillas':'Ej. un refresco, pan, lo que sigue…')+'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="md.items['+i+']=this.value"><button class="x" aria-label="Quitar" onclick="md.items.splice('+i+',1);if(!md.items.length)md.items=[\'\'];renderMandados()">🗑️</button></div>').join('')
     + (md.items.length<10 ? '<button class="btn ghost" style="border:2px dashed var(--green);color:var(--green)" onclick="md.items.push(\'\');renderMandados()">+ Agregar otra cosa</button>' : '<p class="muted center mt">Máximo 10 cosas por mandado.</p>');
 }
 function renderMandadoQuiero(){
