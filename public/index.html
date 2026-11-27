@@ -194,6 +194,30 @@ input[type=file]{padding:8px}
    punto rojo avisa igual que en el botón redondo. En viajes sigue el
    botón redondo de siempre. */
 .chatwide{position:relative;width:100%;background:#16a34a;color:#fff;border:1px solid #15803d;border-radius:14px;padding:12px;font-size:16px;font-weight:800;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+/* v1.4.87: .strip button (ámbar, arriba) ganaba por especificidad y el
+   botón ancho de chat salía NARANJA en vivo; esta regla lo devuelve a VERDE
+   en los dos lados (pasajero y chofer). */
+.strip button.chatwide{background:#16a34a;color:#fff;border-color:#15803d}
+/* v1.4.87: hoja de chat estilo WhatsApp — se desliza hacia arriba, con
+   tirador, encabezado con foto + nombre + En línea + X grande, burbujas,
+   y barra de entrada con cámara y botón redondo verde de enviar. */
+.dialog.chat-sheet .box{max-height:82dvh;display:flex;flex-direction:column;overflow:hidden;animation:chatSlideUp .22s ease-out}
+@keyframes chatSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.chatgrab{width:44px;height:5px;border-radius:3px;background:#d1d5db;margin:2px auto 8px;flex-shrink:0}
+.chatsheet-head{display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-shrink:0;touch-action:none}
+.chathead-photo{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.chathead-photo-empty{display:flex;align-items:center;justify-content:center;background:#dcfce7;color:#166534;font-size:20px;font-weight:800}
+.chathead-name{flex:1;min-width:0;display:flex;flex-direction:column}
+.chathead-name b{font-size:16px}
+.chathead-name span{font-size:12px;color:#16a34a;font-weight:700}
+.chatx{flex-shrink:0;width:44px;height:44px;border-radius:50%;border:none;background:#f3f4f6;color:#111827;font-size:26px;font-weight:800;line-height:1;cursor:pointer}
+.chatmsgs{flex:1;min-height:140px;overflow-y:auto;padding:12px 4px;display:flex;flex-direction:column;gap:6px}
+.chattime{display:block;font-size:11px;opacity:.65;margin-top:2px;text-align:right}
+.chatsend{flex-shrink:0;width:46px;height:46px;border-radius:50%;border:none;background:#16a34a;color:#fff;font-size:20px;font-weight:800;cursor:pointer}
+.chatcam{flex-shrink:0;width:46px;height:46px;border-radius:50%;border:1px solid #d1d5db;background:#fff;font-size:22px;cursor:pointer}
+/* v1.4.87: con el chat abierto, la tarjeta del conductor del pasajero se
+   oculta (evita el nombre duplicado) y vuelve al cerrar el chat. */
+#live-bottom.chat-open .drivercard{display:none}
 .chatwide .dot{position:absolute;top:-4px;right:10px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
 /* v1.4.84: fase 2 del pasajero (Quiero, ya compró) — tarjeta de estado
    compacta para que el mapa se vea GRANDE y LIBRE (mockup aprobado). */
@@ -671,7 +695,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.86'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.87'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3499,13 +3523,15 @@ function renderLiveStrips(){
   const inTrip = liveHeadingToDest(r);
   const canCancel = r.trip_stage!=='finalizado' && r.trip_stage!=='entregado' && !(r.kind==='viaje' && r.trip_stage==='en_viaje') && !(r.kind==='mandado' && ['recogido','en_viaje','entregado'].includes(r.trip_stage||''));
   if(liveAsDriver){
-    // v1.4.83: FASE 1 del chofer (Quiero, antes de "Ya compré") — SIN mapa:
-    // la pantalla es la lista de compra del mockup aprobado: tarjeta "Vas a
-    // comprar el encargo" + COMPRANDO + dónde se compra y cuánto lleva, y
-    // abajo la "Lista de compra" con el botón de etapa (que sigue siendo el
-    // de siempre: "Ya estoy afuera..." o "Ya compré" con su diálogo del
-    // ticket; en fase 1 el botón dice "Ya compré todo", como el mockup).
-    // Al marcar "Ya compré" la fase 2 pinta el mapa con la ruta a entregar.
+    // v1.4.87: FASE 1 del chofer (Quiero, antes de "Ya compré") — SIN mapa:
+    // la pantalla es la lista de compra del mockup aprobado v2: tarjeta
+    // COMPRANDO + "Dirígete a {lugar} para hacer el mandado" en grande +
+    // "Lleva $X para comprar", la "Lista de compra" GRANDE en el medio, y
+    // abajo el botón verde "Ya tengo el pedido" (que sigue siendo el de
+    // siempre: en llego abre el diálogo del ticket y luego viene la fase 2;
+    // en etapas anteriores avanza como siempre). Se QUITAN la nota ("Cuando
+    // termines de comprar…") y la línea del pasajero (👤 … · $ · pago): esa
+    // información no sirve aquí, dijo el usuario.
     if(livePhase1QuieroDriver(r)){
       top.classList.add('paxcol'); bot.classList.add('paxbot');
       let buyTxt83 = '';
@@ -3515,16 +3541,16 @@ function renderLiveStrips(){
       items83 = items83.filter(Boolean);
       const listHtml83 = items83.length ? items83.map(i=>'• '+esc(i)).join('<br>') : (r.description ? '• '+esc(r.description) : '—');
       const nxt83 = nextStage(r);
-      const btnLabel83 = nxt83==='comprado' ? 'Ya compré todo' : stageButtonLabel(r);
-      top.innerHTML = '<div class="backrow" style="align-items:center;gap:8px"><button class="exitp" onclick="exitLive()">‹ Regresar</button><b style="font-size:17px">Mandado en curso</b></div>'
-        + '<div class="statuscard"><div class="row"><b>Vas a comprar el encargo</b><span class="chip amber">COMPRANDO</span></div>'
-        + '<div class="row" style="margin-top:6px"><span>'+(buyTxt83 ? 'Se compra en: '+esc(buyTxt83)+' · ' : '')+'Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div></div>';
+      const btnLabel83 = nxt83==='comprado' ? 'Ya tengo el pedido' : stageButtonLabel(r);
+      const dirTxt83 = buyTxt83 ? 'Dirígete a '+esc(buyTxt83)+' para hacer el mandado' : 'Dirígete a comprar el mandado';
+      top.innerHTML = '<div class="backrow" style="align-items:center;gap:8px"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
+        + '<div class="statuscard"><div class="row"><span class="chip amber">COMPRANDO</span></div>'
+        + '<div style="font-size:20px;font-weight:800;margin-top:8px;line-height:1.25">'+dirTxt83+'</div>'
+        + '<div class="row" style="margin-top:6px"><span>Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div></div>';
       bot.innerHTML = '<div class="drivercard"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:20px">🛒</span><b style="font-size:17px">Lista de compra</b></div>'
-        + '<div style="margin-top:8px;font-size:15px;line-height:1.7;max-height:34dvh;overflow:auto">'+listHtml83+'</div>'
+        + '<div style="margin-top:8px;font-size:18px;line-height:2;max-height:34dvh;overflow:auto">'+listHtml83+'</div>'
         + (nxt83 ? '<button class="greenb" onclick="'+(nxt83==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt83+'\')')+'">'+btnLabel83+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
         + '</div>'
-        + '<div class="muted center" style="font-size:12px">Cuando termines de comprar, toca el botón y te aparecerá el mapa para ir a entregarlo</div>'
-        + '<div class="drivercard" style="padding:8px 14px"><div class="row"><span>👤 '+esc(r.passenger_name||'Pasajero')+' · <b>'+fmt$(r.final_price||r.price)+'</b> · '+esc(r.payment_method||'efectivo')+'</span></div></div>'
         + chatWideBtnHtml(); // v1.4.84: el chat va abajo (botón ancho), no redondo flotante
       pill.classList.add('hidden');
       $('#live-compass').classList.add('hidden');
@@ -4232,12 +4258,12 @@ function chatTime(ts){
 }
 function chatMsgHtml(m){
   const mine = m.sender_role === chatMyRole();
-  const who = mine ? 'Tú' : (m.sender_name || (m.sender_role==='chofer' ? 'Chofer' : 'Pasajero'));
   // v1.4.78 (ADD 3): la foto (ticket incluido) se toca para verla grande.
   if(m.photo) chatPhotos[m.id] = m.photo;
   let body = m.kind==='foto' && m.photo ? '<img src="'+m.photo+'" onclick="chatZoomPhoto('+m.id+')" style="cursor:zoom-in">' : esc(m.text||'');
   if(m.kind==='foto' && m.text) body += esc(m.text);
-  return '<div class="chatmsg '+(mine?'mine':'theirs')+'"><span class="who">'+esc(who)+' · '+chatTime(m.created_at)+'</span>'+body+'</div>';
+  // v1.4.87: burbuja estilo WhatsApp — solo el texto/foto y la hora, sin el nombre (la hoja ya dice con quién hablas).
+  return '<div class="chatmsg '+(mine?'mine':'theirs')+'">'+body+'<span class="chattime">'+chatTime(m.created_at)+'</span></div>';
 }
 function chatZoomPhoto(id){
   const p = chatPhotos[id];
@@ -4268,21 +4294,40 @@ async function chatFetch(){
     }
   } catch(e){}
 }
+/* v1.4.87: hoja de chat estilo WhatsApp (mockups aprobados 2026-11-26):
+   se desliza hacia arriba, tirador + encabezado con foto, nombre y "En
+   línea" + X GRANDE que sí cierra; burbujas gris/verde; barra con cámara
+   y botón redondo verde. La foto (cámara + galería) ya es para AMBOS lados. */
 function chatSheetHtml(){
-  const isDriver = liveAsDriver;
-  return '<div class="flex" style="justify-content:space-between;align-items:center"><b>💬 Chat con '+(isDriver?'el pasajero':'el chofer')+'</b><button class="x" onclick="chatCloseSheet()">✕</button></div>'
-    + '<p class="muted mt">Para cualquier detalle de las compras o del servicio.</p>'
-    + '<div class="chatmsgs" id="chat-msgs"></div>'
-    + (isDriver
-      ? '<div class="btnrow" style="margin-top:10px"><button type="button" class="btn small" onclick="document.getElementById(\'chat-cam\').click()">📷 Tomar foto</button><button type="button" class="btn amber small" onclick="document.getElementById(\'chat-gal\').click()">🖼️ Subir de galería</button></div>'
-        + '<input type="file" id="chat-cam" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
-        + '<input type="file" id="chat-gal" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
-      : '')
-    + '<div class="chatrow"><input id="chat-input" placeholder="Escribe un mensaje…" autocomplete="off" onkeydown="if(event.key===\'Enter\')chatSendText()"><button class="btn small" onclick="chatSendText()">Enviar</button></div>';
+  const other = liveAsDriver
+    ? { name: (liveReq && liveReq.passenger_name) || 'Pasajero', photo: liveReq && liveReq.passenger_photo }
+    : { name: (liveReq && liveReq.driver_name) || 'Chofer', photo: liveReq && liveReq.driver_photo };
+  const avatar = other.photo
+    ? '<img class="chathead-photo" src="'+other.photo+'" alt="">'
+    : '<div class="chathead-photo chathead-photo-empty">'+esc(String(other.name||'?').charAt(0))+'</div>';
+  return '<div class="chatgrab" ontouchstart="chatSwipeStart(event)" ontouchend="chatSwipeEnd(event)"></div>'
+    + '<div class="chatsheet-head" ontouchstart="chatSwipeStart(event)" ontouchend="chatSwipeEnd(event)">'+avatar
+    + '<div class="chathead-name"><b>'+esc(other.name)+'</b><span>En línea</span></div>'
+    + '<button type="button" class="chatx" onclick="chatCloseSheet()" aria-label="Cerrar chat">✕</button></div>'
+    + '<div class="chatmsgs" id="chat-msgs" style="background:#f4f6f5"></div>'
+    + '<div class="btnrow hidden" id="chat-photo-opts" style="margin-top:10px"><button type="button" class="btn small" onclick="document.getElementById(\'chat-cam\').click()">📷 Tomar foto</button><button type="button" class="btn amber small" onclick="document.getElementById(\'chat-gal\').click()">🖼️ Subir de galería</button></div>'
+    + '<input type="file" id="chat-cam" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
+    + '<input type="file" id="chat-gal" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="chatSendPhoto(this)">'
+    + '<div class="chatrow"><button type="button" class="chatcam" onclick="chatTogglePhotoOpts()" aria-label="Enviar foto">📷</button><input id="chat-input" placeholder="Escribe un mensaje…" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key===\'Enter\')chatSendText()"><button type="button" class="chatsend" onclick="chatSendText()" aria-label="Enviar">➤</button></div>';
+}
+function chatTogglePhotoOpts(){
+  const el = document.getElementById('chat-photo-opts');
+  if(el) el.classList.toggle('hidden');
 }
 async function openChatSheet(){
   if(!liveReq || liveReq.status!=='aceptado') return;
   chatOpen = true; chatList = []; chatLastId = 0; chatSetDot(false);
+  // v1.4.87: la hoja es una "chat-sheet" (se desliza hacia arriba) y, en
+  // mandados del PASAJERO, la tarjeta del conductor se oculta mientras el
+  // chat está abierto (evita el nombre duplicado) y vuelve al cerrarlo.
+  const dlg = document.getElementById('dialog');
+  if(dlg) dlg.classList.add('chat-sheet');
+  if(liveReq.kind==='mandado' && !liveAsDriver){ const lb = document.getElementById('live-bottom'); if(lb) lb.classList.add('chat-open'); }
   openDialog(chatSheetHtml());
   try {
     const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0');
@@ -4292,12 +4337,29 @@ async function openChatSheet(){
   chatRenderList(chatList);
   if(chatTimer) clearInterval(chatTimer);
   chatTimer = setInterval(chatFetch, 3000);
-  const inp = document.getElementById('chat-input'); if(inp) inp.focus();
+  // v1.4.87: SIN auto-enfoque del campo (en el teléfono abría el teclado
+  // de inmediato y tapaba la hoja; el usuario toca el campo para escribir).
 }
 function chatCloseSheet(silent){
   chatOpen = false;
   if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
+  // v1.4.87: al cerrar, la tarjeta del conductor vuelve a aparecer y la
+  // hoja deja de ser "chat-sheet".
+  const lb = document.getElementById('live-bottom'); if(lb) lb.classList.remove('chat-open');
+  const dlg = document.getElementById('dialog'); if(dlg) dlg.classList.remove('chat-sheet');
   if(!silent) closeDialog();
+}
+/* v1.4.87: tocar el fondo oscuro fuera de la hoja también la cierra
+   (solo cuando el chat está abierto; los demás diálogos no se tocan). */
+(function(){ const d = document.getElementById('dialog'); if(d) d.addEventListener('click', function(e){ if(e.target === d && chatOpen) chatCloseSheet(); }); })();
+let chatSwipeY = null;
+function chatSwipeStart(e){ const t = e.touches && e.touches[0]; if(t) chatSwipeY = t.clientY; }
+function chatSwipeEnd(e){
+  if(chatSwipeY == null) return;
+  const t = e.changedTouches && e.changedTouches[0];
+  const dy = t ? t.clientY - chatSwipeY : 0;
+  chatSwipeY = null;
+  if(dy > 60) chatCloseSheet();
 }
 async function chatSend(text, photo){
   if(chatSending || !liveReq) return;
