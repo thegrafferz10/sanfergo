@@ -671,7 +671,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.85'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.86'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3558,7 +3558,7 @@ function renderLiveStrips(){
       ? 'Recibe: '+esc(r.recipient_name||r.passenger_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')
       : '';
     const payLine = r.kind==='mandado' && r.order_payment==='por_pagar'
-      ? 'Pedido: Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo'
+      ? 'Pedido: '+(isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo')
       : (r.kind==='mandado' && r.order_payment==='pagado' ? 'Pedido: Ya pagado' : '');
     const miniLinks = [];
     if(r.trip_stage==='en_camino' || r.trip_stage==='llego') miniLinks.push('<a class="minilink" href="tel:'+esc(r.passenger_phone||'')+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>');
@@ -5753,7 +5753,8 @@ async function loadDriverHist(){
 let driverInboxTab = 'sol', driverCounter = null;
 function mandadoDriverSummaryHtml(r){
   // Resumen del mandado en la tarjeta del chofer (v1.4.35): quien recibe y,
-  // si el pedido se va a pagar, lo que el chofer debe llevar para recogerlo.
+  // si el pedido se va a pagar, lo que el chofer debe llevar (v1.4.86: en
+  // Quiero es para comprar; en Enviar, para recogerlo).
   // Se usa en solicitudes, en curso y en el mapa en vivo. Las solicitudes
   // viejas, sin esos campos, no muestran nada y la tarjeta no se rompe.
   if(!r || r.kind!=='mandado') return '';
@@ -5767,7 +5768,7 @@ function mandadoDriverSummaryHtml(r){
   } catch(e){}
   if(r.recipient_name||r.recipient_phone) rows.push(['Recibe', esc(r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')]);
   if(r.order_payment==='pagado') rows.push(['Pedido', 'Ya pagado']);
-  else if(r.order_payment==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo']);
+  else if(r.order_payment==='por_pagar') rows.push(['Pedido', isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo']);
   if(!rows.length) return '';
   return '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px 12px;margin-top:8px"><b>Resumen del mandado</b>'
     + rows.map(x=>'<div class="kv"><span>'+x[0]+'</span><b style="text-align:right">'+x[1]+'</b></div>').join('') + '</div>';
@@ -6113,7 +6114,7 @@ function inboxDetailHtml(r, sub, atLimit){
       + '<div class="sumrow"><div class="sumlab">Precio del pasajero</div><b class="price">'+fmt$(r.price)+'</b></div>'
       + '<div class="sumrow"><div class="sumlab">Lista</div><div class="sumval">'+(items.length ? items.map(i=>'• '+esc(i)).join('<br>') : (r.description ? '• '+esc(r.description) : '—'))+'</div></div>'
       + (isEnviar && (r.recipient_name||r.recipient_phone) ? sumRow('Recibe', esc((r.recipient_name||'Quien recibe') + (r.recipient_phone ? ' · '+r.recipient_phone : ''))) : '')
-      + (r.order_payment==='pagado' ? sumRow('Pedido', 'Ya pagado') : r.order_payment==='por_pagar' ? sumRow('Pedido', 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo') : '')
+      + (r.order_payment==='pagado' ? sumRow('Pedido', 'Ya pagado') : r.order_payment==='por_pagar' ? sumRow('Pedido', isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo') : '')
       + (r.payment_method ? sumRow('Pago', esc(r.payment_method)) : '');
   } else {
     h += '<div class="kv"><span>De</span><b>'+esc(r._dispO)+'</b></div>'
