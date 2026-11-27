@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.96 en /api/health', h.ok && h.version === '1.4.96', JSON.stringify(h));
+  check('versión 1.4.97 en /api/health', h.ok && h.version === '1.4.97', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.87', h134.ok && h134.version === '1.4.96', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.97', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.96)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.96';") && h.version === '1.4.96', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.97)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.97';") && h.version === '1.4.97', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.96 en /api/health (sección)', h27.ok && h27.version === '1.4.96', JSON.stringify(h27));
+  check('versión 1.4.97 en /api/health (sección)', h27.ok && h27.version === '1.4.97', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.96 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.96', JSON.stringify(h28));
+  check('versión 1.4.97 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.97', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.96 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.96', JSON.stringify(h29));
+  check('versión 1.4.97 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.97', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.96 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.96', JSON.stringify(h30));
+  check('versión 1.4.97 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.97', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4827,7 +4827,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.96 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.96', JSON.stringify(h85));
+  check('versión 1.4.97 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.97', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -5543,6 +5543,14 @@ async function api(path, body) {
   check('v1.4.96: botón verde de llamar en mandados (llego/comprado/en_viaje) con el mismo .callbtn de viajes, y se pinta en la tarjeta', liveSec.includes("r.kind==='mandado' && (r.trip_stage==='llego' || r.trip_stage==='comprado' || r.trip_stage==='en_viaje')") && liveSec.includes('callBtn60 + callBtn96') && (liveSec.match(/callBtn96/g)||[]).length >= 2, '');
   check('v1.4.96: el destino de la llamada depende de la etapa — en en_viaje/comprado con destinatario se marca al destinatario (Enviar, entregando); si no, al pasajero', liveSec.includes("(r.trip_stage==='en_viaje' || r.trip_stage==='comprado') && r.recipient_phone") && liveSec.includes("r.passenger_phone ? { name: r.passenger_name||'Pasajero', phone: r.passenger_phone }"), '');
   check('v1.4.96: el botón de llamar de viajes no cambió (llego/en_viaje, pasajero) y el enlace chico (en_camino/llego, pasajero) tampoco', liveSec.includes("r.kind==='viaje' && (r.trip_stage==='llego' || r.trip_stage==='en_viaje') && r.passenger_phone") && liveSec.includes("if(r.trip_stage==='en_camino' || r.trip_stage==='llego') miniLinks.push"), '');
+
+  // ===== v1.4.97 (2026-11-27): pegar el WhatsApp con +52 en Enviar + zoom del mapa en Quiero (el usuario lo pidió en vivo) =====
+  console.log('== v1.4.97: +52 en el WhatsApp de quien recibe + zoom de Quiero ==');
+  check('v1.4.97: mdNormPhone quita lo que no es dígito y se queda con los últimos 10 (quita el +52 y el "52 1")', html.includes("function mdNormPhone(v){ const d = String(v||'').replace(/\\D/g,''); return d.length>10 ? d.slice(-10) : d; }"), '');
+  check('v1.4.97: el campo WhatsApp de quien recibe normaliza al pegar/escribir y las validaciones del paso 2 usan mdNormPhone', html.includes('oninput="md.recipient=mdNormPhone(this.value);this.value=md.recipient;mdToggleAskBtn()"') && html.includes('const valid = mdNormPhone(md.recipient).length===10;') && html.includes('if(mdNormPhone(md.recipient).length!==10)') && html.includes('const valid = mdNormPhone(v).length===10;'), '');
+  check('v1.4.97: "Pedir ubicación por WhatsApp" usa el número normalizado y el enlace wa.me sigue con 52 + 10 dígitos, y al publicar se guarda a 10 dígitos', html.includes('const phone = mdNormPhone(md.recipient);') && html.includes("wa.me/52'+phone") && html.includes("whatsapp://send?phone=52'+phone") && html.includes('recipient_phone: mdNormPhone(md.recipient),'), '');
+  check('v1.4.97: en Quiero el zoom de proximidad no pasa de 16 (se ven las calles) — tope en el cálculo de proxZoom y recentrado a 16', (()=>{ const apSec = html.slice(html.indexOf('function liveApplyDriverPos(lat, lng, prevLat, prevLng){'), html.indexOf("window.addEventListener('online'")); return apSec.includes('if(proxZoom!=null && isQuieroMandado(liveReq)) proxZoom = Math.min(proxZoom, 16);') && html.includes('zoom: isQuieroMandado(liveReq) ? 16 : 17'); })(), '');
+  check('v1.4.97: Enviar y viajes sin cambio — liveTargetZoom sigue 16/17/18 y el encuadre de ruta (fitPoints, maxZoom 16) no se tocó', html.includes("function liveTargetZoom(distM){\n  if(distM==null || distM>1000) return null;\n  if(distM>500) return 16;\n  if(distM>200) return 17;\n  return 18;\n}") && html.includes('map.fitBounds(b, { padding: pad || 70, maxZoom: 16 });'), '');
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

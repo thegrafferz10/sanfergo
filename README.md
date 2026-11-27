@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.96)
+# SanFerGo — versión pública (v1.4.97)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.97 (2026-11-27) — Pegar el WhatsApp con +52 en Enviar + zoom del mapa en Quiero (el usuario lo pidió en vivo)
+
+- Enviar paso 2 ("WhatsApp de quien recibe") ya acepta el número copiado de WhatsApp: al pegarlo con el +52 al principio (12 dígitos) el campo lo limpia solo y lo deja en los 10 dígitos, en vez de rechazarlo por el formato. Nueva función `mdNormPhone`: quita todo lo que no sea dígito y, si sobran, se queda con los últimos 10 (eso quita el 52 y el viejo "52 1" de móvil). Se aplica al escribir/pegar en el campo, en todas las validaciones del paso 2, en "Pedir ubicación por WhatsApp" (el enlace wa.me/whatsapp:// sigue con 52 + los 10 dígitos) y al publicar (`recipient_phone` se guarda a 10 dígitos). Los demás campos de teléfono (perfil de pasajero, registro de chofer, WhatsApp de negocios) no se tocaron — el usuario solo pidió este.
+- En Quiero, el mapa en vivo de la fase 2 ya no se acerca tanto: el zoom de proximidad ahora tiene tope de 16 solo en Quiero (antes subía a 17-18 al acercarse al destino y nunca bajaba, y como la entrega es un salto corto el mapa quedaba en una cuadra). A 16 se ven bien las calles por donde va pasando. El tope está en el cálculo de `proxZoom` y en el recentrado ("Centrar en mi ubicación" va a 16 en Quiero, 17 como antes en lo demás). Enviar y viajes sin cambio: `liveTargetZoom` sigue 16/17/18 y el encuadre de la ruta (`fitPoints`, maxZoom 16) no se tocó. El tope aplica en la vista del chofer y del pasajero del mismo Quiero, porque el código es compartido.
+- Pruebas: suite completa contra BD limpia: **1515 OK, 0 FAIL** (1510 de antes + 5 nuevas de la 1.4.97: 5 estáticas — mdNormPhone (últimos 10 dígitos), campo + validaciones del paso 2 con mdNormPhone, wa.me con 52 + 10 dígitos y guardado a 10 dígitos, tope de zoom 16 en Quiero (proxZoom + recentrado), Enviar/viajes y fitPoints sin cambios; checks actualizados: 8 de versión a 1.4.97).
 
 ## v1.4.96 (2026-11-27) — Botón verde de llamar en mandados + número del pasajero en Quiero (el usuario lo pidió en vivo)
 
