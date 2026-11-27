@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.84 en /api/health', h.ok && h.version === '1.4.84', JSON.stringify(h));
+  check('versión 1.4.85 en /api/health', h.ok && h.version === '1.4.85', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.84', h134.ok && h134.version === '1.4.84', JSON.stringify(h134));
+  check('versión 1.4.85', h134.ok && h134.version === '1.4.85', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.84)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.84';") && h.version === '1.4.84', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.85)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.85';") && h.version === '1.4.85', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1095,9 +1095,9 @@ async function api(path, body) {
     const r = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', extra_stops: extraStops });
     return r.ok ? r.request.price : null;
   }
-  check('v1.4.78: mandado sin precio, 1.0 km, 0 paradas extra sugiere $30 (mínimo de mandado)', (await suggestedMandado(0)) === 30);
-  check('v1.4.78: mandado sin precio, 1.0 km, 1 parada extra sugiere $40', (await suggestedMandado(1)) === 40);
-  check('v1.4.78: mandado sin precio, 1.0 km, 2 paradas extra sugiere $50', (await suggestedMandado(2)) === 50);
+  check('v1.4.85: mandado sin precio, 1.0 km, 0 paradas extra sugiere $20 (mínimo de mandado)', (await suggestedMandado(0)) === 20);
+  check('v1.4.85: mandado sin precio, 1.0 km, 1 parada extra sugiere $30', (await suggestedMandado(1)) === 30);
+  check('v1.4.85: mandado sin precio, 1.0 km, 2 paradas extra sugiere $40', (await suggestedMandado(2)) === 40);
   const manFixed = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 40, payment_method: 'efectivo', extra_stops: 2 });
   check('mandado con precio puesto ($40) no suma paradas extra', manFixed.ok && manFixed.request.price === 40, JSON.stringify(manFixed));
   // (5) Viaje corto (menos de 0.5 km) sí se puede publicar a $20.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.84 en /api/health (sección)', h27.ok && h27.version === '1.4.84', JSON.stringify(h27));
+  check('versión 1.4.85 en /api/health (sección)', h27.ok && h27.version === '1.4.85', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.84 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.84', JSON.stringify(h28));
+  check('versión 1.4.85 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.85', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.84 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.84', JSON.stringify(h29));
+  check('versión 1.4.85 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.85', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.84 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.84', JSON.stringify(h30));
+  check('versión 1.4.85 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.85', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -1665,7 +1665,7 @@ async function api(path, body) {
   check('v1.4.39: el detalle trae un botón visible "‹ Ver todas las solicitudes" que lo cierra (ahora al final del flotante, v1.4.41)', inboxSec.includes('function inboxDetailHtml(r, sub, atLimit){') && inboxSec.includes("onclick=\"closeInboxOverlay()\">‹ Ver todas las solicitudes</button>"));
   // --- v1.4.40: la fila compacta trae km · ETA · pago y lo de llevar para recoger ---
   check('v1.4.40: la fila colapsada trae la línea tenue con km · ETA · pago (igual que la app real)', compactSec.includes("r.distance_km+' km · ~'+r.eta_minutes+' min'") && compactSec.includes("'Pago: '+esc(r.payment_method)") && compactSec.includes("rowMeta.join(' · ')") && compactSec.includes('rowMeta.length'));
-  check('v1.4.40: la línea ámbar "Lleva $X para recogerlo" solo sale con pedido por pagar', compactSec.includes("r.order_payment==='por_pagar'") && compactSec.includes("Lleva '+fmt$(r.order_amount||0)+' para recogerlo") && compactSec.includes('#fef3c7'));
+  check('v1.4.85: la línea ámbar "Lleva $X" solo sale con pedido por pagar y dice "para comprar" en Quiero y "para recogerlo" en Enviar', compactSec.includes("r.order_payment==='por_pagar'") && compactSec.includes("Lleva '+fmt$(r.order_amount||0)+(isQuieroMandado(r)?' para comprar':' para recogerlo')") && compactSec.includes('#fef3c7'));
   check('v1.4.40: los nuevos campos de la fila entran en la firma (un cambio repinta sin parpadeo)', inboxSec.includes("(r.distance_km||'')") && inboxSec.includes("(r.eta_minutes||'')") && inboxSec.includes("(r.payment_method||'')") && inboxSec.includes("(r.order_payment||'')") && inboxSec.includes("(r.order_amount||0)"));
   // --- v1.4.41: el detalle de la solicitud se abre como flotante, como el anuncio de entrada ---
   check('v1.4.41: el flotante del detalle usa la geometría del anuncio de entrada (fondo oscuro, tarjeta 340 px, X de 48×48 arriba)', html.includes('#inbox-detail-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding-top:7dvh;pointer-events:auto}') && html.includes('#inbox-detail-overlay .reqwrap{pointer-events:auto;position:relative;width:min(92vw,340px)}') && html.includes('#inbox-detail-overlay .reqfloat{max-height:85dvh;overflow-y:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px}') && html.includes('#inbox-detail-overlay .adx{position:absolute;top:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#1c2420;color:#fff;font-size:28px;font-weight:800;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:2}'));
@@ -2046,7 +2046,7 @@ async function api(path, body) {
   const man3Row = man3.ok && (await api('/api/requests?id=' + man3.request.id)).requests[0];
   check('v1.4.48: en vivo, el mandado con passenger_count=3 se guarda como 1 (los mandados no tienen personas)', man3.ok && man3Row && man3Row.passenger_count === 1, JSON.stringify(man3Row && { p: man3Row.passenger_count }));
   const manLow = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_detail: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, eta_minutes: 5, price: 15, payment_method: 'efectivo', description: 'Recoger un paquete' });
-  check('v1.4.48: en vivo, el mandado a $15 sigue rechazado (su mínimo es $30)', !manLow.ok, JSON.stringify(manLow));
+  check('v1.4.48: en vivo, el mandado a $15 sigue rechazado (su mínimo es $20)', !manLow.ok, JSON.stringify(manLow));
   // Compatibilidad: un viaje viejo por transferencia sigue publicándose
   // (el servidor lo acepta para los viajes en curso), aunque el cliente
   // ya no ofrece ese botón.
@@ -4458,7 +4458,9 @@ async function api(path, body) {
   console.log('== v1.4.78: pasos fusionados, chat, mapa divertido, $30 mínimo, ticket ==');
   // --- Mínimo $30 de mandado (servidor; el viaje sigue en $20) ---
   const man25 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
-  check('v1.4.78: publicar mandado a $25 se rechaza (mínimo $30)', !man25.ok && /30/.test(man25.error || ''), JSON.stringify(man25));
+  check('v1.4.85: publicar mandado a $25 sí se puede (mínimo $20)', man25.ok && man25.request.price === 25, JSON.stringify(man25));
+  const man15 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 15, payment_method: 'efectivo' });
+  check('v1.4.85: publicar mandado a $15 se rechaza (mínimo $20)', !man15.ok && /20/.test(man15.error || ''), JSON.stringify(man15));
   const man30 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
   check('v1.4.78: publicar mandado a $30 sí se puede', man30.ok && man30.request.price === 30, JSON.stringify(man30));
   // --- Cliente: paso fusionado, tiendas fijas, dinero para comprar, mapa divertido ---
@@ -4466,11 +4468,11 @@ async function api(path, body) {
   check('v1.4.80: el paso 3 se titula "¿Dónde se compra?" con el campo ARRIBA y las dos instrucciones en tarjetas ABAJO (sin tiendas fijas)', quieroSec78.includes('¿Dónde se compra?') && quieroSec78.includes('Paso 3 de 4') && quieroSec78.includes('md-buy-where') && quieroSec78.includes('Escribe la tienda o el lugar') && quieroSec78.indexOf('md-buy-where') < quieroSec78.indexOf('Instrucción 1') && quieroSec78.includes('icbox green') && quieroSec78.includes('Instrucción 1') && quieroSec78.includes('icbox amber') && quieroSec78.includes('Instrucción 2') && html.includes('Abarrotes Castillejo') && html.includes('Farmacia del Súper Descuento') && html.includes('Bodega Aurrerá') && !quieroSec78.includes('mdStopPlaceHtml') && !quieroSec78.includes('function mdChoosePresetStore') && !quieroSec78.includes('<b>Un solo lugar</b>') && !quieroSec78.includes('<b>Varios lados</b>'));
   check('v1.4.78: el paso fusionado ya no tiene búsqueda de punto exacto ni pegar ubicación de WhatsApp', !quieroSec78.includes('mdStopSearchHtml') && !quieroSec78.includes('mdResolveWa(') && !quieroSec78.includes('md-wa-0'), '');
   check('v1.4.79: el resumen del chofer muestra "📍 Se compra en" con el texto tal como se escribió', html.includes("['📍 Se compra en'") && html.includes('stops_json'), '');
-  check('v1.4.78: el paso de precio muestra el dinero para comprar con steppers de $50 ($150 por defecto, mínimo $100)', html.includes('¿Cuánto dinero lleva el chofer para comprar?') && html.includes('mdCarryStep(-50)') && html.includes('mdCarryStep(50)') && html.includes('carryAmount:150') && html.includes('Math.max(100,'), '');
+  check('v1.4.85: el paso de precio muestra el dinero para comprar con steppers de $50 ($150 por defecto, mínimo $50)', html.includes('¿Cuánto dinero lleva el chofer para comprar?') && html.includes('mdCarryStep(-50)') && html.includes('mdCarryStep(50)') && html.includes('carryAmount:150') && html.includes('Math.max(50,'), '');
   check('v1.4.78: publicar "Quiero" manda por_pagar con el dinero para comprar', html.includes("order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150"), '');
   check('v1.4.78: el mapa de mandados usa el estilo divertido Voyager y Viajes sigue con Meta', html.includes('basemaps.cartocdn.com/gl/voyager-gl-style/style.json') && html.includes("makeMap('md-map', false, true)") && html.includes("pickReturn==='mandados'") && html.includes("liveReq.kind==='mandado'") && html.includes('style: fun ? FUN_STYLE_URL : META_STYLE_URL'), '');
   check('v1.4.78: el mapa en vivo cambia de estilo entre viaje (Meta) y mandado (Voyager)', html.includes('function setLiveMapStyle(fun)') && html.includes("setLiveMapStyle(liveReq.kind==='mandado')"), '');
-  check('v1.4.78: el mínimo de mandado es $30 en cliente (viaje sigue $20)', html.includes('MIN_MANDADO = 30') && html.includes("kind==='viaje' ? minForPax(st.pax) : MIN_MANDADO") && html.includes('El precio debe ir de cinco en cinco: $30, $35, $40'), '');
+  check('v1.4.85: el mínimo de mandado es $20 en cliente (viaje sigue $20)', html.includes('MIN_MANDADO = 20') && html.includes("kind==='viaje' ? minForPax(st.pax) : MIN_MANDADO") && html.includes('El precio debe ir de cinco en cinco: $20, $25, $30'), '');
   // --- Chat: cuentas enlazadas con su perfil ---
   const chatPaxAcc = await api('/api/register-account', { name: 'Chat Pasajera', username: 'chatpax78_' + RUN, phone: '9610000078', password: 'secreta123' });
   check('v1.4.78: cuenta de pasajera para el chat', chatPaxAcc.ok && !!chatPaxAcc.token && chatPaxAcc.passenger && chatPaxAcc.passenger.id, JSON.stringify(chatPaxAcc));
@@ -4572,7 +4574,7 @@ async function api(path, body) {
   const tripLock79 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Progreso', dest_lat: 16.87737, dest_lng: -93.22214, distance_km: 1.5, price: 30, payment_method: 'efectivo' });
   check('v1.4.79: en vivo — los viajes sí se publican con el candado de Mandados puesto', tripLock79.ok && tripLock79.request.kind === 'viaje', JSON.stringify(tripLock79));
   // El dueño (@thegrafferz10) sí puede publicar con el candado puesto:
-  // texto libre SIN coordenadas y sin precio (sugiere $30, el mínimo).
+  // texto libre SIN coordenadas y sin precio (sugiere $20, el mínimo).
   // El dueño (@thegrafferz10) sí puede publicar con el candado puesto:
   // la cuenta ya existe en esta corrida (own64, registrada en v1.4.64);
   // se le sube la foto del pasajero porque publicar exige perfil completo.
@@ -4584,7 +4586,7 @@ async function api(path, body) {
   const manNoLabel79 = await api('/api/create-request', { passenger_id: owner79.passenger.id, kind: 'mandado', origin_zone: '   ', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
   check('v1.4.79: publicar "Quiero" sin texto de dónde se compra se rechaza', !manNoLabel79.ok && /dónde se compra/.test(manNoLabel79.error || ''), JSON.stringify(manNoLabel79));
   const manOwner79 = await api('/api/create-request', { passenger_id: owner79.passenger.id, kind: 'mandado', origin_zone: 'Farmacia del Súper Descuento', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Farmacia del Súper Descuento', lat: null, lng: null, detail: '' }], extra_stops: 0 });
-  check('v1.4.79: el dueño publica "Quiero" con texto libre SIN coordenadas y sin precio (sugiere $30)', manOwner79.ok && manOwner79.request.price === 30 && manOwner79.request.origin_lat === null, JSON.stringify(manOwner79));
+  check('v1.4.85: el dueño publica "Quiero" con texto libre SIN coordenadas y sin precio (sugiere $20)', manOwner79.ok && manOwner79.request.price === 20 && manOwner79.request.origin_lat === null, JSON.stringify(manOwner79));
   const manOwnerRow79 = await api('/api/requests?id=' + manOwner79.request.id);
   check('v1.4.79: la parada guarda el texto tal como se escribió en stops_json', manOwnerRow79.ok && (manOwnerRow79.requests[0].stops_json || '').includes('Farmacia del Súper Descuento'), JSON.stringify(manOwnerRow79.requests && manOwnerRow79.requests[0].stops_json));
   // El admin abre el candado: la cuenta normal ya puede publicar.
@@ -4642,15 +4644,15 @@ async function api(path, body) {
   // --- Enviar sigue intacto (4 pasos, precio paso 4) ---
   const envSec80 = html.slice(html.indexOf('function renderMandadoEnviar(){'), html.indexOf('function mdNextEnviar2(){'));
   check('v1.4.80: Enviar sigue en 4 pasos con el precio en el paso 4 (no se tocó)', envSec80.includes('Paso 1 de 4') && envSec80.includes('Paso 2 de 4') && envSec80.includes('Paso 3 de 4') && envSec80.includes('md.step===4'), '');
-  // --- En vivo: el candado sigue puesto, el mínimo $30 sigue, el texto vacío se rechaza ---
+  // --- En vivo: el candado sigue puesto, el mínimo $20 sigue, el texto vacío se rechaza ---
   const meLock80 = await api('/api/me?token=' + encodeURIComponent(chatPaxAcc.token));
   check('v1.4.80: en vivo — /api/me sigue diciendo que Mandados está bloqueado', meLock80.ok && meLock80.mandados_locked === true, JSON.stringify(meLock80 && { locked: meLock80.mandados_locked }));
   const man25b80 = await api('/api/create-request', { passenger_id: own64.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 25, payment_method: 'efectivo' });
-  check('v1.4.80: en vivo — publicar mandado a $25 se sigue rechazando (mínimo $30)', !man25b80.ok && /30/.test(man25b80.error || ''), JSON.stringify(man25b80));
+  check('v1.4.85: en vivo — publicar mandado a $25 sí se puede (mínimo $20)', man25b80.ok && man25b80.request.price === 25, JSON.stringify(man25b80));
   const manNoLabel80 = await api('/api/create-request', { passenger_id: own64.passenger.id, kind: 'mandado', origin_zone: '   ', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo' });
   check('v1.4.80: en vivo — publicar "Quiero" sin texto de dónde se compra se sigue rechazando', !manNoLabel80.ok && /dónde se compra/.test(manNoLabel80.error || ''), JSON.stringify(manNoLabel80));
   const manOk80 = await api('/api/create-request', { passenger_id: own64.passenger.id, kind: 'mandado', origin_zone: 'Abarrotes Castillejo', dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Abarrotes Castillejo', lat: null, lng: null, detail: '' }], extra_stops: 0 });
-  check('v1.4.80: en vivo — el dueño publica "Quiero" con texto libre (sugiere $30)', manOk80.ok && manOk80.request.price === 30, JSON.stringify(manOk80));
+  check('v1.4.85: en vivo — el dueño publica "Quiero" con texto libre (sugiere $20)', manOk80.ok && manOk80.request.price === 20, JSON.stringify(manOk80));
 
   console.log('== v1.4.81: resumen del precio de Quiero con filas apiladas, "Ver lista" flotante y píldora en dos columnas ==');
   // --- Cliente: el resumen de Quiero trae las filas en orden, sin "Qué se entrega" ---
@@ -4809,6 +4811,31 @@ async function api(path, body) {
   check('v1.4.84: el punto rojo del chat sobrevive al repintado (estado chatUnread)', html.includes('chatUnread = !!on;') && html.includes('chatUnread = false'));
   check('v1.4.84: el CSS trae .chatwide (botón ancho verde) y .statuscard.compact84', html.includes('.chatwide{') && html.includes('.chatwide .dot{') && html.includes('.strip.top.paxcol .statuscard.compact84{'));
   check('v1.4.84: el recentrar sube en mandados para no tapar el botón ancho de chat', liveSec.includes("r.kind==='mandado'?60:0") && liveSec.includes("r.kind==='mandado' ? 'calc(env(safe-area-inset-bottom,0px) + 250px)' : ''"));
+
+  // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
+  console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
+  const h85 = await api('/api/health');
+  check('v1.4.85: versión 1.4.85 en /api/health', h85.ok && h85.version === '1.4.85', JSON.stringify(h85));
+  // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
+  // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
+  const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.85: el admin abre el candado de Mandados para las pruebas en vivo', lockOpen85.ok && lockOpen85.mandados_locked === false, JSON.stringify(lockOpen85));
+  // --- Cliente: stepper de dinero para comprar baja hasta $50, no menos ---
+  check('v1.4.85: el stepper de dinero para comprar baja hasta $50 (clamp y reset guard)', html.includes('Math.max(50, (Number(md.carryAmount)||150) + d)') && html.includes('!(Number(md.carryAmount)>=50)'), '');
+  // --- Cliente: insignia ámbar de la bandeja del chofer ---
+  check('v1.4.85: la insignia ámbar de la bandeja dice "Lleva $X para comprar" en Quiero y "para recogerlo" en Enviar', html.includes("(isQuieroMandado(r)?' para comprar':' para recogerlo')") && html.includes("'Lleva '+fmt$(r.order_amount||0)"), '');
+  // --- Servidor: "Quiero" con "Lleva $50" se publica; con $25 se rechaza ---
+  const q85 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 20, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 50, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.85: mandado "Quiero" a $20 con "Lleva $50" se publica', q85.ok && q85.request.price === 20 && q85.request.order_amount === 50, JSON.stringify(q85));
+  const q85low = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 20, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 25, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.85: "Quiero" con "Lleva $25" se rechaza (mínimo $50 para comprar)', !q85low.ok && /50/.test(q85low.error || ''), JSON.stringify(q85low));
+  // --- Servidor: "Enviar" a $20 sí se puede; mandado sin precio sugiere $20 ---
+  const e85 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 20, payment_method: 'efectivo', description: 'Paquete', recipient_phone: '9610000099', recipient_name: 'Quien recibe', order_payment: 'pagado', order_amount: 0 });
+  check('v1.4.85: mandado "Enviar" a $20 sí se puede', e85.ok && e85.request.price === 20, JSON.stringify(e85));
+  const s85 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Mercado', origin_lat: 16.8675, origin_lng: -93.2105, dest_zone: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, payment_method: 'efectivo' });
+  check('v1.4.85: mandado sin precio, 1.0 km, sugiere $20', s85.ok && s85.request.price === 20, JSON.stringify(s85));
+  const lockClose85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.85: el admin vuelve a bloquear y el candado queda puesto', lockClose85.ok && lockClose85.mandados_locked === true, JSON.stringify(lockClose85));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

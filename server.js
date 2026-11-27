@@ -520,7 +520,7 @@ const LANDMARKS = [
 // El usuario cobra $50 los viajes a colonias desde Centro; cuadra porque
 // recoge un poco más arriba. NO cambiar la tarifa sin su orden.
 const BASE_FARE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
-const MIN_MANDADO = 30; // v1.4.78: el mandado empieza en $30 (el viaje sigue en $20).
+const MIN_MANDADO = 20; // v1.4.85: el mandado empieza en $20 (el viaje sigue en $20).
 const MANDADO_EXTRA_STOP = 10;
 const FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 // v1.4.67: el viaje gratis por recomendación cubre hasta $30; si el viaje
@@ -604,7 +604,7 @@ function negotiatedPriceError(p, r) {
     if (!Number.isFinite(p) || p < min) return `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${min}.`;
   }
   if (r && r.kind === 'mandado') {
-    if (!Number.isFinite(p) || p < MIN_MANDADO) return 'El mínimo para un mandado es $30.';
+    if (!Number.isFinite(p) || p < MIN_MANDADO) return 'El mínimo para un mandado es $20.';
     return validNegotiatedPriceMandado(p) ? null : GRID_ERROR;
   }
   return validNegotiatedPrice(p) ? null : GRID_ERROR;
@@ -880,7 +880,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.84' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.85' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -2216,12 +2216,12 @@ async function api(req, res, pathname) {
     const pax = kind === 'viaje' ? Math.min(3, Math.max(1, Number(passenger_count) || 1)) : 1;
     // Precio sugerido de mandado: tarifa + $10 por parada extra (solo en
     // la rama sugerida; si el pasajero pone su precio, se respeta tal cual).
-    // v1.4.78: el mandado sugiere mínimo $30 (la tarifa sola daba $20).
+    // v1.4.78: el mandado sugiere mínimo $20 (la tarifa sola daba $20).
     const stopsFee = kind === 'mandado' ? MANDADO_EXTRA_STOP * (extra_stops || 0) : 0;
     const finalPrice = price ?? (kind === 'viaje' ? roundUp5For(fareFor(km), pax) : Math.max(MIN_MANDADO, suggestedPrice(km)) + stopsFee);
     if (price != null) {
       if (kind === 'viaje' && !validNegotiatedPriceFor(finalPrice, pax)) return send(res, 400, { ok: false, error: finalPrice < minForPax(pax) ? `El mínimo para ${pax} ${pax === 1 ? 'persona' : 'personas'} es $${minForPax(pax)}.` : GRID_ERROR });
-      if (kind === 'mandado' && !validNegotiatedPriceMandado(finalPrice)) return send(res, 400, { ok: false, error: finalPrice < MIN_MANDADO ? 'El mínimo para un mandado es $30.' : GRID_ERROR });
+      if (kind === 'mandado' && !validNegotiatedPriceMandado(finalPrice)) return send(res, 400, { ok: false, error: finalPrice < MIN_MANDADO ? 'El mínimo para un mandado es $20.' : GRID_ERROR });
     }
     // Sin mínimo de distancia: solo hay mínimo de precio ($20). Un viaje
     // corto a $20 se puede publicar.
@@ -2239,9 +2239,9 @@ async function api(req, res, pathname) {
       if (order_payment === 'por_pagar' && !(Number(order_amount) > 0)) return send(res, 400, { ok: false, error: 'Escribe la cantidad que el chofer necesita llevar para recoger el mandado.' });
     }
     // v1.4.78: "Quiero un mandado" — el chofer lleva dinero para comprar:
-    // si se va a pagar, la cantidad mínima es $100 (el cliente la pone en
+    // si se va a pagar, la cantidad mínima es $50 (el cliente la pone en
     // pasos de $50 desde $150). No toca Enviar: ahí sigue el mínimo >$0.
-    if (kind === 'mandado' && body.type !== 'enviar' && order_payment === 'por_pagar' && !(Number(order_amount) >= 100)) return send(res, 400, { ok: false, error: 'La cantidad que lleva el chofer para comprar es mínimo $100.' });
+    if (kind === 'mandado' && body.type !== 'enviar' && order_payment === 'por_pagar' && !(Number(order_amount) >= 50)) return send(res, 400, { ok: false, error: 'La cantidad que lleva el chofer para comprar es mínimo $50.' });
     // v1.4.67: VIAJE GRATIS por recomendación — solo viajes (no
     // mandados), solo si el pasajero tiene viajes gratis sin gastar (los
     // que están buscando o en curso ya cuentan como apartados: el viaje
