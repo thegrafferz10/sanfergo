@@ -706,7 +706,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.94'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.95'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -1476,8 +1476,8 @@ let regKind = 'pasajero', regPhoto1 = null, regPhoto2 = null, regReturn = 'home'
 // uno con capture (cámara: user para la cara, environment para el
 // vehículo) y otro sin capture (galería). Los dos pasan por
 // fileToPhoto igual que antes (480px, JPEG 0.75); solo cambia la
-// fuente de la foto. La foto del pasajero NO cambia (el usuario solo
-// pidió choferes).
+// fuente de la foto. La foto del pasajero usa el mismo patrón desde la
+// v1.4.95 (cámara + galería, igual que los choferes — el usuario lo pidió).
 function driverPhotoField(slot){
   const selfie = slot==='selfie';
   const v = selfie ? 'regPhoto1' : 'regPhoto2';
@@ -1507,7 +1507,11 @@ function openRegistro(kind, ret){
     + '<label class="mt">Teléfono / WhatsApp</label><input id="rp-phone" value="'+(myPassenger?esc(myPassenger.phone):'')+'" placeholder="Ej. 961 000 0000" inputmode="tel">'
     + '<div class="photobox"><b>Foto de tu cara (selfie)</b><div class="muted">Tómala con la cámara o súbela de tu galería. Sin esta foto no se puede guardar tu perfil.</div>'
     + '<div id="rp-prev">'+(hasPhoto?'<img src="'+myPassenger.face_photo+'">':'')+'</div>'
-    + '<input type="file" accept="image/*" capture="user" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rp-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
+    + '<div class="btnrow" style="margin-top:8px">'
+    + '<button type="button" class="btn small" onclick="document.getElementById(\'rp-cam\').click()">📷 Tomar foto</button>'
+    + '<button type="button" class="btn amber small" onclick="document.getElementById(\'rp-gal\').click()">🖼️ Subir de galería</button></div>'
+    + '<input type="file" id="rp-cam" accept="image/*" capture="user" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rp-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})">'
+    + '<input type="file" id="rp-gal" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="fileToPhoto(this, d=>{regPhoto1=d; document.getElementById(\'rp-prev\').innerHTML=\'<img src=\'+JSON.stringify(d)+\'>\';})"></div>'
     + '<div class="card warn"><b>La foto de tu cara (selfie) es obligatoria.</b><p class="muted mt">Sin ella no se puede guardar tu perfil: el conductor te reconoce por tu foto cuando acepta tu viaje o mandado.</p></div>'
     + '<button class="btn" onclick="savePassenger()">Guardar mi perfil de pasajero</button>';
   } else {
