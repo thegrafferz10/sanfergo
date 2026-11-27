@@ -1,9 +1,17 @@
-# SanFerGo — versión pública (v1.4.91)
+# SanFerGo — versión pública (v1.4.92)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.92 (2026-11-27) — 4 detalles de la prueba en el teléfono (el usuario dijo que todo lo demás estaba perfecto)
+
+- Distintivo del chofer (el único detalle del chat): el círculo rojo con el conteo NUNCA aparecía del lado del chofer aunque el pasajero mandara un mensaje. Causa: el conteo se llevaba en el cliente con un solo watermark (chatLastId) y el seed al entrar a la pantalla en vivo marcaba como leído todo lo que ya existía — el mensaje que llegó antes de cambiar a la vista del chofer se tragaba. Ahora el acuse de lectura es del SERVIDOR y POR ROL: tabla nueva `chat_read (request_id, role, last_read_id)`, `POST /api/chat/read` marca leído (valida que el chat sea suyo y que el rol valga para esa cuenta, igual que `/api/chat/send`) y `GET /api/chat` devuelve `unread` (mensajes del otro lado con id mayor que lo leído de este rol; el cliente pasa `role=` como al mandar). El cliente pinta el distintivo con ese conteo absoluto (chatFetch y chatSeed); abrir y cerrar la hoja marcan leído; entrar a la pantalla en vivo ya NO marca nada como leído, así que el mensaje que llegó antes de entrar sí cuenta. El distintivo sigue en los dos botones (redondo y ancho), viajes y mandados, los dos lados. La app nativa hace lo mismo (ChatSheet usa el `unread` del servidor y marca leído al abrir/cerrar).
+- Enviar paso 2, "Pedir ubicación por WhatsApp": en iOS Safari el `window.open(wa.me, '_blank')` dejaba una pestaña en blanco delante y al volver de WhatsApp había que darle X para volver a SanFerGo. Ahora `mdAskLocation` abre WhatsApp por el esquema `whatsapp://send?phone=...&text=...` con `location.href` (sin tocar la pestaña) y, si a los ~1200 ms la página sigue visible (WhatsApp no instalado), abre el enlace wa.me en una pestaña nueva. Mismo texto prellenado. Solo cambia `mdAskLocation`; los otros enlaces wa.me (suscripción, negocios, :2286) no se tocaron.
+- Al pegar el enlace y tocar "Marcar como punto de entrega", el teclado de iOS se quedaba abierto tapando "Continuar": `mdResolveWaDest` ahora hace blur del campo del enlace y del elemento activo antes de re-renderizar.
+- La caja de WhatsApp, ya marcado el punto, seguía preguntando "¿Ya te mandaron la ubicación por WhatsApp?": ahora el encabezado cambia a "✓ Punto de entrega seleccionado" (con las coordenadas y el botón "Quitar este punto" de siempre; el campo para pegar queda oculto como antes).
+- Pruebas: suite completa contra BD limpia: **1494 OK, 0 FAIL** (1464 de antes + 30 nuevas de la 1.4.92: 10 estáticas y 20 en vivo; checks actualizados: 8 de versión a 1.4.92 y 2 de la v1.4.88 — los tres GET del chat ahora llevan `&role=` y openChatSheet marca leído antes de pedir el historial).
 
 ## v1.4.91 (2026-11-27) — Lote de 6 detalles de la prueba en el teléfono (mockup fase 1 aprobado "Arre")
 

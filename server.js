@@ -185,6 +185,17 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_chat_request ON chat_messages (request_id, id);
+-- v1.4.92: acuse de lectura del chat POR ROL (el distintivo de no leídos
+-- del chofer nunca aparecía: el seed del cliente marcaba como leído todo
+-- lo que existía al entrar a la pantalla en vivo, así que el mensaje que
+-- llegó antes de cambiar a la vista del chofer se tragaba. Ahora el
+-- servidor guarda hasta dónde leyó cada lado; GET /api/chat devuelve
+-- 'unread' y POST /api/chat/read lo marca).
+CREATE TABLE IF NOT EXISTS chat_read (
+  request_id INTEGER NOT NULL, role TEXT NOT NULL,
+  last_read_id INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(request_id, role)
+);
 -- v1.4.91 (detalle 2): suscripciones Web Push por cuenta (endpoint +
 -- llaves) y tokens FCM de la app nativa (solo se guardan: el envío por
 -- Firebase no está implementado, no hay llave de cuenta de servicio).
@@ -949,7 +960,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.91' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.92' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -2389,7 +2400,8 @@ async function api(req, res, pathname) {
   // del servicio pueden leer y escribir; un tercero (o sin sesión) recibe
   // error. La foto la mandan AMBOS lados (v1.4.88: antes solo el chofer; el
   // cliente la baja a 800 px JPEG 0.75; aquí se rechaza si pasa de ~1.5 MB).
-  // Sin acuses de lectura.
+  // Acuses de lectura por rol (v1.4.92): POST /api/chat/read marca leído y
+  // GET /api/chat devuelve `unread` (tabla chat_read).
   if (pathname === '/api/chat/send') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
@@ -2420,6 +2432,27 @@ async function api(req, res, pathname) {
     sendChatPush(r, a, role, text, photo); // v1.4.91 (detalle 2): push al otro lado (no se espera: no retrasa la respuesta)
     return send(res, 200, { ok: true, message: { ...msg, sender_name: a.name } });
   }
+  // v1.4.92: marcar el chat como leído POR ROL. El cliente lo llama al
+  // abrir la hoja de chat y al cerrarla. El rol viene de la vista (como
+  // en /api/chat/send): solo se acepta si vale para esa cuenta; si no,
+  // se usa el rol de la cuenta. last_read_id queda en el último mensaje
+  // que existe para esa solicitud.
+  if (pathname === '/api/chat/read') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const rid = body.request_id;
+    if (!validId(rid)) return badId(res);
+    const r = db.prepare('SELECT * FROM requests WHERE id=?').get(rid);
+    if (!r) return send(res, 404, { ok: false, error: 'No encontrado.' });
+    const isDriver = a.driver_id && r.driver_id && Number(a.driver_id) === Number(r.driver_id);
+    const isPax = a.passenger_id && r.passenger_id && Number(a.passenger_id) === Number(r.passenger_id);
+    if (!isDriver && !isPax) return send(res, 403, { ok: false, error: 'Este chat no es tuyo.' });
+    const role = (body.role === 'chofer' && isDriver) ? 'chofer' : (body.role === 'pasajero' && isPax) ? 'pasajero' : (isDriver ? 'chofer' : 'pasajero');
+    const maxId = db.prepare('SELECT COALESCE(MAX(id),0) m FROM chat_messages WHERE request_id=?').get(rid).m;
+    db.prepare(`INSERT INTO chat_read (request_id, role, last_read_id) VALUES (?,?,?)
+      ON CONFLICT(request_id, role) DO UPDATE SET last_read_id=excluded.last_read_id`).run(rid, role, maxId);
+    return send(res, 200, { ok: true, last_read_id: maxId });
+  }
   if (pathname === '/api/chat') {
     const a = accountFromToken(q.get('token') || body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
@@ -2436,7 +2469,17 @@ async function api(req, res, pathname) {
     for (const m of rows) {
       if (!names[m.sender_account_id]) { const ac = db.prepare('SELECT name FROM accounts WHERE id=?').get(m.sender_account_id); names[m.sender_account_id] = ac ? ac.name : ''; }
     }
-    return send(res, 200, { ok: true, messages: rows.map(m => ({ ...m, sender_name: names[m.sender_account_id] || '' })) });
+    // v1.4.92: `unread` — mensajes del OTRO lado con id mayor que el último
+    // leído de este rol (tabla chat_read). El cliente pasa role como en
+    // /api/chat/send; si no vale para esa cuenta, se usa el rol de la cuenta.
+    // No depende de after_id: así cuenta también el mensaje que llegó antes
+    // de entrar a esta vista (el seed del cliente lo marcaba como leído).
+    const wantRole = q.get('role');
+    const myRole = (wantRole === 'chofer' && isDriver) ? 'chofer' : (wantRole === 'pasajero' && isPax) ? 'pasajero' : (isDriver ? 'chofer' : 'pasajero');
+    const otherRole = myRole === 'chofer' ? 'pasajero' : 'chofer';
+    const readRow = db.prepare('SELECT last_read_id FROM chat_read WHERE request_id=? AND role=?').get(rid, myRole);
+    const unread = db.prepare(`SELECT COUNT(*) c FROM chat_messages WHERE request_id=? AND sender_role=? AND id>?`).get(rid, otherRole, readRow ? Number(readRow.last_read_id) : 0).c;
+    return send(res, 200, { ok: true, unread, messages: rows.map(m => ({ ...m, sender_name: names[m.sender_account_id] || '' })) });
   }
   // v1.4.91 (detalle 2): Web Push del chat. POST /api/push/subscribe
   // guarda la suscripción del navegador (endpoint + llaves) por cuenta;
