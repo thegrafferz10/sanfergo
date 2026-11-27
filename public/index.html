@@ -706,7 +706,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.97'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.98'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3549,6 +3549,13 @@ async function renderLiveMap(){
     // se centra solo en la entrega (como v1.4.82).
     if(from) fitPoints(liveMap, [[from.lng, from.lat], [dest.lng, dest.lat]], liveFollowPadding());
     else fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());
+  } else if(isQuieroMandado(r) && dPos){
+    // v1.4.98: en Quiero fase 2 el mapa se ve como el taxímetro —
+    // cerquita, centrado en la mototaxi a zoom 17 (la 1.4.97 lo dejó
+    // más abierto con el tope a 16 y el encuadre de toda la ruta: a
+    // 1.1 km se veía ancho y la línea se cortaba fuera de pantalla).
+    // La línea azul se sigue dibujando igual; solo cambia el encuadre.
+    liveMap.easeTo({ center: [dPos.lng, dPos.lat], zoom: 17, padding: liveFollowPadding(), duration: 500 });
   } else if(liveRouteCoords && liveRouteCoords.length){
     fitPoints(liveMap, liveRouteCoords, liveFollowPadding());
   } else {
@@ -3567,9 +3574,7 @@ function liveRecenter(){
   const c = liveAsDriver
     ? (liveDriverMarker ? liveDriverMarker.getLngLat() : null)
     : (liveReq.driver_lat ? { lng: liveReq.driver_lng, lat: liveReq.driver_lat } : { lng: liveReq.origin_lng, lat: liveReq.origin_lat });
-  // v1.4.97: en Quiero el recentrado va a 16, no a 17 (mismo tope que el
-  // zoom de proximidad, para que se vean las calles).
-  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: isQuieroMandado(liveReq) ? 16 : 17, padding: liveFollowPadding(), duration: 500 });
+  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: 17, padding: liveFollowPadding(), duration: 500 });
 }
 function liveResetNorth(){ if(liveMap) liveMap.easeTo({ bearing: 0, duration: 400 }); }
 /* heading-up del viaje en vivo: solo calcula el rumbo suavizado y lo
@@ -4151,10 +4156,6 @@ function liveApplyDriverPos(lat, lng, prevLat, prevLng){
   // que el chofer: destino en viaje, recogida antes de empezar.
   const tgtZoom = liveHeadingToDest(liveReq) ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
   proxZoom = liveTargetZoom(havKm(lat, lng, tgtZoom.lat, tgtZoom.lng) * 1000);
-  // v1.4.97: en Quiero el zoom de proximidad no pasa de 16 — la entrega
-  // es un salto corto y a 17-18 solo se ve una cuadra; a 16 se ven bien
-  // las calles por donde va pasando. Enviar y viajes sin cambio.
-  if(proxZoom!=null && isQuieroMandado(liveReq)) proxZoom = Math.min(proxZoom, 16);
   if(liveFollow){
     const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
     if(liveBearing!=null) opts.bearing = liveBearing;
