@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.85 en /api/health', h.ok && h.version === '1.4.85', JSON.stringify(h));
+  check('versión 1.4.86 en /api/health', h.ok && h.version === '1.4.86', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.85', h134.ok && h134.version === '1.4.85', JSON.stringify(h134));
+  check('versión 1.4.86', h134.ok && h134.version === '1.4.86', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.85)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.85';") && h.version === '1.4.85', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.86)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.86';") && h.version === '1.4.86', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.85 en /api/health (sección)', h27.ok && h27.version === '1.4.85', JSON.stringify(h27));
+  check('versión 1.4.86 en /api/health (sección)', h27.ok && h27.version === '1.4.86', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.85 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.85', JSON.stringify(h28));
+  check('versión 1.4.86 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.86', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.85 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.85', JSON.stringify(h29));
+  check('versión 1.4.86 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.86', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.85 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.85', JSON.stringify(h30));
+  check('versión 1.4.86 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.86', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4715,6 +4715,7 @@ async function api(path, body) {
       FREE_DAILY_LIMIT: 5,
       myDriver: { id: 777 },
       driverCounter: driverCounter || null,
+      isQuieroMandado: (r)=>!!r && r.kind==='mandado' && !r.recipient_phone,
     };
     const fn = new Function('r','sub','atLimit', ...Object.keys(stubs), detailSec81 + '; return inboxDetailHtml(r, sub, atLimit);');
     return fn(r, false, false, ...Object.values(stubs));
@@ -4724,7 +4725,7 @@ async function api(path, body) {
   }
   let detM81 = '', detM81Err = '';
   try { detM81 = runDetail81(reqMandado81(), null); } catch(e){ detM81Err = String(e && e.message || e); }
-  check('v1.4.81: evaluado — detalle del MANDADO Quiero: filas en orden (Se compra en / Se entrega en / Precio $30 / Lista / Pedido / Pago), sin Distancia ni duplicados', !!detM81 && detM81.includes('Se compra en') && detM81.includes('Todo en el centro') && detM81.includes('Se entrega en') && detM81.includes('Progreso Buenos Aires') && detM81.includes('Precio del pasajero') && detM81.includes('$30') && detM81.includes('Lista') && detM81.includes('Tres kilos de carne') && detM81.includes('Pedido') && detM81.includes('Se pagará · Lleva $150 para recogerlo') && detM81.includes('Pago') && detM81.includes('efectivo') && detM81.indexOf('Se compra en') < detM81.indexOf('Se entrega en') && detM81.indexOf('Se entrega en') < detM81.indexOf('Precio del pasajero') && detM81.indexOf('Precio del pasajero') < detM81.indexOf('Lista') && detM81.indexOf('Lista') < detM81.indexOf('Pedido') && detM81.indexOf('Pedido') < detM81.indexOf('Pago') && !detM81.includes('Distancia') && !detM81.includes('Cosas:') && !detM81.includes('Resumen del mandado') && !detM81.includes('Paradas extra'), detM81Err || detM81.slice(0, 400));
+  check('v1.4.81: evaluado — detalle del MANDADO Quiero: filas en orden (Se compra en / Se entrega en / Precio $30 / Lista / Pedido / Pago), sin Distancia ni duplicados', !!detM81 && detM81.includes('Se compra en') && detM81.includes('Todo en el centro') && detM81.includes('Se entrega en') && detM81.includes('Progreso Buenos Aires') && detM81.includes('Precio del pasajero') && detM81.includes('$30') && detM81.includes('Lista') && detM81.includes('Tres kilos de carne') && detM81.includes('Pedido') && detM81.includes('Necesitas $150 para comprar este mandado') && !detM81.includes('para recogerlo') && detM81.includes('Pago') && detM81.includes('efectivo') && detM81.indexOf('Se compra en') < detM81.indexOf('Se entrega en') && detM81.indexOf('Se entrega en') < detM81.indexOf('Precio del pasajero') && detM81.indexOf('Precio del pasajero') < detM81.indexOf('Lista') && detM81.indexOf('Lista') < detM81.indexOf('Pedido') && detM81.indexOf('Pedido') < detM81.indexOf('Pago') && !detM81.includes('Distancia') && !detM81.includes('Cosas:') && !detM81.includes('Resumen del mandado') && !detM81.includes('Paradas extra'), detM81Err || detM81.slice(0, 400));
   check('v1.4.81: evaluado — detalle del MANDADO Quiero: cada dato sale UNA sola vez (sin duplicados)', !!detM81 && (detM81.match(/Se compra en/g)||[]).length === 1 && (detM81.match(/Todo en el centro/g)||[]).length === 1 && (detM81.match(/Tres kilos de carne/g)||[]).length === 1 && (detM81.match(/Progreso Buenos Aires/g)||[]).length === 1, detM81.slice(0, 400));
   check('v1.4.81: evaluado — detalle del MANDADO Quiero: botones intactos (Aceptar $30, Contraofertar, Ver todas las solicitudes)', !!detM81 && detM81.includes('Aceptar $30') && detM81.includes('Contraofertar') && detM81.includes('‹ Ver todas las solicitudes'), detM81.slice(0, 400));
   let detE81 = '', detE81Err = '';
@@ -4815,7 +4816,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('v1.4.85: versión 1.4.85 en /api/health', h85.ok && h85.version === '1.4.85', JSON.stringify(h85));
+  check('versión 1.4.86 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.86', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -4836,6 +4837,38 @@ async function api(path, body) {
   check('v1.4.85: mandado sin precio, 1.0 km, sugiere $20', s85.ok && s85.request.price === 20, JSON.stringify(s85));
   const lockClose85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
   check('v1.4.85: el admin vuelve a bloquear y el candado queda puesto', lockClose85.ok && lockClose85.mandados_locked === true, JSON.stringify(lockClose85));
+
+  // ===== v1.4.86 (2026-11-26): fila "Pedido" del Quiero dice "Necesitas $X para comprar este mandado" =====
+  console.log('== v1.4.86: Pedido del Quiero = "Necesitas $X para comprar este mandado" ==');
+  // --- Estático: los tres sitios del chofer usan el condicional por Quiero/Enviar ---
+  const detailSec86 = html.slice(html.indexOf('function inboxDetailHtml(r, sub, atLimit){'), html.indexOf('function renderInboxOverlay(list){'));
+  check('v1.4.86: el detalle del chofer (overlay) dice "Necesitas $X para comprar este mandado" en Quiero y "Se pagará · Lleva $X para recogerlo" en Enviar', detailSec86.includes("isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo'"));
+  const drvSumSec86 = html.slice(html.indexOf('function mandadoDriverSummaryHtml(r){'), html.indexOf('let inboxLoaded'));
+  check('v1.4.86: la tarjeta del chofer (mandadoDriverSummaryHtml) usa el mismo condicional Quiero/Enviar', drvSumSec86.includes("isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo'"));
+  const liveSec86 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+  check('v1.4.86: el renglón Pedido del mapa en vivo del chofer usa el mismo condicional Quiero/Enviar', liveSec86.includes("isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo'"));
+  // El resumen de publicar de Enviar (lado del pasajero) sigue con "para recogerlo": solo se toca el lado del chofer.
+  const pubSumSec86 = html.slice(html.indexOf('function mdPublishSummaryHtml(){'), html.indexOf('function mdShowListPopup(){'));
+  check('v1.4.86: el resumen de publicar de Enviar NO se toca (sigue "Se pagará · Lleva $X para recogerlo")', pubSumSec86.includes("else if(md.orderPay==='por_pagar') rows.push(['Pedido', 'Se pagará · Lleva '+fmt$(Number(md.orderAmount)||0)+' para recogerlo'])") && !pubSumSec86.includes('para comprar este mandado'));
+  // --- Evaluado: el detalle (overlay) con Quiero y con Enviar ---
+  check('v1.4.86: evaluado — detalle del MANDADO Quiero: Pedido dice "Necesitas $150 para comprar este mandado", sin "para recogerlo"', !!detM81 && detM81.includes('Necesitas $150 para comprar este mandado') && !detM81.includes('para recogerlo'), detM81Err || detM81.slice(0, 400));
+  check('v1.4.86: evaluado — detalle del MANDADO Enviar: Pedido sigue "Se pagará · Lleva $200 para recogerlo", sin "para comprar"', !!detE81 && detE81.includes('Se pagará · Lleva $200 para recogerlo') && !detE81.includes('para comprar este mandado'), detE81Err || detE81.slice(0, 400));
+  // --- Evaluado: mandadoDriverSummaryHtml con Quiero y con Enviar ---
+  function runDrvSum86(r){
+    const stubs = {
+      esc: (s)=>String(s==null?'':s),
+      fmt$: (n)=>'$'+Math.round(Number(n)||0),
+      isQuieroMandado: (x)=>!!x && x.kind==='mandado' && !x.recipient_phone,
+    };
+    const fn = new Function('r', ...Object.keys(stubs), drvSumSec86 + '; return mandadoDriverSummaryHtml(r);');
+    return fn(r, ...Object.values(stubs));
+  }
+  let sumQ86 = '', sumQ86Err = '';
+  try { sumQ86 = runDrvSum86({ kind:'mandado', recipient_phone: null, recipient_name: null, order_payment: 'por_pagar', order_amount: 100, stops_json: JSON.stringify([{zone:'Madero'}]) }); } catch(e){ sumQ86Err = String(e && e.message || e); }
+  check('v1.4.86: evaluado — la tarjeta del chofer (Quiero) dice "Necesitas $100 para comprar este mandado", sin "para recogerlo"', !!sumQ86 && sumQ86.includes('Necesitas $100 para comprar este mandado') && sumQ86.includes('Se compra en') && sumQ86.includes('Madero') && !sumQ86.includes('para recogerlo'), sumQ86Err || sumQ86.slice(0, 300));
+  let sumE86 = '', sumE86Err = '';
+  try { sumE86 = runDrvSum86({ kind:'mandado', recipient_phone: '9610000083', recipient_name: 'Ana', order_payment: 'por_pagar', order_amount: 200, stops_json: '[]' }); } catch(e){ sumE86Err = String(e && e.message || e); }
+  check('v1.4.86: evaluado — la tarjeta del chofer (Enviar) sigue "Se pagará · Lleva $200 para recogerlo", sin "para comprar"', !!sumE86 && sumE86.includes('Se pagará · Lleva $200 para recogerlo') && sumE86.includes('Recibe') && sumE86.includes('Ana · 9610000083') && !sumE86.includes('para comprar este mandado'), sumE86Err || sumE86.slice(0, 300));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
