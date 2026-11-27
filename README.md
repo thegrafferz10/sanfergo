@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.97)
+# SanFerGo — versión pública (v1.4.98)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.98 (2026-11-27) — El mapa de Quiero fase 2 se ve como el taxímetro, cerquita (corrige la 1.4.97, el usuario lo pidió en vivo)
+
+- CORRECCIÓN: la 1.4.97 fue en la dirección contraria. El usuario dijo "el mapa sigue muy grande" y la 1.4.97 lo dejó más abierto con un tope de zoom a 16; lo que él quería era lo opuesto: que se vea como el taxímetro, "así de cerquita". Ahora en Quiero fase 2 el mapa ya no encuadra toda la ruta (a 1.1 km se veía ancho y la línea azul se cortaba fuera de pantalla): centra en la mototaxi a zoom 17, igual que el taxímetro (`taxiCenterOn` va a 17), y el zoom de proximidad vuelve a subir a 18 al acercarse al destino como en Enviar. La línea azul se sigue dibujando igual; solo cambia el encuadre. Se quitó el tope de `proxZoom` a 16 de la 1.4.97 y el recentrado ("Centrar en mi ubicación") vuelve a 17 para todos. Quiero fase 1 sigue sin mapa, como antes.
+- La normalización del teléfono de la 1.4.97 (`mdNormPhone`, pegar el WhatsApp con +52 en Enviar) sigue intacta — no se tocó. Enviar y viajes sin cambio.
+- Pruebas: suite completa contra BD limpia: **1517 OK, 0 FAIL** (1515 de antes + 4 nuevas de la 1.4.98: 4 estáticas — encuadre de Quiero fase 2 centrado en la mototaxi a zoom 17 antes del encuadre de la ruta, tope de zoom 16 quitado y recentrado a 17 para todos, mdNormPhone intacto, Enviar/viajes y fitPoints sin cambios; se quitaron los 2 checks del tope de zoom de la 1.4.97; checks actualizados: 8 de versión a 1.4.98).
 
 ## v1.4.97 (2026-11-27) — Pegar el WhatsApp con +52 en Enviar + zoom del mapa en Quiero (el usuario lo pidió en vivo)
 
