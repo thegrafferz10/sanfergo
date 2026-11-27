@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.94)
+# SanFerGo — versión pública (v1.4.95)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.95 (2026-11-27) — Galería en la foto del registro de pasajero, igual que el chofer (el usuario lo pidió)
+
+- En el registro de pasajero, la foto de cara (selfie) ya no es solo cámara: ahora tiene los mismos dos botones bonitos que el chofer — verde "📷 Tomar foto" (cámara frontal, input oculto `rp-cam` con `capture="user"`) y naranja "🖼️ Subir de galería" (input oculto `rp-gal` sin `capture`). Los dos pasan por `fileToPhoto` igual que antes (480px, JPEG 0.75), alimentan `regPhoto1` y actualizan la vista previa `#rp-prev`. El texto ("Tómala con la cámara o súbela de tu galería", que ya prometía las dos opciones) y la advertencia de foto obligatoria no cambiaron; la foto sigue siendo obligatoria para guardar el perfil y `savePassenger` no se tocó. La app nativa ya tenía las dos opciones.
+- Pruebas: suite completa contra BD limpia: **1506 OK, 0 FAIL** (1502 de antes + 4 nuevas de la 1.4.95: 4 estáticas — dos botones bonitos (verde + naranja), dos inputs ocultos rp-cam con capture + rp-gal sin capture, los dos alimentan regPhoto1 y actualizan #rp-prev, texto y advertencia sin cambios; checks actualizados: 8 de versión a 1.4.95 y 3 que afirmaban el comportamiento anterior — 2 de la v1.4.57 (usos literales de fileToPhoto 6→7, líneas de perfil 1→2) y 1 de la v1.4.72 (el formulario de pasajero ahora sí cambia)).
 
 ## v1.4.94 (2026-11-27) — Botón de WhatsApp en Administrar choferes (mockup aprobado "Sí, así queda")
 
