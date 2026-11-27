@@ -706,7 +706,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.95'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.96'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3665,8 +3665,12 @@ function renderLiveStrips(){
     // mismo campo de siempre. El botón verde de "Pedir ubicación por
     // WhatsApp" y la caja verde del punto de entrega no existen en la web
     // (eran de la app real) y no se agregan.
+    // v1.4.96: en Quiero no hay destinatario (recipient_phone vacío por
+    // definición): se muestra el número del propio pasajero, que es quien
+    // recibe el mandado. En Enviar sigue el destinatario que puso el
+    // pasajero al pedirlo.
     const recvLine = r.kind==='mandado'
-      ? 'Recibe: '+esc(r.recipient_name||r.passenger_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : '')
+      ? 'Recibe: '+esc(r.recipient_name||r.passenger_name||'Quien recibe') + (r.recipient_phone ? ' · '+esc(r.recipient_phone) : (r.passenger_phone ? ' · '+esc(r.passenger_phone) : ''))
       : '';
     const payLine = r.kind==='mandado' && r.order_payment==='por_pagar'
       ? 'Pedido: '+(isQuieroMandado(r) ? 'Necesitas '+fmt$(r.order_amount||0)+' para comprar este mandado' : 'Se pagará · Lleva '+fmt$(r.order_amount||0)+' para recogerlo')
@@ -3680,11 +3684,25 @@ function renderLiveStrips(){
     // chico de antes de llegar queda como estaba.
     const callBtn60 = (r.kind==='viaje' && (r.trip_stage==='llego' || r.trip_stage==='en_viaje') && r.passenger_phone)
       ? '<a class="callbtn" href="tel:'+esc(r.passenger_phone)+'">📞 Llamar a '+esc(r.passenger_name||'Pasajero')+'</a>' : '';
+    // v1.4.96: botón VERDE de llamar en mandados, mismo .callbtn que en
+    // viajes. El chofer llegaba al destino (Enviar) y no tenía cómo
+    // marcarle al destinatario para que saliera a recoger el mandado
+    // (el número sí se veía en "Recibe:"). En en_viaje/comprado con
+    // destinatario (Enviar, entregando) se marca al destinatario; en
+    // llego, o sin destinatario (Quiero: el pasajero es quien recibe),
+    // se marca al pasajero. El enlace chico (en_camino/llego) no cambia.
+    const callTo96 = (r.kind==='mandado' && (r.trip_stage==='llego' || r.trip_stage==='comprado' || r.trip_stage==='en_viaje'))
+      ? (((r.trip_stage==='en_viaje' || r.trip_stage==='comprado') && r.recipient_phone)
+        ? { name: r.recipient_name||'Quien recibe', phone: r.recipient_phone }
+        : (r.passenger_phone ? { name: r.passenger_name||'Pasajero', phone: r.passenger_phone } : null))
+      : null;
+    const callBtn96 = callTo96
+      ? '<a class="callbtn" href="tel:'+esc(callTo96.phone)+'">📞 Llamar a '+esc(callTo96.name)+'</a>' : '';
     bot.innerHTML = '<div class="row live-mini"><span>'+esc(r.passenger_name||'Pasajero')+' · '+(r.kind==='mandado' ? esc(r.description||'Mandado') : esc(r.origin_zone||'')+' → '+esc(r.dest_zone||''))+(r.kind==='viaje' ? ' · '+paxText(r.passenger_count) : '')+'</span><span>'+esc(r.payment_method||'efectivo')+'</span></div>'
       + (recvLine ? '<div class="row live-mini"><span>'+recvLine+'</span></div>' : '')
       + (payLine ? '<div class="row live-mini"><span>'+payLine+'</span></div>' : '')
       + (miniLinks.length ? '<div class="row live-mini-links">'+miniLinks.join('')+'</div>' : '')
-      + callBtn60
+      + callBtn60 + callBtn96
       + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
       + (nxt ? '<button onclick="'+btnOn89+'">'+btnLbl89+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
