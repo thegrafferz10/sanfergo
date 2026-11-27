@@ -671,13 +671,13 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.84'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.85'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
 /* Tarifa oficial 2026-11-20: $10 base + $2.50 cada 300 m; espera $1.25/min parado; mínimo $20 */
 const BASE = 10, PER_300M = 2.5, WAIT_PER_MIN = 1.25, MIN_TRIP = 20;
-const MIN_MANDADO = 30; // v1.4.78: el mandado empieza en $30 (el viaje sigue en $20).
+const MIN_MANDADO = 20; // v1.4.85: el mandado empieza en $20 (el viaje sigue en $20).
 const MANDADO_EXTRA_STOP = 10, FREE_DAILY_LIMIT = 5, PREMIUM_MIN_PRICE = 80;
 const SUB_PLANS = [{key:'weekly',days:7,price:50,label:'Semanal',desc:'$50 por semana · 7 días'},{key:'monthly',days:30,price:150,label:'Mensual',desc:'$150 por mes · 30 días'},{key:'yearly',days:365,price:500,label:'Anual',desc:'$500 por año · 365 días'}];
 const fmt$ = n => '$' + Math.round(n);
@@ -2640,7 +2640,7 @@ function priceSheetHtml(kind){
       + (n ? '<div class="card warn"><b>Recorrido: '+fmt$(base)+' · Paradas extra: '+n+' × $10 = +'+fmt$(n*MANDADO_EXTRA_STOP)+'</b><p class="muted mt">Como las compras son de varios lados, el precio sugerido sube por las paradas extra. Ya va incluido en el sugerido.</p></div>' : '');
   }
   // v1.4.78: "Quiero un mandado" — cuánto dinero lleva el chofer para
-  // comprar: $150 por defecto, pasos de $50, mínimo $100, sin máximo.
+  // comprar: $150 por defecto, pasos de $50, mínimo $50, sin máximo.
   // Enviar NO toca esto (su pago del pedido sigue en su paso 3).
   let carryHtml = '';
   if(!isTrip && md.kind==='quiero'){
@@ -2748,15 +2748,15 @@ function mdSummaryLine(){
 }
 function mdCarryStep(d){
   // v1.4.78: el dinero que lleva el chofer para comprar en "Quiero un
-  // mandado": $150 por defecto, pasos de $50, mínimo $100, sin máximo.
-  md.carryAmount = Math.max(100, (Number(md.carryAmount)||150) + d);
+  // mandado": $150 por defecto, pasos de $50, mínimo $50, sin máximo.
+  md.carryAmount = Math.max(50, (Number(md.carryAmount)||150) + d);
   const v = document.getElementById('md-carry-val'); if(v) v.textContent = fmt$(md.carryAmount);
   const s = document.getElementById('md-sum-carry'); if(s) s.textContent = fmt$(md.carryAmount);
 }
 function priceStep(kind, d){
   const st = kind==='viaje' ? wiz : md;
   // v1.4.48: el piso del stepper es el mínimo por personas en viajes
-  // (1=$20, 2=$25, 3=$30); en mandados es $30 (v1.4.78).
+  // (1=$20, 2=$25, 3=$30); en mandados es $20 (v1.4.85).
   const floor = kind==='viaje' ? minForPax(st.pax) : MIN_MANDADO;
   st.price = Math.max(floor, st.price + d);
   const v = document.getElementById('price-val'); if(v) v.textContent = fmt$(st.price);
@@ -4991,7 +4991,7 @@ function mdVehicleHtml(){
    lugar). Para estimar el precio se intenta emparejar ese texto con el
    registro de lugares (zonas + negocios, sin acentos ni mayúsculas):
    si coincide, se usan sus coordenadas APROXIMADAS; si no coincide, la
-   estimación usa el punto de entrega (distancia 0 → precio mínimo $30).
+   estimación usa el punto de entrega (distancia 0 → precio mínimo $20).
    El chofer solo necesita saber dónde comprar: el texto tal cual se
    escribió viaja en stops_json y se muestra como "Se compra en: <texto>".
    Las tiendas fijas y el buscador de parada de v1.4.78 se quitaron por
@@ -5109,9 +5109,9 @@ function startMandado(kind){
   }
   md.kind = kind; md.step = 1;
   // v1.4.78: "Quiero un mandado" lleva dinero para comprar: $150 por
-  // defecto (se respeta lo ya elegido si es ≥$100). Enviar NO toca esto:
+  // defecto (se respeta lo ya elegido si es ≥$50). Enviar NO toca esto:
   // su pago del pedido sigue en su paso 3.
-  if(kind==='quiero' && !(Number(md.carryAmount)>=100)) md.carryAmount = 150;
+  if(kind==='quiero' && !(Number(md.carryAmount)>=50)) md.carryAmount = 150;
   // v1.4.80: la entrega de "Quiero un mandado" ya NO se captura sola por
   // GPS al entrar al flujo: el paso 1 la pide con dos tarjetas ("Usar
   // ubicación actual" / "Ubicar un punto en el mapa"), como en Viajes.
@@ -5205,7 +5205,7 @@ async function mdComputePrice(){
   // v1.4.79: el origen de la estimación es el punto aproximado del texto
   // (registro) y, si el texto no emparejó con nada, el propio punto de
   // entrega: la distancia estimada es 0 y el precio queda en el mínimo
-  // $30 (la tarifa y el mínimo no cambian).
+  // $20 (la tarifa y el mínimo no cambian).
   const origin = (first.lat!=null) ? first : dest;
   const est = await estimateKm(origin, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
@@ -5359,7 +5359,7 @@ async function mdComputeEnviarPrice(){
   const est = await estimateKm(origin, dest);
   md.km = Math.max(0.8, Math.round(est.km*10)/10);
   md.eta = etaMin(md.km);
-  md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km)); // v1.4.78: Enviar también es mandado: mínimo $30
+  md.suggested = Math.max(MIN_MANDADO, suggestedPrice(md.km)); // v1.4.78: Enviar también es mandado: mínimo $20 (v1.4.85)
   md.price = md.suggested;
   mdBack(4);
 }
@@ -5382,7 +5382,7 @@ async function publishMandado(){
   // Sin punto de entrega marcado no se publica nada (nunca se inventa Centro).
   if(!md.dest || md.dest.lat==null){ toast('Marca el punto de entrega en el mapa.'); return; }
   const price = md.price;
-  if(!price || price < MIN_MANDADO || price > 1000 || price % 5 !== 0){ toast('El precio debe ir de cinco en cinco: $30, $35, $40…'); return; }
+  if(!price || price < MIN_MANDADO || price > 1000 || price % 5 !== 0){ toast('El precio debe ir de cinco en cinco: $20, $25, $30…'); return; }
   const pay = md.payment;
   try {
     let body;
@@ -5398,7 +5398,7 @@ async function publishMandado(){
         stops: md.stops.map(s=>({ zone:s.zone, lat:s.lat, lng:s.lng, detail:s.detail||'' })),
         extra_stops: Math.max(0, md.stops.length-1),
         // v1.4.78: el chofer lleva dinero para comprar ($150 por defecto,
-        // pasos de $50, mínimo $100): el chofer lo ve como "Lleva $X".
+        // pasos de $50, mínimo $50): el chofer lo ve como "Lleva $X".
         order_payment:'por_pagar', order_amount: Number(md.carryAmount)||150 };
     } else {
       const dest = md.dest;
@@ -6021,7 +6021,7 @@ async function loadDriverInbox(force){
       // precio de antes y el de ahora (igual que en la app real).
       + (r.price_improved?'<div style="margin-top:6px;background:#dcfce7;color:#166534;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">✦ Precio mejorado<br><span style="font-weight:400">El pasajero ha aumentado su precio: antes '+fmt$(r.previous_price||0)+', ahora '+fmt$(r.price)+'.</span></div>':'')
       + (r.is_free_trip?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">🎁 Viaje gratis · el pasajero paga '+fmt$(freeTripPays(r.price))+'</div>':'')
-      + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+' para recogerlo</div>':'')
+      + (r.order_payment==='por_pagar'?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Lleva '+fmt$(r.order_amount||0)+(isQuieroMandado(r)?' para comprar':' para recogerlo')+'</div>':'')
       + (counter && !rejected?'<div style="margin-top:6px;background:#fef3c7;color:#92400e;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Te contraofertó '+fmt$(counter)+' · Toca para responder</div>':'')
       + (rejected?'<div style="margin-top:6px;background:#ffedd5;color:#9a3412;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700">Rechazado · '+esc(rejectedTxt)+'</div>':'')
       + '</div></div></div>';
@@ -6216,7 +6216,7 @@ function closeInboxOverlay(){
 function driverCounterStep(d){
   if(!driverCounter) return;
   // v1.4.48: el piso es el mínimo por personas del viaje (1=$20, 2=$25,
-  // 3=$30); en mandados es $30 (v1.4.78).
+  // 3=$30); en mandados es $20 (v1.4.85).
   const rr = (inboxLastList||[]).find(x=>x.id===driverCounter.rid);
   const floor = rr && rr.kind==='viaje' ? minForPax(rr.passenger_count) : MIN_MANDADO;
   driverCounter.price = Math.max(floor, driverCounter.price + d);
