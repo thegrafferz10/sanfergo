@@ -1,9 +1,15 @@
-# SanFerGo — versión pública (v1.4.95)
+# SanFerGo — versión pública (v1.4.96)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.96 (2026-11-27) — Botón verde de llamar en mandados + número del pasajero en Quiero (el usuario lo pidió en vivo)
+
+- En la pantalla en vivo del chofer, los mandados ya tienen el botón verde "📞 Llamar a ..." con el mismo estilo `.callbtn` que en viajes. Antes el chofer llegaba al destino de un Enviar y no tenía cómo marcarle al destinatario para que saliera a recoger el mandado, aunque el número sí se veía en "Recibe:". El destino de la llamada depende de la etapa: en `en_viaje`/`comprado` con destinatario (Enviar, entregando) se marca al destinatario; en `llego`, o sin destinatario, se marca al pasajero.
+- La línea "Recibe:" en Quiero ahora muestra el número del propio pasajero (`Recibe: {nombre} · {teléfono del pasajero}`), porque en Quiero no hay destinatario — el que recibe es el mismo que pidió. En Enviar sigue el destinatario que puso el pasajero al pedirlo. El enlace chico "📞 Llamar a ..." (en_camino/llego, pasajero) y el botón de viajes no cambiaron; la bandeja del chofer tampoco (ya mostraba nombre + teléfono).
+- Pruebas: suite completa contra BD limpia: **1510 OK, 0 FAIL** (1506 de antes + 4 nuevas de la 1.4.96: 4 estáticas — Recibe con fallback al teléfono del pasajero en Quiero, botón verde en mandados en llego/comprado/en_viaje con el mismo .callbtn y pintado en la tarjeta, destino de la llamada según etapa, botón de viajes y enlace chico sin cambios; checks actualizados: 8 de versión a 1.4.96).
 
 ## v1.4.95 (2026-11-27) — Galería en la foto del registro de pasajero, igual que el chofer (el usuario lo pidió)
 
