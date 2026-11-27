@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.88 en /api/health', h.ok && h.version === '1.4.88', JSON.stringify(h));
+  check('versión 1.4.89 en /api/health', h.ok && h.version === '1.4.89', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.87', h134.ok && h134.version === '1.4.88', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.89', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.88)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.88';") && h.version === '1.4.88', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.89)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.89';") && h.version === '1.4.89', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.88 en /api/health (sección)', h27.ok && h27.version === '1.4.88', JSON.stringify(h27));
+  check('versión 1.4.89 en /api/health (sección)', h27.ok && h27.version === '1.4.89', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.88 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.88', JSON.stringify(h28));
+  check('versión 1.4.89 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.89', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.88 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.88', JSON.stringify(h29));
+  check('versión 1.4.89 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.89', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.88 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.88', JSON.stringify(h30));
+  check('versión 1.4.89 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.89', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4819,7 +4819,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.88 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.88', JSON.stringify(h85));
+  check('versión 1.4.89 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.89', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -4928,7 +4928,8 @@ async function api(path, body) {
   check('v1.4.87: evaluado — fase 1 del chofer en llego: "Dirígete a Madero para hacer el mandado" + "Lleva $100 para comprar" + COMPRANDO', !!strips87 && strips87.drvLlego.top.includes('Dirígete a Madero para hacer el mandado') && strips87.drvLlego.top.includes('Lleva $100 para comprar') && strips87.drvLlego.top.includes('COMPRANDO'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.top.slice(0, 300)));
   check('v1.4.87: evaluado — fase 1 del chofer en llego: lista GRANDE + botón "Ya tengo el pedido" que abre el ticket', !!strips87 && strips87.drvLlego.bot.includes('Lista de compra') && strips87.drvLlego.bot.includes('Dos kilos de tomate') && strips87.drvLlego.bot.includes('font-size:18px') && strips87.drvLlego.bot.includes('Ya tengo el pedido') && strips87.drvLlego.bot.includes('askTicketPhoto()'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.bot.slice(0, 400)));
   check('v1.4.87: evaluado — fase 1 del chofer en llego: SIN la nota y SIN la línea del pasajero', !!strips87 && !strips87.drvLlego.bot.includes('Cuando termines de comprar') && !strips87.drvLlego.bot.includes('👤') && !strips87.drvLlego.bot.includes('The Noob Gamer') && !strips87.drvLlego.bot.includes('para recogerlo'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.bot.slice(0, 400)));
-  check('v1.4.87: evaluado — fase 1 del chofer en confirmado: el botón sigue siendo "Ya estoy afuera para recoger el paquete" (avanza a llego)', !!strips87 && strips87.drvConf.bot.includes('Ya estoy afuera para recoger el paquete') && strips87.drvConf.bot.includes("advanceLive('llego')") && !strips87.drvConf.bot.includes('Ya tengo el pedido'), strips87Err || JSON.stringify(strips87 && strips87.drvConf.bot.slice(0, 300)));
+  // v1.4.89 (FIX 1): este check de la 1.4.87 quedó obsoleto — en confirmado el botón YA NO es "Ya estoy afuera para recoger el paquete": ahora es el botón único "Ya tengo el pedido" (el usuario no sabía cómo terminar de comprar).
+  check('v1.4.89: evaluado — fase 1 del chofer en confirmado: el botón AHORA es "Ya tengo el pedido" (antes "Ya estoy afuera para recoger el paquete")', !!strips87 && strips87.drvConf.bot.includes('Ya tengo el pedido') && strips87.drvConf.bot.includes('askTicketPhoto()') && !strips87.drvConf.bot.includes('recoger el paquete'), strips87Err || JSON.stringify(strips87 && strips87.drvConf.bot.slice(0, 300)));
   check('v1.4.87: evaluado — Enviar del chofer NO cambia (sin "Ya tengo el pedido", sin lista; Pedido sigue "Se pagará · Lleva $200 para recogerlo")', !!strips87 && !strips87.drvEnv.bot.includes('Ya tengo el pedido') && !strips87.drvEnv.bot.includes('Lista de compra') && strips87.drvEnv.bot.includes('Se pagará · Lleva $200 para recogerlo'), strips87Err || JSON.stringify(strips87 && strips87.drvEnv.bot.slice(0, 400)));
   check('v1.4.87: evaluado — fase 1 del pasajero NO cambia (tarjeta del chofer + botón ancho de chat; la tarjeta se oculta solo por CSS al abrir el chat)', !!strips87 && strips87.paxP1.bot.includes('Josué Eduardo') && strips87.paxP1.bot.includes('Chat con el conductor') && strips87.paxP1.top.includes('El conductor está comprando tu encargo'), strips87Err || JSON.stringify(strips87 && { top: strips87.paxP1.top.slice(0, 200), bot: strips87.paxP1.bot.slice(0, 200) }));
   // --- Evaluado: la hoja de chat real (abrir → cerrar, pasajero y chofer) ---
@@ -5075,6 +5076,129 @@ async function api(path, body) {
     tok88 = urls88;
   } catch(e){ tok88Err = String(e && e.message || e); }
   check('v1.4.88: evaluado — openChatSheet pide el historial con el token en la URL (antes iba sin token y el servidor daba 401)', !!tok88 && tok88.length === 1 && tok88[0] === '/api/chat?request_id=7&after_id=0&token=tok123', tok88Err || JSON.stringify(tok88));
+
+  // ===== v1.4.89 (2026-11-26): fase 1 del chofer en Quiero — UN solo botón "Ya tengo el pedido" en cualquier etapa (antes "Ya estoy afuera para recoger el paquete" en confirmado/en_camino y el usuario no sabía cómo terminar de comprar) =====
+  console.log('== v1.4.89: botón único "Ya tengo el pedido" en fase 1 de Quiero ==');
+  // (a) Salto directo a 'comprado' desde en_camino (man88, Quiero aceptado: al aceptar el servidor pone trip_stage='en_camino', nunca 'confirmado' con chofer).
+  const adv89a = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man88.request.id, stage: 'comprado' });
+  check('v1.4.89: Quiero avanza en_camino → comprado DIRECTO (sin pasar por llego)', adv89a.ok && adv89a.request.trip_stage === 'comprado', JSON.stringify(adv89a));
+  const lockOpen89 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.89: se abre el candado de Mandados para los mandados de prueba', lockOpen89.ok && lockOpen89.mandados_locked === false, JSON.stringify(lockOpen89));
+  const man89b = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 100, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.89: mandado Quiero nuevo para el salto directo y el flujo completo', man89b.ok && man89b.request.id, JSON.stringify(man89b));
+  const acc89b = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: man89b.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.89: el chofer acepta el mandado Quiero nuevo (queda en en_camino)', acc89b.ok && acc89b.request.status === 'aceptado' && acc89b.request.trip_stage === 'en_camino', JSON.stringify(acc89b));
+  const adv89d = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man89b.request.id, stage: 'comprado' });
+  check('v1.4.89: Quiero nuevo avanza en_camino → comprado DIRECTO', adv89d.ok && adv89d.request.trip_stage === 'comprado', JSON.stringify(adv89d));
+  const adv89g = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man89b.request.id, stage: 'en_viaje' });
+  check('v1.4.89: tras el salto, el flujo sigue: comprado → en_viaje (fase 2, mapa con ruta)', adv89g.ok && adv89g.request.trip_stage === 'en_viaje', JSON.stringify(adv89g));
+  const adv89h = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man89b.request.id, stage: 'entregado' });
+  check('v1.4.89: el flujo termina: en_viaje → entregado', adv89h.ok && adv89h.request.trip_stage === 'entregado' && adv89h.request.status === 'finalizado', JSON.stringify(adv89h));
+  // Enviar NO puede saltar a 'comprado' (el candado de recipient_phone lo bloquea aunque STAGE_NEXT lo permita para Quiero).
+  const man89e = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_detail: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Llevar un paquete', vehicle: 'mototaxi', recipient_phone: '9614444444', recipient_name: 'María López', order_payment: 'por_pagar', order_amount: 150 });
+  check('v1.4.89: mandado Enviar nuevo para probar que NO llega a comprado', man89e.ok && man89e.request.id, JSON.stringify(man89e));
+  const acc89e = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: man89e.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.89: el chofer acepta el mandado Enviar nuevo', acc89e.ok && acc89e.request.status === 'aceptado', JSON.stringify(acc89e));
+  const adv89f = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: man89e.request.id, stage: 'comprado' });
+  check('v1.4.89: Enviar NO puede marcar comprado (400, no es de compras) aunque el salto exista para Quiero', !adv89f.ok && /no es de compras/.test(adv89f.error || ''), JSON.stringify(adv89f));
+  const lockClose89 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.89: el candado de Mandados vuelve a quedar puesto', lockClose89.ok && lockClose89.mandados_locked === true, JSON.stringify(lockClose89));
+  // (b) Estático: la rama de fase 1 del chofer ya no usa stageButtonLabel ni advanceLive para el botón; el servidor permite el salto en STAGE_NEXT (también desde confirmado, que en vivo nunca tiene chofer porque al aceptar pasa a en_camino).
+  const ph1Sec89 = html.slice(html.indexOf('if(livePhase1QuieroDriver(r)){'), html.indexOf("top.classList.remove('paxcol')"));
+  check('v1.4.89: la pantalla de fase 1 del chofer tiene UN solo botón "Ya tengo el pedido" que abre el diálogo del ticket (askTicketPhoto), sin "recoger el paquete" ni advanceLive', ph1Sec89.includes('Ya tengo el pedido') && ph1Sec89.includes('onclick="askTicketPhoto()"') && !ph1Sec89.includes('recoger el paquete') && !ph1Sec89.includes('advanceLive') && !ph1Sec89.includes('stageButtonLabel'), ph1Sec89.slice(0, 400));
+  check('v1.4.89: STAGE_NEXT permite confirmado → comprado y en_camino → comprado en mandados (Quiero)', srv.includes("confirmado: ['en_camino', 'comprado'], en_camino: ['llego', 'comprado']"), '');
+  // (c) Enviar sigue con "Ya estoy afuera para recoger el paquete" en el paso llego (stageButtonLabel intacto, no tocado).
+  check('v1.4.89: stageButtonLabel sigue dando "Ya estoy afuera para recoger el paquete" al mandado en llego (Enviar, correcto ahí)', html.includes("llego:'Ya estoy afuera para recoger el paquete'"), '');
+  // (d) Evaluado: la pantalla de fase 1 del chofer en Quiero muestra "Ya tengo el pedido" en confirmado, en_camino y llego, y abre el ticket; Enviar en en_camino muestra "Ya estoy afuera para recoger el paquete"; el viaje no cambia.
+  let ph1_89 = null, ph1Err89 = '';
+  try {
+    const liveSec89 = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+    const stageLabelSrc89 = html.slice(html.indexOf('const STAGE_LABEL'), html.indexOf('/* Hacia el destino'));
+    const htdSrc89 = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+    const quieroSrc89 = html.slice(html.indexOf('function isQuieroMandado(r){'), html.indexOf('function nextStage(r){'));
+    const nextSrc89 = html.slice(html.indexOf('function nextStage(r){'), html.indexOf('function passengerStageTitle(r){'));
+    const compassSrc89 = html.slice(html.indexOf('function compassDir(from, to){'), html.indexOf('async function cancelLiveRequest(rid){'));
+    function runStrips89(r) {
+      const mkEl = () => ({ classList: { add(){}, remove(){} }, style: {}, innerHTML: '', textContent: '' });
+      const top = mkEl(), bot = mkEl(), pill = mkEl(), compass = mkEl(), recenter = mkEl();
+      const els = { '#live-top': top, '#live-bottom': bot, '#live-pill': pill, '#live-compass': compass, '#live-recenter': recenter };
+      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = true;\nlet liveReq = null;\nfunction chatShowBtn(){}\nfunction chatWideBtnHtml(){ return \'<button class="chatwide">Chat</button>\'; }\n' + stageLabelSrc89 + '\n' + htdSrc89 + '\n' + quieroSrc89 + '\n' + nextSrc89 + '\n' + compassSrc89 + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec89 + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
+      const h = f(sel => els[sel] || mkEl(), top, bot);
+      h.run(r);
+      return { top: top.innerHTML, bot: bot.innerHTML };
+    }
+    const quiero89 = { kind: 'mandado', recipient_phone: '', stops_json: '[{"zone":"Madero","detail":""}]', items_json: '["Dos kilos de tomate","2 cebolla"]', order_amount: 100, origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8709, dest_lng: -93.2063, driver_lat: 16.8727, driver_lng: -93.2081, passenger_name: 'Josue Eduardo', passenger_phone: '9614868605', payment_method: 'efectivo', price: 30, final_price: 30 };
+    const enviar89 = { ...quiero89, recipient_phone: '9614444444', recipient_name: 'María López', description: 'Llevar un paquete', order_payment: 'por_pagar' };
+    const viaje89 = { kind: 'viaje', origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8675, dest_lng: -93.2105, driver_lat: 16.8727, driver_lng: -93.2081, passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', payment_method: 'efectivo', price: 20, final_price: 20, passenger_count: 1 };
+    ph1_89 = {
+      qConf: runStrips89({ ...quiero89, trip_stage: 'confirmado' }),
+      qCamino: runStrips89({ ...quiero89, trip_stage: 'en_camino' }),
+      qLlego: runStrips89({ ...quiero89, trip_stage: 'llego' }),
+      env: runStrips89({ ...enviar89, trip_stage: 'en_camino' }),
+      trip: runStrips89({ ...viaje89, trip_stage: 'en_camino' })
+    };
+  } catch(e){ ph1Err89 = String(e && e.message || e); }
+  check('v1.4.89: evaluado — fase 1 de Quiero en confirmado muestra "Ya tengo el pedido" que abre el ticket, sin "recoger el paquete"', !!ph1_89 && ph1_89.qConf.bot.includes('Ya tengo el pedido') && ph1_89.qConf.bot.includes('onclick="askTicketPhoto()"') && !ph1_89.qConf.bot.includes('recoger el paquete') && !ph1_89.qConf.bot.includes('advanceLive('), ph1Err89 || JSON.stringify(ph1_89 && ph1_89.qConf.bot.slice(0, 300)));
+  check('v1.4.89: evaluado — fase 1 de Quiero en en_camino y en llego también muestra "Ya tengo el pedido" (mismo botón único)', !!ph1_89 && ph1_89.qCamino.bot.includes('Ya tengo el pedido') && ph1_89.qCamino.bot.includes('onclick="askTicketPhoto()"') && ph1_89.qLlego.bot.includes('Ya tengo el pedido') && ph1_89.qLlego.bot.includes('onclick="askTicketPhoto()"'), ph1Err89 || JSON.stringify(ph1_89 && { c: ph1_89.qCamino.bot.slice(0, 150), l: ph1_89.qLlego.bot.slice(0, 150) }));
+  check('v1.4.89: evaluado — Enviar en en_camino SIGUE con "Ya estoy afuera para recoger el paquete" (advanceLive llego)', !!ph1_89 && ph1_89.env.bot.includes('Ya estoy afuera para recoger el paquete') && ph1_89.env.bot.includes("advanceLive('llego')"), ph1Err89 || JSON.stringify(ph1_89 && ph1_89.env.bot.slice(0, 300)));
+  check('v1.4.89: evaluado — el viaje en en_camino SIGUE con "Ya estoy afuera" (sin cambios)', !!ph1_89 && ph1_89.trip.bot.includes('Ya estoy afuera') && !ph1_89.trip.bot.includes('recoger el paquete'), ph1Err89 || JSON.stringify(ph1_89 && ph1_89.trip.bot.slice(0, 200)));
+
+  // ===== v1.4.89 FIX 5 (2026-11-26): en Quiero, en 'comprado' el botón es "Finalizar mandado" y va directo a 'entregado' (antes "Ya voy en camino" y luego "Entregado", repetido) =====
+  console.log('== v1.4.89 FIX 5: "Finalizar mandado" en Quiero comprado ==');
+  // (a) API: Quiero avanza comprado → entregado DIRECTO (STAGE_NEXT ya lo permitía) y el recibo tiene duración (trip_started_at se marca al comprar).
+  const lockOpen89b = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.89 FIX 5: se abre el candado de Mandados para el mandado de prueba', lockOpen89b.ok && lockOpen89b.mandados_locked === false, JSON.stringify(lockOpen89b));
+  // Chofer NUEVO para esta sección: chatDrv ya gastó sus 5 servicios gratis de hoy con man78/man88/man89b/man89e (el límite es por chofer y por día).
+  const drv89jAcc = await api('/api/register-account', { name: 'Chofer Finalizar', username: 'chatdrv89_' + RUN, phone: '9610000089', password: 'secreta123' });
+  const drv89j = await api('/api/register-driver', { name: 'Chofer Finalizar', phone: '9610000089', vehicle: 'mototaxi', unit: 'F89', selfie: PHOTO, vehicle_photo: PHOTO });
+  await approveDriver(drv89j.driver.id);
+  const link89j = await api('/api/link-profiles', { token: drv89jAcc.token, driver_id: drv89j.driver.id });
+  const on89j = await api('/api/set-driver-online', { driver_id: drv89j.driver.id, online: true });
+  check('v1.4.89 FIX 5: chofer nuevo aprobado, enlazado y en línea (con sus 5 servicios gratis intactos)', drv89jAcc.ok && drv89j.ok && link89j.ok && on89j.ok && on89j.driver.online === 1, JSON.stringify({ acc: drv89jAcc.ok, drv: drv89j.ok, link: link89j.ok, on: on89j.ok }));
+  const man89j = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 100, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.89 FIX 5: mandado Quiero nuevo para el final directo', man89j.ok && man89j.request.id, JSON.stringify(man89j));
+  const acc89j = await api('/api/driver-respond', { driver_id: drv89j.driver.id, request_id: man89j.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.89 FIX 5: el chofer acepta el mandado Quiero nuevo', acc89j.ok && acc89j.request.status === 'aceptado', JSON.stringify(acc89j));
+  const adv89j = await api('/api/advance-stage', { driver_id: drv89j.driver.id, request_id: man89j.request.id, stage: 'comprado' });
+  check('v1.4.89 FIX 5: Quiero avanza a comprado y ya queda marcado el inicio (trip_started_at)', adv89j.ok && adv89j.request.trip_stage === 'comprado' && adv89j.request.trip_started_at, JSON.stringify(adv89j.request && { st: adv89j.request.trip_stage, started: adv89j.request.trip_started_at }));
+  const adv89k = await api('/api/advance-stage', { driver_id: drv89j.driver.id, request_id: man89j.request.id, stage: 'entregado' });
+  check('v1.4.89 FIX 5: Quiero avanza comprado → entregado DIRECTO (sin pasar por en_viaje)', adv89k.ok && adv89k.request.trip_stage === 'entregado' && adv89k.request.status === 'finalizado', JSON.stringify(adv89k));
+  const got89j = await api('/api/requests?id=' + man89j.request.id);
+  check('v1.4.89 FIX 5: el recibo tiene duración real (trip_started_at marcado al comprar y finished_at al entregar)', got89j.ok && got89j.requests[0].trip_started_at && got89j.requests[0].finished_at && got89j.requests[0].finished_at >= got89j.requests[0].trip_started_at, JSON.stringify(got89j.requests && got89j.requests[0] && { started: got89j.requests[0].trip_started_at, finished: got89j.requests[0].finished_at }));
+  const lockClose89b = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.89 FIX 5: el candado de Mandados vuelve a quedar puesto', lockClose89b.ok && lockClose89b.mandados_locked === true, JSON.stringify(lockClose89b));
+  // (b) Estático: STAGE_NEXT ya permitía comprado → entregado; el servidor marca trip_started_at al comprar.
+  check('v1.4.89 FIX 5: STAGE_NEXT ya permitía comprado → entregado en mandados (no hizo falta agregarlo)', srv.includes("comprado: ['en_viaje', 'entregado']"), '');
+  check('v1.4.89 FIX 5: el servidor marca trip_started_at también al pasar a comprado (para la duración del recibo)', srv.includes("(stage === startStage || stage === 'comprado') && !r.trip_started_at"), '');
+  // (c) Evaluado: en fase 2 el botón del chofer en Quiero comprado dice "Finalizar mandado"; Enviar sigue "Ya voy en camino" → "Entregado".
+  let fin89 = null, finErr89 = '';
+  try {
+    const liveSec89b = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+    const stageLabelSrc89b = html.slice(html.indexOf('const STAGE_LABEL'), html.indexOf('/* Hacia el destino'));
+    const htdSrc89b = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+    const quieroSrc89b = html.slice(html.indexOf('function isQuieroMandado(r){'), html.indexOf('function nextStage(r){'));
+    const nextSrc89b = html.slice(html.indexOf('function nextStage(r){'), html.indexOf('function passengerStageTitle(r){'));
+    const compassSrc89b = html.slice(html.indexOf('function compassDir(from, to){'), html.indexOf('async function cancelLiveRequest(rid){'));
+    function runStrips89b(r) {
+      const mkEl = () => ({ classList: { add(){}, remove(){} }, style: {}, innerHTML: '', textContent: '' });
+      const top = mkEl(), bot = mkEl(), pill = mkEl(), compass = mkEl(), recenter = mkEl();
+      const els = { '#live-top': top, '#live-bottom': bot, '#live-pill': pill, '#live-compass': compass, '#live-recenter': recenter };
+      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = true;\nlet liveReq = null;\nfunction chatShowBtn(){}\nfunction chatWideBtnHtml(){ return \'<button class="chatwide">Chat</button>\'; }\n' + stageLabelSrc89b + '\n' + htdSrc89b + '\n' + quieroSrc89b + '\n' + nextSrc89b + '\n' + compassSrc89b + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec89b + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
+      const h = f(sel => els[sel] || mkEl(), top, bot);
+      h.run(r);
+      return { top: top.innerHTML, bot: bot.innerHTML };
+    }
+    const quiero89b = { kind: 'mandado', recipient_phone: '', stops_json: '[{"zone":"Madero","detail":""}]', items_json: '["Dos kilos de tomate","2 cebolla"]', order_amount: 100, origin_zone: 'Madero', dest_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_lat: 16.8709, dest_lng: -93.2063, driver_lat: 16.8727, driver_lng: -93.2081, passenger_name: 'Josue Eduardo', passenger_phone: '9614868605', payment_method: 'efectivo', price: 30, final_price: 30 };
+    const enviar89b = { ...quiero89b, recipient_phone: '9614444444', recipient_name: 'María López', description: 'Llevar un paquete', order_payment: 'por_pagar' };
+    fin89 = {
+      qComprado: runStrips89b({ ...quiero89b, trip_stage: 'comprado' }),
+      envLlego: runStrips89b({ ...enviar89b, trip_stage: 'llego' }),
+      envViaje: runStrips89b({ ...enviar89b, trip_stage: 'en_viaje' })
+    };
+  } catch(e){ finErr89 = String(e && e.message || e); }
+  check('v1.4.89 FIX 5: evaluado — fase 2 de Quiero en comprado muestra "Finalizar mandado" (advanceLive entregado), sin "Ya voy en camino"', !!fin89 && fin89.qComprado.bot.includes('Finalizar mandado') && fin89.qComprado.bot.includes("advanceLive('entregado')") && !fin89.qComprado.bot.includes('Ya voy en camino'), finErr89 || JSON.stringify(fin89 && fin89.qComprado.bot.slice(0, 300)));
+  check('v1.4.89 FIX 5: evaluado — Enviar en llego SIGUE con "Ya voy en camino" (advanceLive en_viaje)', !!fin89 && fin89.envLlego.bot.includes('Ya voy en camino') && fin89.envLlego.bot.includes("advanceLive('en_viaje')"), finErr89 || JSON.stringify(fin89 && fin89.envLlego.bot.slice(0, 300)));
+  check('v1.4.89 FIX 5: evaluado — Enviar en en_viaje SIGUE con "Entregado"', !!fin89 && fin89.envViaje.bot.includes('Entregado') && fin89.envViaje.bot.includes("advanceLive('entregado')"), finErr89 || JSON.stringify(fin89 && fin89.envViaje.bot.slice(0, 200)));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

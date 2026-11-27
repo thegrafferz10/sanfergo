@@ -565,7 +565,7 @@ const MANDADO_STAGES = ['confirmado', 'en_camino', 'llego', 'recogido', 'comprad
 // esta versión no se quedan atorados.
 const STAGE_NEXT = {
   viaje: { confirmado: ['en_camino'], en_camino: ['llego', 'en_viaje'], llego: ['en_viaje'], en_viaje: ['finalizado'] },
-  mandado: { confirmado: ['en_camino'], en_camino: ['llego'], llego: ['recogido', 'comprado', 'en_viaje'], recogido: ['en_viaje', 'entregado'], comprado: ['en_viaje', 'entregado'], en_viaje: ['entregado'] }, // v1.4.78: 'comprado' es el "Ya compré" de un "Quiero un mandado" (llego → comprado → en_viaje)
+  mandado: { confirmado: ['en_camino', 'comprado'], en_camino: ['llego', 'comprado'], llego: ['recogido', 'comprado', 'en_viaje'], recogido: ['en_viaje', 'entregado'], comprado: ['en_viaje', 'entregado'], en_viaje: ['entregado'] }, // v1.4.78: 'comprado' es el "Ya compré" de un "Quiero un mandado" (llego → comprado → en_viaje); v1.4.89: la pantalla de fase 1 del chofer en Quiero tiene UN solo botón "Ya tengo el pedido" en cualquier etapa de fase 1 (confirmado/en_camino/llego) y avanza directo a 'comprado' — Enviar NO puede llegar a 'comprado' porque /api/advance-stage lo bloquea con recipient_phone ('Este mandado no es de compras')
 };
 
 function haversineKm(a, b, c, d) {
@@ -880,7 +880,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.88' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.89' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -2608,7 +2608,8 @@ async function api(req, res, pathname) {
     const status = isFinal ? 'finalizado' : r.status;
     // Marcar inicio real del recorrido (para el recibo: duración real).
     const startStage = 'en_viaje'; // el recorrido real empieza al salir hacia el destino
-    const stampStart = stage === startStage && !r.trip_started_at;
+    // v1.4.89 (FIX 5): en Quiero el chofer salta 'en_viaje' ("Finalizar mandado" va de 'comprado' a 'entregado') — el inicio se marca al comprar, para que el recibo tenga duración real; 'comprado' solo existe en Quiero.
+    const stampStart = (stage === startStage || stage === 'comprado') && !r.trip_started_at;
     db.prepare(`UPDATE requests SET trip_stage=?, trip_stage_at=datetime('now'), status=?
       ${stampStart ? ', trip_started_at=datetime(\'now\')' : ''}
       ${isFinal ? ', finished_at=datetime(\'now\')' : ''}
