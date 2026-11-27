@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.89 en /api/health', h.ok && h.version === '1.4.89', JSON.stringify(h));
+  check('versión 1.4.90 en /api/health', h.ok && h.version === '1.4.90', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.87', h134.ok && h134.version === '1.4.89', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.90', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.89)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.89';") && h.version === '1.4.89', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.90)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.90';") && h.version === '1.4.90', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.89 en /api/health (sección)', h27.ok && h27.version === '1.4.89', JSON.stringify(h27));
+  check('versión 1.4.90 en /api/health (sección)', h27.ok && h27.version === '1.4.90', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.89 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.89', JSON.stringify(h28));
+  check('versión 1.4.90 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.90', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.89 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.89', JSON.stringify(h29));
+  check('versión 1.4.90 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.90', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.89 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.89', JSON.stringify(h30));
+  check('versión 1.4.90 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.90', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4819,7 +4819,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.89 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.89', JSON.stringify(h85));
+  check('versión 1.4.90 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.90', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -5199,6 +5199,61 @@ async function api(path, body) {
   check('v1.4.89 FIX 5: evaluado — fase 2 de Quiero en comprado muestra "Finalizar mandado" (advanceLive entregado), sin "Ya voy en camino"', !!fin89 && fin89.qComprado.bot.includes('Finalizar mandado') && fin89.qComprado.bot.includes("advanceLive('entregado')") && !fin89.qComprado.bot.includes('Ya voy en camino'), finErr89 || JSON.stringify(fin89 && fin89.qComprado.bot.slice(0, 300)));
   check('v1.4.89 FIX 5: evaluado — Enviar en llego SIGUE con "Ya voy en camino" (advanceLive en_viaje)', !!fin89 && fin89.envLlego.bot.includes('Ya voy en camino') && fin89.envLlego.bot.includes("advanceLive('en_viaje')"), finErr89 || JSON.stringify(fin89 && fin89.envLlego.bot.slice(0, 300)));
   check('v1.4.89 FIX 5: evaluado — Enviar en en_viaje SIGUE con "Entregado"', !!fin89 && fin89.envViaje.bot.includes('Entregado') && fin89.envViaje.bot.includes("advanceLive('entregado')"), finErr89 || JSON.stringify(fin89 && fin89.envViaje.bot.slice(0, 200)));
+
+  // ===== v1.4.90 (2026-11-26): Enviar paso 3 — opciones de pago apiladas ("Se pagará el pedido" arriba, "Pedido ya pagado" abajo) + la descripción ya no se borra al cambiar de opción =====
+  console.log('== v1.4.90: pago del pedido apilado en Enviar paso 3 + descripción que no se borra ==');
+  // --- Estático: el bloque de pago del paso 3 (anclado a renderMandadoEnviar, no a Quiero) ---
+  const envFn90 = html.indexOf('function renderMandadoEnviar(){');
+  const s3Start90 = html.indexOf('} else if(md.step===3){', envFn90);
+  const s3End90 = html.indexOf('} else if(md.step===4){', s3Start90);
+  const step3Sec90 = html.slice(s3Start90, s3End90);
+  const pay3Idx90 = step3Sec90.indexOf('¿Cómo se paga el pedido?');
+  const pay3Sec90 = step3Sec90.slice(pay3Idx90, step3Sec90.indexOf("md.orderPay==='por_pagar' ? '<label", pay3Idx90));
+  check('v1.4.90: las opciones de pago del paso 3 de Enviar van APILADAS en columna (flex-direction:column), "Se pagará el pedido" ANTES que "Pedido ya pagado"', pay3Sec90.includes('flex-direction:column') && pay3Sec90.indexOf('Se pagará el pedido') !== -1 && pay3Sec90.indexOf('Pedido ya pagado') !== -1 && pay3Sec90.indexOf('Se pagará el pedido') < pay3Sec90.indexOf('Pedido ya pagado'), pay3Sec90.slice(0, 300));
+  check('v1.4.90: ambas opciones conservan su clase pay-opt, su lógica sel y su onclick (por_pagar / pagado con md.orderAmount vacío)', pay3Sec90.includes("class=\"pay-opt '+(md.orderPay==='por_pagar'?'sel':'')+'\" onclick=\"md.orderPay=\\'por_pagar\\';renderMandados()\"") && pay3Sec90.includes("class=\"pay-opt '+(md.orderPay==='pagado'?'sel':'')+'\" onclick=\"md.orderPay=\\'pagado\\';md.orderAmount=\\'\\';renderMandados()\""), pay3Sec90.slice(0, 400));
+  check('v1.4.90: NO se agregó ningún icono de verificación (la palomita del mockup era solo adorno del generador; el seleccionado sigue siendo el .sel verde)', !pay3Sec90.includes('✓') && !pay3Sec90.includes('✔') && !pay3Sec90.includes('check'), pay3Sec90.slice(0, 200));
+  check('v1.4.90: el resto del paso 3 sigue igual (título, subtítulo, etiqueta, placeholder, errores, botón Continuar)', step3Sec90.includes('<h2>¿Qué hay que entregar?</h2>') && step3Sec90.includes('Paso 3 de 4 · Cuéntale al conductor qué lleva.') && step3Sec90.includes('¿Qué hay que recoger o entregar?') && step3Sec90.includes('placeholder="Ej. llevar un paquete a mi hermana"') && step3Sec90.includes('id="md-err4"') && step3Sec90.includes('id="md-err3b"') && step3Sec90.includes('onclick="mdNextEnviar3()">Continuar</button>'), step3Sec90.slice(0, 300));
+  check('v1.4.90: el textarea #md-desc ahora guarda lo escrito al teclear (oninput="md.description=this.value", mismo patrón que #md-order-amount)', html.includes('<textarea id="md-desc" rows="3" placeholder="Ej. llevar un paquete a mi hermana" oninput="md.description=this.value">'), '');
+  check('v1.4.90: "Continuar" sigue exigiendo descripción (el guard if(!md.description) muestra md-err4 y no avanza)', html.includes("if(!md.description){ if(e4) e4.classList.remove('hidden'); return; }"), '');
+  // --- Evaluado: escribir en #md-desc, cambiar de opción de pago, el texto sigue ahí tras el re-render ---
+  let step3_90 = null, step3Err90 = '';
+  try {
+    let src90 = step3Sec90.replace(/^} else if\(md\.step===3\)\{/, 'if(true){') + '}';
+    const runStep3_90 = (mdObj) => {
+      const page90 = { innerHTML: '' };
+      const fn90 = new Function('md', 'page', 'backPill', 'esc', src90 + '; return page.innerHTML;');
+      return fn90(mdObj, page90, () => '', (s) => String(s ?? ''));
+    };
+    const md90 = { step: 3, description: '', orderPay: 'pagado', orderAmount: '' };
+    const h90a = runStep3_90(md90);
+    const onIn90 = (h90a.match(/<textarea[^>]*id="md-desc"[^>]*oninput="([^"]*)"/) || [])[1] || '';
+    if (onIn90) new Function('md', onIn90).call({ value: 'Caja' }, md90);
+    md90.orderPay = 'por_pagar';
+    const h90b = runStep3_90(md90);
+    const txt90b = (h90b.match(/<textarea[^>]*id="md-desc"[^>]*>([^<]*)<\/textarea>/) || [])[1];
+    md90.orderPay = 'pagado';
+    const h90c = runStep3_90(md90);
+    const txt90c = (h90c.match(/<textarea[^>]*id="md-desc"[^>]*>([^<]*)<\/textarea>/) || [])[1];
+    step3_90 = { onIn90, descAfterType: md90.description, txtAfterSwitch: txt90b, txtAfterSwitchBack: txt90c, orderOk: h90b.indexOf('Se pagará el pedido') < h90b.indexOf('Pedido ya pagado'), colOk: h90b.includes('flex-direction:column') };
+  } catch (e) { step3Err90 = String(e && e.message || e); }
+  check('v1.4.90: evaluado — escribo "Caja" en #md-desc, cambio a "Se pagará el pedido" y el texto SIGUE tras el re-render (y también al volver a "Pedido ya pagado")', !!step3_90 && step3_90.onIn90 === 'md.description=this.value' && step3_90.descAfterType === 'Caja' && step3_90.txtAfterSwitch === 'Caja' && step3_90.txtAfterSwitchBack === 'Caja', step3Err90 || JSON.stringify(step3_90));
+  check('v1.4.90: evaluado — el paso 3 ya renderizado trae "Se pagará el pedido" arriba de "Pedido ya pagado" en columna', !!step3_90 && step3_90.orderOk && step3_90.colOk, step3Err90 || JSON.stringify(step3_90));
+  // --- Evaluado: "Continuar" sigue exigiendo descripción ---
+  let next3_90 = null, next3Err90 = '';
+  try {
+    const next3Src90 = html.slice(html.indexOf('function mdNextEnviar3(){'), html.indexOf('function mdToggleAskBtn(){'));
+    const runNext3_90 = (descVal, orderPayVal) => {
+      const mkEl90 = (v) => { const cls = new Set(['hidden']); return { value: v || '', textContent: '', classList: { add(c){ cls.add(c); }, remove(c){ cls.delete(c); }, contains(c){ return cls.has(c); } }, _cls: cls }; };
+      const els90 = { 'md-desc': mkEl90(descVal), 'md-err4': mkEl90(), 'md-err3b': mkEl90() };
+      const doc90 = { getElementById(id){ return els90[id] || null; } };
+      const mdObj90 = { description: '', orderPay: orderPayVal, orderAmount: '' };
+      let priceCalled90 = false;
+      new Function('md', 'document', 'mdComputeEnviarPrice', next3Src90 + '; mdNextEnviar3();')(mdObj90, doc90, () => { priceCalled90 = true; });
+      return { err4Shown: !els90['md-err4']._cls.has('hidden'), priceCalled: priceCalled90, desc: mdObj90.description };
+    };
+    next3_90 = { empty: runNext3_90('', 'pagado'), ok: runNext3_90('Caja', 'pagado') };
+  } catch (e) { next3Err90 = String(e && e.message || e); }
+  check('v1.4.90: evaluado — "Continuar" con descripción vacía muestra el error y NO avanza; con "Caja" pasa la validación', !!next3_90 && next3_90.empty.err4Shown && !next3_90.empty.priceCalled && !next3_90.ok.err4Shown && next3_90.ok.priceCalled && next3_90.ok.desc === 'Caja', next3Err90 || JSON.stringify(next3_90));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
