@@ -17,7 +17,7 @@ en unos 10 minutos, sin pagar nada.
    elegir el repositorio.
 4. Configuración:
    - **Runtime:** Node
-   - **Build Command:** (vacío, no hay dependencias)
+   - **Build Command:** `npm install` (v1.4.91: el servidor ya tiene una dependencia, `web-push`, para las notificaciones push del chat)
    - **Start Command:** `node server.js`
    - **Instance Type:** Free
    - **Environment Variables:** `DATA_DIR` = `/var/data` (ver paso 5)
@@ -67,6 +67,52 @@ las dos cosas, en Railway (Variables del servicio):
   web", con el origen autorizado
   `https://sanfergo-production.up.railway.app` y luego el dominio propio
   cuando se compre).
+
+## Notificaciones push del chat (v1.4.91)
+
+Cuando pasajero y chofer se escriben en el chat de un servicio, el que
+recibe la notificación es el otro lado, aunque tenga la app cerrada:
+el servidor manda un Web Push (título "SanFerGo", cuerpo "{nombre}:
+{texto}" o "{nombre}: Te envió una foto"). El permiso se pide SOLO
+cuando el usuario abre un viaje o mandado en vivo, nunca al entrar.
+
+Para activarlo, en Railway (Variables del servicio) hacen falta las
+llaves VAPID (se generan una sola vez en cualquier máquina con Node):
+
+```
+npx web-push generate-vapid-keys
+```
+
+- `VAPID_PUBLIC_KEY`: la llave pública que imprime el comando (es
+  pública: el servidor la sirve en `/api/config`, no es un secreto).
+- `VAPID_PRIVATE_KEY`: la llave privada que imprime el comando. **Es
+  un secreto: SOLO vive en las variables de entorno del servidor, nunca
+  se guarda en el repo ni en el código.** Sin ella, el push queda
+  desactivado y el chat sigue igual.
+- `VAPID_SUBJECT` (opcional): `mailto:contacto@sanfernandogo.com` por
+  defecto; identifica al remitente del push.
+
+**Límite honesto en iPhone:** en Safari el Web Push solo llega si el
+usuario agregó el sitio a la pantalla de inicio (botón Compartir →
+"Añadir a pantalla de inicio") y dio permiso de notificaciones. En
+Safari normal, sin agregar el sitio, el aviso NO llega (limitación de
+Apple, no de SanFerGo). En Android (Chrome) el push llega con el sitio
+abierto en el navegador o agregado a inicio.
+
+**FCM (app nativa) — pendiente:** la app nativa registra su token en
+`POST /api/push/fcm-token` y el servidor lo guarda por cuenta, pero el
+**envío por Firebase NO está implementado**: no existe llave de cuenta
+de servicio de Firebase. Para activarlo haría falta crear la llave en
+la consola de Firebase y guardarla como variable de entorno
+(`FIREBASE_SERVICE_ACCOUNT_JSON`), y programar el envío en el servidor.
+Hasta entonces, la app nativa avisa dentro de la app (distintivo rojo
+con el conteo en el botón de Chat) pero no con notificación del teléfono
+con la app cerrada.
+
+Solo para pruebas: con `SANFERGO_PUSH_LOG=1` el servidor expone
+`GET /api/push/log` con los últimos intentos de push (para la suite de
+pruebas). Sin esa variable, esa ruta devuelve 404. No se pone en
+producción.
 
 ## Qué NO funciona como lanzamiento
 

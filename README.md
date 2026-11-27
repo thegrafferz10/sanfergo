@@ -1,9 +1,19 @@
-# SanFerGo — versión pública (v1.4.66)
+# SanFerGo — versión pública (v1.4.91)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.91 (2026-11-27) — Lote de 6 detalles de la prueba en el teléfono (mockup fase 1 aprobado "Arre")
+
+- Detalle 1: los inputs de la lista de Quiero ("¿Qué quieres que te traigan?") ya llevan `autocomplete/autocorrect/autocapitalize="off"` + `spellcheck="false"`: en iOS Safari la 2ª línea ya no dispara la barra de autofill "Tarjeta" ni deshabilita el teclado.
+- Detalle 2: Web Push del chat — al mandar un mensaje, el otro lado recibe notificación del teléfono aunque tenga la app cerrada (título "SanFerGo", cuerpo "{nombre}: {texto}" o "{nombre}: Te envió una foto}", tag por solicitud). Service worker `public/sw.js` + llaves VAPID por entorno (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, la privada nunca en el repo; sin llaves el push queda desactivado y el chat sigue igual). El permiso se pide SOLO al abrir un viaje/mandado en vivo, nunca al entrar. La app nativa registra su token FCM en `POST /api/push/fcm-token` (solo se guarda: el envío por Firebase NO está implementado, no hay llave de cuenta de servicio). Límite honesto: en iPhone Safari el push solo llega si el sitio está agregado a la pantalla de inicio y con permiso (ver DEPLOY.md).
+- Detalle 3: el botón ancho de Chat (pasajero y chofer, viajes y mandados) ya muestra un círculo rojo con el CONTEO de mensajes sin leer cuando la hoja está cerrada; se limpia al abrir el chat.
+- Detalle 4: CAMBIO DE REGLA (reemplaza la v1.4.82/v1.4.84): en fase 1 del pasajero (Quiero, antes de "Ya compré") ya NO hay mapa — solo las tarjetas apiladas sobre fondo claro, igual que el chofer (mockup aprobado). En fase 2 ("comprado") el mapa vuelve con ruta azul + pin de entrega + mototaxi. Enviar y viajes no cambian.
+- Detalle 5: regla de 30 minutos (solo mandados, Quiero + Enviar; viajes no cambian): aceptado el mandado, el pasajero no puede cancelar hasta 30 min después de la aceptación y solo si el chofer aún no marcó "Ya tengo el pedido"; en "comprado" o más ya no se puede cancelar. Se cumple en el SERVIDOR (`/api/cancel-request`, sello nuevo `accepted_at`); las filas viejas sin sello se tratan como vencidas. El botón muestra la notita durante el bloqueo.
+- Detalle 6: el chofer ve en fase 1 de Quiero un conteo en vivo 30:00 → 00:00 (cada segundo, desde `accepted_at`) con el aviso de que si se acaba el tiempo el pasajero podrá cancelar; al vencer dice "El pasajero ya puede cancelar".
+- Pruebas: suite completa contra BD limpia: **1473 OK, 0 FAIL** (1428 de antes + 45 nuevas de la 1.4.91: 21 estáticas, 4 evaluadas y 20 en vivo; checks actualizados: 8 de versión a 1.4.91 y 10 viejos — 1 de la v1.4.55 (el mandado aceptado ya no se cancela en los primeros 30 min), 1 de orden de la columna de abajo, 1 de la v1.4.65, 1 de la v1.4.82, 1 de la v1.4.83, 3 de la v1.4.84, 1 de la v1.4.87 y 1 de la v1.4.78 — cuyas expectativas cambiaron con esta versión).
 
 ## v1.4.66 (2026-11-24) — La ficha del chofer muestra también el taxímetro
 

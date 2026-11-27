@@ -85,6 +85,27 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM = process.env.RESEND_FROM || 'SanFerGo <onboarding@resend.dev>';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+// v1.4.91 (detalle 2): Web Push para el chat. La llave PRIVADA solo
+// viene de la variable de entorno VAPID_PRIVATE_KEY (nunca se guarda en
+// el repo); la pública se sirve en /api/config. Sin llaves, el push
+// queda desactivado y el chat sigue igual. FCM (app nativa) solo guarda
+// el token en /api/push/fcm-token: el envío por Firebase NO está
+// implementado (no hay llave de cuenta de servicio) — ver DEPLOY.md.
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contacto@sanfernandogo.com';
+let webpush = null, pushEnabled = false;
+try {
+  webpush = require('web-push');
+  if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    pushEnabled = true;
+  }
+} catch (e) { webpush = null; pushEnabled = false; }
+// Registro en memoria de los intentos de push (solo para la suite:
+// GET /api/push/log solo responde si SANFERGO_PUSH_LOG=1).
+const PUSH_LOG = [];
+function pushLog(entry) { PUSH_LOG.push({ ...entry, at: new Date().toISOString() }); if (PUSH_LOG.length > 50) PUSH_LOG.shift(); }
 const PUBLIC_DIR = path.join(__dirname, 'public');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -114,7 +135,7 @@ CREATE TABLE IF NOT EXISTS requests (
   payment_method TEXT, description TEXT,
   recipient_phone TEXT, items_json TEXT, stops_json TEXT, extra_stops INTEGER DEFAULT 0,
   status TEXT DEFAULT 'buscando', trip_stage TEXT, trip_stage_at TEXT,
-  trip_started_at TEXT, finished_at TEXT,
+  trip_started_at TEXT, finished_at TEXT, accepted_at TEXT,
   driver_id INTEGER, driver_name TEXT, driver_phone TEXT, driver_photo TEXT,
   driver_unit TEXT, driver_vehicle TEXT, vehicle_photo TEXT,
   driver_lat REAL, driver_lng REAL, driver_loc_at TEXT,
@@ -164,6 +185,20 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_chat_request ON chat_messages (request_id, id);
+-- v1.4.91 (detalle 2): suscripciones Web Push por cuenta (endpoint +
+-- llaves) y tokens FCM de la app nativa (solo se guardan: el envío por
+-- Firebase no está implementado, no hay llave de cuenta de servicio).
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL, auth TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL, token TEXT NOT NULL UNIQUE,
+  created_at TEXT DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS lost_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_type TEXT NOT NULL, reporter_name TEXT, reporter_phone TEXT,
@@ -308,6 +343,7 @@ addCol('requests', 'vehicle', 'TEXT');
 addCol('requests', 'passenger_count', 'INTEGER DEFAULT 1'); // v1.4.48: cuántas personas van en el viaje (1/2/3; mandados siempre 1)
 addCol('requests', 'trip_started_at', 'TEXT');
 addCol('requests', 'finished_at', 'TEXT');
+addCol('requests', 'accepted_at', 'TEXT'); // v1.4.91 (detalle 5/6): cuándo aceptó el chofer el mandado (regla de 30 min)
 addCol('passengers', 'free_trips', 'INTEGER DEFAULT 0'); // v1.4.67: viajes gratis ganados por recomendación (se gastan al terminar el viaje gratis)
 addCol('requests', 'is_free_trip', 'INTEGER DEFAULT 0'); // v1.4.67: viaje gratis — solo lo hace el chofer del dueño
 // Duración de la cita en minutos (copia de la duración del servicio al
@@ -782,8 +818,11 @@ function confirmRequest(requestId, d, finalPrice, acceptedOfferId) {
     db.prepare(`UPDATE offers SET status='superada' WHERE request_id=?`).run(requestId);
   }
   db.prepare(`UPDATE requests SET status='aceptado', final_price=?, driver_id=?, driver_name=?, driver_phone=?,
-    driver_photo=?, driver_unit=?, driver_vehicle=?, vehicle_photo=?, trip_stage='en_camino', trip_stage_at=datetime('now')
+    driver_photo=?, driver_unit=?, driver_vehicle=?, vehicle_photo=?, trip_stage='en_camino', trip_stage_at=datetime('now'), accepted_at=datetime('now')
     WHERE id=?`).run(finalPrice, d.id, d.name, d.phone, d.selfie, d.unit, d.vehicle, d.vehicle_photo, requestId);
+  // v1.4.91 (detalle 5/6): accepted_at es el sello de la regla de 30
+  // minutos del mandado (cancelar y conteo del chofer). Se sella al
+  // aceptar; las filas viejas sin sello se tratan como vencidas.
   // v1.4.43: al aceptar ya va automáticamente en camino al punto de
   // recogida (sin botón "Voy en camino").
   return db.prepare('SELECT * FROM requests WHERE id=?').get(requestId);
@@ -861,6 +900,36 @@ async function resolveLocationText(text) {
 // v1.4.78: anti-spam del chat — última vez (ms) que cada cuenta mandó un mensaje (1 msg/s).
 const CHAT_LAST_SEND = new Map();
 
+// v1.4.91 (detalle 2): push al OTRO lado cuando llega un mensaje de
+// chat. Fire-and-forget: si el push falla (sin llaves, sin suscripción
+// o el endpoint murió), el mensaje igual se guarda y se devuelve.
+// El título es siempre "SanFerGo", el cuerpo "{nombre}: {texto}" o
+// "{nombre}: Te envió una foto", y el tag es por solicitud (así un
+// mensaje nuevo reemplaza la notificación anterior de ese servicio).
+// Una suscripción que devuelve 404/410 (ya no existe) se borra.
+function sendChatPush(r, sender, role, text, photo) {
+  if (!pushEnabled || !webpush) return;
+  try {
+    const otherAccount = role === 'chofer'
+      ? db.prepare('SELECT id FROM accounts WHERE passenger_id=?').get(r.passenger_id)
+      : db.prepare('SELECT id FROM accounts WHERE driver_id=?').get(r.driver_id);
+    if (!otherAccount) return;
+    const subs = db.prepare('SELECT * FROM push_subscriptions WHERE account_id=?').all(otherAccount.id);
+    if (!subs.length) return;
+    const body = sender.name + ': ' + (text || 'Te envió una foto');
+    const payload = JSON.stringify({ title: 'SanFerGo', body, tag: 'chat-' + r.id, data: { requestId: r.id } });
+    for (const s of subs) {
+      const sub = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+      webpush.sendNotification(sub, payload).then(
+        () => pushLog({ request_id: r.id, account_id: otherAccount.id, endpoint: s.endpoint, status: 'ok' }),
+        (e) => {
+          pushLog({ request_id: r.id, account_id: otherAccount.id, endpoint: s.endpoint, status: 'error', error: String((e && e.statusCode) || (e && e.message) || e) });
+          if (e && (e.statusCode === 404 || e.statusCode === 410)) { try { db.prepare('DELETE FROM push_subscriptions WHERE id=?').run(s.id); } catch (_) {} }
+        });
+    }
+  } catch (e) { /* el push nunca rompe el chat */ }
+}
+
 // v1.4.76 (arreglo del crash de Railway 2026-11-25): los ids que llegan
 // del cliente (query o body) se validan ANTES de atarlos a un `?` de
 // SQLite. node:sqlite tira un TypeError no atrapado ("Provided value
@@ -880,11 +949,13 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.90' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.91' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
-  if (pathname === '/api/config') return send(res, 200, { ok: true, googleClientId: GOOGLE_CLIENT_ID || null, emailCode: emailCodeEnabled() });
+  // v1.4.91: vapidPublicKey es pública (no un secreto) y pushEnabled dice
+  // si el servidor puede mandar notificaciones push del chat.
+  if (pathname === '/api/config') return send(res, 200, { ok: true, googleClientId: GOOGLE_CLIENT_ID || null, emailCode: emailCodeEnabled(), vapidPublicKey: VAPID_PUBLIC_KEY || null, pushEnabled });
   if (pathname === '/api/places') return send(res, 200, { ok: true, places: PLACES, landmarks: LANDMARKS, fare: { base: BASE_FARE, per_300m: PER_300M, wait_per_min: WAIT_PER_MIN, min: MIN_TRIP, extra_stop: MANDADO_EXTRA_STOP } });
 
   if (pathname === '/api/resolve-location') {
@@ -2346,6 +2417,7 @@ async function api(req, res, pathname) {
     const kind = photo ? 'foto' : 'texto';
     const ins = db.prepare(`INSERT INTO chat_messages (request_id, sender_account_id, sender_role, kind, text, photo) VALUES (?,?,?,?,?,?)`).run(rid, a.id, role, kind, text || null, photo);
     const msg = db.prepare('SELECT * FROM chat_messages WHERE id=?').get(ins.lastInsertRowid);
+    sendChatPush(r, a, role, text, photo); // v1.4.91 (detalle 2): push al otro lado (no se espera: no retrasa la respuesta)
     return send(res, 200, { ok: true, message: { ...msg, sender_name: a.name } });
   }
   if (pathname === '/api/chat') {
@@ -2365,6 +2437,41 @@ async function api(req, res, pathname) {
       if (!names[m.sender_account_id]) { const ac = db.prepare('SELECT name FROM accounts WHERE id=?').get(m.sender_account_id); names[m.sender_account_id] = ac ? ac.name : ''; }
     }
     return send(res, 200, { ok: true, messages: rows.map(m => ({ ...m, sender_name: names[m.sender_account_id] || '' })) });
+  }
+  // v1.4.91 (detalle 2): Web Push del chat. POST /api/push/subscribe
+  // guarda la suscripción del navegador (endpoint + llaves) por cuenta;
+  // el envío sale solo desde /api/chat/send hacia el otro lado. Si el
+  // servidor no tiene llaves VAPID, suscribirse devuelve error (el chat
+  // sigue igual, sin push).
+  if (pathname === '/api/push/subscribe') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const sub = body.subscription || {};
+    if (!sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return send(res, 400, { ok: false, error: 'Suscripción no válida.' });
+    if (!pushEnabled) return send(res, 400, { ok: false, error: 'Las notificaciones push no están activadas en el servidor.' });
+    db.prepare(`INSERT INTO push_subscriptions (account_id, endpoint, p256dh, auth) VALUES (?,?,?,?)
+      ON CONFLICT(endpoint) DO UPDATE SET account_id=excluded.account_id, p256dh=excluded.p256dh, auth=excluded.auth`).run(a.id, String(sub.endpoint), String(sub.keys.p256dh), String(sub.keys.auth));
+    const n = db.prepare('SELECT COUNT(*) c FROM push_subscriptions WHERE account_id=?').get(a.id).c;
+    return send(res, 200, { ok: true, subscriptions: n });
+  }
+  // v1.4.91 (detalle 2): la app NATIVA registra aquí su token FCM para
+  // que el servidor sepa a quién avisarle. SOLO se guarda: el envío por
+  // Firebase NO está implementado (no existe llave de cuenta de servicio
+  // de Firebase) — ver DEPLOY.md.
+  if (pathname === '/api/push/fcm-token') {
+    const a = accountFromToken(body.token);
+    if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
+    const tok = body.fcm_token || body.fcmToken;
+    if (!tok || typeof tok !== 'string') return send(res, 400, { ok: false, error: 'Falta el token FCM.' });
+    db.prepare(`INSERT OR REPLACE INTO fcm_tokens (account_id, token) VALUES (?,?)`).run(a.id, tok);
+    return send(res, 200, { ok: true, stored: true });
+  }
+  // v1.4.91: registro de intentos de push, SOLO para la suite de
+  // pruebas (SANFERGO_PUSH_LOG=1). Sin esa variable, 404 como si no
+  // existiera. Nunca se expone en producción.
+  if (pathname === '/api/push/log') {
+    if (process.env.SANFERGO_PUSH_LOG !== '1') return send(res, 404, { ok: false, error: 'No encontrado.' });
+    return send(res, 200, { ok: true, attempts: PUSH_LOG });
   }
   if (pathname === '/api/driver-respond') {
     const { driver_id, request_id, price, eta_minutes } = body;
@@ -2576,6 +2683,23 @@ async function api(req, res, pathname) {
       (r.kind === 'mandado' && ['recogido', 'comprado', 'en_viaje', 'entregado'].includes(r.trip_stage || ''));
     if (r.status === 'aceptado' && started) {
       return send(res, 400, { ok: false, error: 'El servicio ya empezó y no se puede cancelar.' });
+    }
+    // v1.4.91 (detalle 5): regla de 30 minutos — SOLO mandados. Una vez
+    // aceptado, el pasajero no puede cancelar hasta 30 min después de la
+    // aceptación Y solo si el chofer aún no marcó "Ya tengo el pedido"
+    // ('comprado' o más ya lo bloquea el chequeo de arriba). Sin sello de
+    // aceptación (fila vieja) se trata como vencido: no se bloquea para
+    // siempre. Antes de aceptar (buscando) sigue libre. Los viajes no
+    // cambian. El endpoint no distingue quién cancela (no lleva token):
+    // en la app solo el pasajero ve el botón de cancelar en vivo; el
+    // chofer no cancela por aquí.
+    if (r.status === 'aceptado' && r.kind === 'mandado' && !['comprado', 'recogido', 'en_viaje', 'entregado'].includes(r.trip_stage || '')) {
+      if (r.accepted_at) {
+        const accMs = Date.parse(String(r.accepted_at).replace(' ', 'T') + 'Z');
+        if (Number.isFinite(accMs) && Date.now() - accMs < 30 * 60 * 1000) {
+          return send(res, 400, { ok: false, error: 'Aún no puedes cancelar este mandado: espera 30 minutos desde que el chofer lo aceptó.' });
+        }
+      }
     }
     db.prepare(`UPDATE requests SET status='cancelado' WHERE id=?`).run(request_id);
     return send(res, 200, { ok: true });

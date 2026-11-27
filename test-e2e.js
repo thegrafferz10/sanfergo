@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.90 en /api/health', h.ok && h.version === '1.4.90', JSON.stringify(h));
+  check('versión 1.4.91 en /api/health', h.ok && h.version === '1.4.91', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.87', h134.ok && h134.version === '1.4.90', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.91', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -502,7 +502,7 @@ async function api(path, body) {
   // Corrección del orden del viaje activo (v1.3.4): el aviso verde ya NO va
   // arriba; va en la columna de abajo, debajo de Cancelar, sobre la tarjeta.
   check('orden corregido del viaje activo: aviso verde en la columna de abajo, no arriba', html.includes('.strip.bottom.paxbot .arrive') && !html.includes('.strip.top.paxcol .arrive') && !/top\.innerHTML = \(showArrive/.test(html));
-  const bi = html.indexOf('bot.innerHTML = (canCancel');
+  const bi = html.indexOf('bot.innerHTML = cancelHtml91'); // v1.4.91 (detalle 5): el botón de cancelar ahora va en cancelHtml91 (con la notita del bloqueo de 30 min)
   check('Cancelar, aviso verde y tarjeta del chofer van en la columna de abajo, en ese orden', bi > 0 && html.indexOf('+ arriveHtml', bi) > bi && html.indexOf('drivercard', bi) > html.indexOf('+ arriveHtml', bi));
   check('encuadre del viaje activo deja más aire abajo que arriba (v1.4.61: el pasajero ya no usa botPad ni el zoom 16 fijo — chofer y pasajero encuadran la ruta con liveFollowPadding, arriba 170 y abajo 280)', (()=>{ const rl = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){')); return html.includes("function liveFollowPadding(){ return followPadding('live-top', 'live-bottom', 170, 280); }") && rl.includes('fitPoints(liveMap, liveRouteCoords, liveFollowPadding())') && !rl.includes('botPad'); })());
   // Seguimiento del taxímetro y del viaje en vivo (v1.4.4): el giro heading-up
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.90)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.90';") && h.version === '1.4.90', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.91)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.91';") && h.version === '1.4.91', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.90 en /api/health (sección)', h27.ok && h27.version === '1.4.90', JSON.stringify(h27));
+  check('versión 1.4.91 en /api/health (sección)', h27.ok && h27.version === '1.4.91', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.90 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.90', JSON.stringify(h28));
+  check('versión 1.4.91 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.91', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.90 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.90', JSON.stringify(h29));
+  check('versión 1.4.91 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.91', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.90 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.90', JSON.stringify(h30));
+  check('versión 1.4.91 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.91', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -2675,7 +2675,14 @@ async function api(path, body) {
   const accMan55 = await api('/api/driver-respond', { driver_id: drv55a.driver.id, request_id: man55.request.id, kind: 'acepta', price: 30 });
   check('v1.4.55: en vivo, el chofer acepta el mandado (queda aceptado: la condición con la que Viajes va al mapa en vivo)', accMan55.ok && accMan55.request.status === 'aceptado', JSON.stringify(accMan55.request && { st: accMan55.request.status }));
   const canMan55 = await api('/api/cancel-request', { request_id: man55.request.id });
-  check('v1.4.55: en vivo, cancelar el mandado aceptado funciona (antes de empezar) y se levanta el candado', canMan55.ok, JSON.stringify(canMan55));
+  // v1.4.91 (detalle 5): la regla CAMBIÓ por el usuario (2026-11-27) —
+  // la v1.4.55 permitía cancelar el mandado aceptado; ahora los primeros
+  // 30 min están bloqueados. El candado se levanta terminando el mandado.
+  check('v1.4.91 (detalle 5): el mandado aceptado YA NO se cancela en los primeros 30 min (la v1.4.55 lo permitía; regla cambiada por el usuario)', !canMan55.ok && /30 minutos/.test(canMan55.error || ''), JSON.stringify(canMan55));
+  for (const st55 of ['llego', 'comprado', 'en_viaje', 'entregado']) {
+    const a55 = await api('/api/advance-stage', { driver_id: drv55a.driver.id, request_id: man55.request.id, stage: st55 });
+    if (!a55.ok) break;
+  }
   const paxFree55 = await api('/api/requests?passenger_id=' + pax55.passenger.id + '&light=1');
   check('v1.4.55: en vivo, tras cancelar ya no hay mandado activo (entrar a Viajes vuelve a mostrar el formulario)', paxFree55.ok && !paxFree55.requests.some(r=>r.kind==='mandado' && (r.status==='buscando' || r.status==='aceptado')), JSON.stringify(paxFree55.requests && paxFree55.requests.map(r=>({ k: r.kind, st: r.status }))));
 
@@ -3758,7 +3765,7 @@ async function api(path, body) {
   check('v1.4.65: openLiveTrip y exitLive usan syncDriverGpsWatch (salir del mapa ya no apaga el GPS) y doLogout sí lo apaga', html.includes('startLivePolling();\n  syncDriverGpsWatch();') && html.includes('syncDriverGpsWatch();\n  livePendingAdvance = null;') && html.includes('stopDriverGpsWatch(); // v1.4.65: sin sesión ya no hay servicio activo que reportar'));
   check('v1.4.65: el sondeo global del chofer sincroniza el watch tras leer sus servicios activos', html.includes('setDriverActiveFromList(mine.requests);') && html.slice(html.indexOf('setDriverActiveFromList(mine.requests);'), html.indexOf('setDriverActiveFromList(mine.requests);') + 400).includes('syncDriverGpsWatch();'));
   check('v1.4.65: el sondeo del mapa en vivo pasa de 5 s a 2 s y el reintento OSRM se ajusta a cada 8º tick (~16 s)', pollSec65.includes('}, 2000);') && pollSec65.includes('if(liveOsrmRetryTick >= 8){') && !pollSec65.includes('}, 5000);'));
-  check('v1.4.65: si el marcador se perdió, el sondeo lo vuelve a crear en la posición fresca (sin esperar al cambio de etapa) — salvo en fase 1 del CHOFER (v1.4.83: ahí no hay mapa); la fase 1 del pasajero sí tiene mototaxi desde v1.4.84', pollSec65.includes("if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){") && pollSec65.includes("liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);"));
+  check('v1.4.65: si el marcador se perdió, el sondeo lo vuelve a crear en la posición fresca (sin esperar al cambio de etapa) — salvo en fase 1 (v1.4.91, detalle 4: ni chofer ni pasajero tienen mapa en fase 1; la v1.4.84 que le daba mototaxi al pasajero queda reemplazada)', pollSec65.includes("if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){") && pollSec65.includes("liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([r.driver_lng, r.driver_lat]).addTo(liveMap);"));
   check('v1.4.65: al finalizar el viaje el watch se apaga directo (sondeo y advanceLive), no con sync (driverActiveTrip queda viejo 5 s)', pollSec65.includes("stopDriverGpsWatch(); // v1.4.65: el viaje terminó") && html.includes("if(stage==='finalizado' || stage==='entregado'){ releaseWakeLock(); stopDriverGpsWatch(); showTripSummary(liveReq, true); return; }"));
   // Evaluado: el ciclo de vida del watch con GPS simulado.
   let watch65 = null;
@@ -4540,7 +4547,7 @@ async function api(path, body) {
   const advCompradoEnv = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: env78.request.id, stage: 'comprado' });
   check('v1.4.78: un "Enviar" NO puede marcar "Ya compré"', env78.ok && accEnv78.ok && advLlegoEnv.ok && !advCompradoEnv.ok && /no es de compras/.test(advCompradoEnv.error || ''), JSON.stringify(advCompradoEnv));
   // Cliente: chat y ticket.
-  check('v1.4.78: el mapa en vivo trae el botón flotante 💬 Chat y la hoja con sondeo de 3 s', html.includes('id="live-chat-btn"') && html.includes('openChatSheet()') && html.includes('setInterval(chatFetch, 3000)') && html.includes('chatSetDot(true)'), '');
+  check('v1.4.78: el mapa en vivo trae el botón flotante 💬 Chat y la hoja con sondeo de 3 s', html.includes('id="live-chat-btn"') && html.includes('openChatSheet()') && html.includes('setInterval(chatFetch, 3000)') && html.includes('chatSetDot(chatUnread+n)'), ''); // v1.4.91 (detalle 3): chatSetDot(true) pasó a conteo chatSetDot(chatUnread+n)
   check('v1.4.78: la hoja del chat trae foto para AMBOS lados (cámara + galería) (v1.4.87: antes solo el chofer)', html.includes('Tomar foto') && html.includes('Subir de galería') && html.includes('chatSendPhoto') && html.includes('chat-cam'), '');
   check('v1.4.78: la foto del chat se toca para verla grande', html.includes('chatZoomPhoto') && html.includes('cursor:zoom-in'), '');
   check('v1.4.78: el chofer ve "Ya compré" y la hoja del ticket con "Sin ticket"', html.includes("comprado:'Ya compré'") && html.includes('askTicketPhoto()') && html.includes('Foto del ticket') && html.includes('Sin ticket'), '');
@@ -4760,7 +4767,7 @@ async function api(path, body) {
   // --- Cliente: renderLiveMap no dibuja ruta, pines ni mototaxi en fase 1; centra en la entrega ---
   const liveMapSec82 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
   check('v1.4.82: renderLiveMap guarda la fase 1 (sin ruta OSRM ni recta, sin pines) — el encuadre y la mototaxi son v1.4.84', liveMapSec82.includes('const phase1 = livePhase1Quiero(r);') && liveMapSec82.includes('if(!phase1 && from)') && liveMapSec82.includes('if(!phase1 && rt)') && liveMapSec82.includes('if(!phase1){') && liveMapSec82.includes('if(phase1){') && liveMapSec82.includes('fitPoints(liveMap, [[dest.lng, dest.lat]], liveFollowPadding());'));
-  check('v1.4.82: ensureLiveRoute no crea ruta en fase 1 del pasajero (la mototaxi del sondeo es v1.4.84)', html.includes('if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
+  check('v1.4.82: ensureLiveRoute no crea ruta en fase 1 del pasajero (v1.4.91: tampoco hay mototaxi del sondeo — la fase 1 ya no lleva mapa)', html.includes('if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){'));
   // --- Cliente: tarjeta de fase 1 en renderLiveStrips + CSS de la línea de estado y la píldora ---
   check('v1.4.82: la tarjeta de fase 1 dice "El conductor está comprando tu encargo" (COMPRANDO) con dónde se compra, cuánto lleva y la línea de estado', liveSec.includes('El conductor está comprando tu encargo') && liveSec.includes('COMPRANDO') && liveSec.includes('Se compra en: ') && liveSec.includes('Lleva ') && liveSec.includes(' para comprar') && liveSec.includes('buytimeline') && liveSec.includes('Tu mandado fue aceptado') && liveSec.includes('El conductor está comprando') && liveSec.includes('En camino a entregarte') && liveSec.includes('Pendiente'));
   check('v1.4.82: la tarjeta de fase 1 usa el texto de compra de stops_json[0] y el dinero (order_amount)', liveSec.includes("JSON.parse(r.stops_json||'[]')[0]") && liveSec.includes('order_amount') && liveSec.includes('fmt$(r.order_amount||0)'));
@@ -4788,7 +4795,7 @@ async function api(path, body) {
   // --- Cliente: renderLiveMap oculta el mapa en fase 1 del chofer y lo vuelve a mostrar en fase 2 ---
   const liveMapSec83 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
   check('v1.4.83: renderLiveMap oculta el mapa en fase 1 del chofer (nolive-map) y lo vuelve a mostrar en fase 2', liveMapSec83.includes('const phase1d = livePhase1QuieroDriver(r);') && liveMapSec83.includes("document.getElementById('view-live').classList.add('nolive-map');") && liveMapSec83.includes("document.getElementById('view-live').classList.remove('nolive-map');") && liveMapSec83.includes('if(phase1d){'));
-  check('v1.4.83: ensureLiveRoute y el sondeo tampoco crean ruta ni mototaxi en fase 1 del chofer', html.includes('if(livePhase1QuieroDriver(liveReq)) return; // v1.4.83: fase de compra del chofer — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
+  check('v1.4.83: ensureLiveRoute y el sondeo tampoco crean ruta ni mototaxi en fase 1 del chofer', html.includes('if(livePhase1QuieroDriver(liveReq)) return; // v1.4.83: fase de compra del chofer — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){'));
   // --- Cliente: pantalla de fase 1 del chofer en renderLiveStrips + CSS sin mapa ---
   // v1.4.87: el texto de la pantalla cambió (mockup v2 aprobado): ahora es
   // "Dirígete a {lugar} para hacer el mandado" + COMPRANDO + "Lleva $X para comprar".
@@ -4805,21 +4812,21 @@ async function api(path, body) {
   check('v1.4.84: renderLiveMap pinta la mototaxi en fase 1 del pasajero (fuera del bloque de pines) y no la pinta sin GPS del chofer', liveMapSec84.indexOf('liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() }).setLngLat([dPos.lng, dPos.lat]).addTo(liveMap);') > liveMapSec84.indexOf('} // fin if(!phase1) — pines') && liveMapSec84.includes('if(phase1 && !from){'));
   check('v1.4.84: en fase 1 el encuadre incluye chofer + entrega (la mototaxi se ve abajo, donde anda)', liveMapSec84.includes('fitPoints(liveMap, [[from.lng, from.lat], [dest.lng, dest.lat]], liveFollowPadding());') && liveMapSec84.includes('if(phase1){'));
   check('v1.4.84: en fase 1 sigue sin ruta (ni OSRM ni recta) y el pin de compra sigue dentro del bloque sin-fase-1', liveMapSec84.includes('if(!phase1 && from)') && liveMapSec84.includes('if(!phase1 && rt)') && liveMapSec84.indexOf('liveMarkers.buy = new maplibregl.Marker') > liveMapSec84.indexOf('if(!phase1){'));
-  check('v1.4.84: el sondeo recupera la mototaxi también en fase 1 del pasajero (solo excluye la fase 1 del chofer, sin mapa)', html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
+  check('v1.4.84: el sondeo ya NO recupera la mototaxi en fase 1 del pasajero (v1.4.91, detalle 4: sin mapa en fase 1, igual que el chofer)', html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){'));
   // --- Cliente: fase 2 del pasajero (Quiero) con tarjeta compacta ---
   check('v1.4.84: la fase 2 de Quiero (pasajero) usa tarjeta compacta con "El conductor viene en camino a entregarte"', liveSec.includes('} else if(isQuieroMandado(r)){') && liveSec.includes('statuscard compact84') && liveSec.includes('El conductor viene en camino a entregarte') && liveSec.includes('Tu encargo viene en camino a '));
   // --- Cliente: chat ancho abajo en mandados; redondo solo en viajes ---
-  check('v1.4.84: existe el botón ancho de chat (chatWideBtnHtml) con las dos etiquetas y el punto rojo', html.includes('function chatWideBtnHtml(){') && html.includes('Chat con el pasajero') && html.includes('Chat con el conductor') && html.includes('live-chat-btn-bottom') && html.includes("chatUnread?'<span class=\"dot\"></span>':''"));
+  check('v1.4.84: existe el botón ancho de chat (chatWideBtnHtml) con las dos etiquetas y el distintivo rojo con conteo (v1.4.91, detalle 3: antes era un punto vacío)', html.includes('function chatWideBtnHtml(){') && html.includes('Chat con el pasajero') && html.includes('Chat con el conductor') && html.includes('live-chat-btn-bottom') && html.includes("chatUnread>0?'<span class=\"chatbadge\">'+chatUnread+'</span>':''"));
   check('v1.4.84: el botón redondo flotante ya NO se muestra en mandados (en viajes sí)', html.includes("b.classList.toggle('hidden', !(accepted && liveReq.kind!=='mandado'))"));
   check('v1.4.84: el botón ancho de chat se pinta en las pantallas de mandado en vivo (pasajero y chofer, fase 1 y 2)', (liveSec.match(/chatWideBtnHtml\(\)/g)||[]).length >= 3 && liveSec.includes("r.kind==='mandado' ? chatWideBtnHtml() : ''") && liveSec.includes('+ chatWideBtnHtml();'));
-  check('v1.4.84: el punto rojo del chat sobrevive al repintado (estado chatUnread)', html.includes('chatUnread = !!on;') && html.includes('chatUnread = false'));
+  check('v1.4.84: el distintivo del chat sobrevive al repintado (estado chatUnread con el conteo, v1.4.91 detalle 3: antes era solo sí/no)', html.includes('chatUnread = 0;') && html.includes("chatUnread = (n===false || n===0) ? 0 : (Number(n)||0);") && html.includes('chatSetDot(false)'));
   check('v1.4.84: el CSS trae .chatwide (botón ancho verde) y .statuscard.compact84', html.includes('.chatwide{') && html.includes('.chatwide .dot{') && html.includes('.strip.top.paxcol .statuscard.compact84{'));
   check('v1.4.84: el recentrar sube en mandados para no tapar el botón ancho de chat', liveSec.includes("r.kind==='mandado'?60:0") && liveSec.includes("r.kind==='mandado' ? 'calc(env(safe-area-inset-bottom,0px) + 250px)' : ''"));
 
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.90 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.90', JSON.stringify(h85));
+  check('versión 1.4.91 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.91', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -4896,7 +4903,7 @@ async function api(path, body) {
   const liveMapSec87 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
   check('v1.4.87: en fase 1 del pasajero NO hay ruta (OSRM y la línea azul están detrás de if(!phase1); ensureLiveRoute sale antes)', liveMapSec87.includes("if(!phase1 && from){ try { rt = await osrmRoute") && liveMapSec87.includes("if(!phase1 && rt){ liveRouteCoords = rt.coords;") && html.includes('if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta'));
   check('v1.4.87: en fase 1 del pasajero NO hay pines (recogida, destino y compra están dentro de if(!phase1))', (()=>{ const a = liveMapSec87.indexOf('if(!phase1){'); const b = liveMapSec87.indexOf('} // fin if(!phase1)'); const blk = liveMapSec87.slice(a, b); return a >= 0 && b > a && blk.includes('liveMarkers.dest') && blk.includes('liveMarkers.buy') && blk.includes('liveMarkers.pick'); })());
-  check('v1.4.87: en fase 1 del pasajero SÍ hay mototaxi (el marcador se crea FUERA del if(!phase1), en la posición real del chofer; el sondeo lo recupera)', liveMapSec87.indexOf('} // fin if(!phase1)') < liveMapSec87.indexOf('liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() })') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
+  check('v1.4.87: en fase 1 del pasajero YA NO hay mototaxi (v1.4.91, detalle 4: renderLiveMap sale antes con nolive-map, sin marcador; la v1.4.84 queda reemplazada)', liveMapSec87.indexOf('if(livePhase1Quiero(r)){') < liveMapSec87.indexOf('liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() })') && liveMapSec87.includes("document.getElementById('view-live').classList.add('nolive-map')") && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r) && !livePhase1Quiero(r)){'));
   // --- Evaluado: la pantalla de fase 1 del chofer (renderLiveStrips real) ---
   let strips87 = null, strips87Err = '';
   try {
@@ -5254,6 +5261,182 @@ async function api(path, body) {
     next3_90 = { empty: runNext3_90('', 'pagado'), ok: runNext3_90('Caja', 'pagado') };
   } catch (e) { next3Err90 = String(e && e.message || e); }
   check('v1.4.90: evaluado — "Continuar" con descripción vacía muestra el error y NO avanza; con "Caja" pasa la validación', !!next3_90 && next3_90.empty.err4Shown && !next3_90.empty.priceCalled && !next3_90.ok.err4Shown && next3_90.ok.priceCalled && next3_90.ok.desc === 'Caja', next3Err90 || JSON.stringify(next3_90));
+
+  // ===== v1.4.91 (2026-11-27): lote de 6 detalles de la prueba en el teléfono (mockup fase 1 aprobado "Arre", "Trabaja en eso") =====
+  console.log('== v1.4.91: 6 detalles — autocomplete lista, push chat, distintivo no leídos, fase 1 sin mapa, regla 30 min, conteo chofer ==');
+  const sw91 = fs.readFileSync(path.join(__dirname, 'public', 'sw.js'), 'utf8');
+  const dep91 = fs.readFileSync(path.join(__dirname, 'DEPLOY.md'), 'utf8');
+  // --- Estático: detalle 1 (autocomplete de la lista de Quiero) ---
+  const itemsFn91 = html.slice(html.indexOf('function mdItemsHtml(){'), html.indexOf('function renderMandadoQuiero(){'));
+  check('v1.4.91 D1: los inputs data-item de la lista de Quiero llevan autocomplete/autocorrect/autocapitalize off + spellcheck false (mismo patrón que pick-search/chat-input)', itemsFn91.includes('autocomplete="off"') && itemsFn91.includes('autocorrect="off"') && itemsFn91.includes('autocapitalize="off"') && itemsFn91.includes('spellcheck="false"') && itemsFn91.includes('data-item='), itemsFn91.slice(0, 300));
+  check('v1.4.91 D1: nada más cambia en esa pantalla (placeholder, oninput y botón de quitar siguen igual)', itemsFn91.includes("placeholder=\"'+(i===0?'Ej. 2 kg de tortillas':'Ej. un refresco, pan, lo que sigue…')+'\"") && itemsFn91.includes("oninput=\"md.items['+i+']=this.value\"") && itemsFn91.includes('+ Agregar otra cosa'), '');
+  // --- Estático: detalle 2 (Web Push) ---
+  check('v1.4.91 D2: el servidor usa web-push con VAPID (llaves de entorno, nunca en el repo)', srv.includes("require('web-push')") && srv.includes('setVapidDetails') && srv.includes('VAPID_PUBLIC_KEY') && srv.includes('VAPID_PRIVATE_KEY') && srv.includes("process.env.VAPID_PRIVATE_KEY"), '');
+  check('v1.4.91 D2: el servidor tiene /api/push/subscribe (guarda endpoint + llaves por cuenta) y /api/push/fcm-token (solo guarda el token)', srv.includes("'/api/push/subscribe'") && srv.includes('push_subscriptions') && srv.includes("'/api/push/fcm-token'") && srv.includes('fcm_tokens') && srv.includes('INSERT OR REPLACE INTO fcm_tokens'), '');
+  check('v1.4.91 D2: al mandar un mensaje de chat se dispara el push al OTRO lado (título SanFerGo, cuerpo nombre + texto o "Te envió una foto", tag por solicitud)', srv.includes('function sendChatPush') && srv.includes('sendChatPush(r, a, role, text, photo)') && srv.includes("title: 'SanFerGo'") && srv.includes("(text || 'Te envió una foto')") && srv.includes("tag: 'chat-' + r.id"), '');
+  check('v1.4.91 D2: /api/config sirve la llave VAPID pública (no es secreto) y si el push está activado', srv.includes('vapidPublicKey: VAPID_PUBLIC_KEY || null') && srv.includes('pushEnabled'), '');
+  check('v1.4.91 D2: el service worker muestra la notificación y al tocarla abre la app', sw91.includes("self.addEventListener('push'") && sw91.includes('showNotification') && sw91.includes("self.addEventListener('notificationclick'") && sw91.includes("clients.openWindow('/')"), sw91.slice(0, 200));
+  const pushFn91 = html.slice(html.indexOf('async function ensurePushSubscription(){'), html.indexOf('/* ===== CHAT PASAJERO ⇄ CHOFER (v1.4.78) ====='));
+  const liveTripFn91 = html.slice(html.indexOf('async function openLiveTrip('), html.indexOf('async function renderLiveMap(){'));
+  check('v1.4.91 D2: el permiso de notificaciones para el PUSH solo se pide al abrir un viaje/mandado en vivo (ensurePushSubscription solo se llama desde openLiveTrip, nunca al entrar)', liveTripFn91.includes('ensurePushSubscription();') && (html.match(/ensurePushSubscription/g) || []).length === 2 && pushFn91.includes('Notification.requestPermission()') && pushFn91.includes("navigator.serviceWorker.register('/sw.js')") && pushFn91.includes("api('/api/push/subscribe'"), '');
+  check('v1.4.91 D2: DEPLOY.md documenta las variables VAPID, el límite de iPhone (solo agregado a inicio + permiso) y que el envío FCM NO está implementado', dep91.includes('VAPID_PUBLIC_KEY') && dep91.includes('VAPID_PRIVATE_KEY') && dep91.includes('nunca') && dep91.includes('pantalla de inicio') && dep91.includes('FCM') && dep91.includes('NO está implementado'), '');
+  // --- Estático: detalle 3 (distintivo con conteo) ---
+  check('v1.4.91 D3: el botón ancho de chat lleva el círculo rojo con el CONTEO (chatbadge), no un punto vacío', html.includes("chatUnread>0?'<span class=\"chatbadge\">'+chatUnread+'</span>'") && html.includes('.chatwide .chatbadge') && html.includes('.chatbtn .chatbadge'), '');
+  check('v1.4.91 D3: con la hoja cerrada cada mensaje del otro lado SUMA al conteo; al abrir el chat se limpia', html.includes('chatSetDot(chatUnread+n)') && html.includes('msgs.filter(m=>m.sender_role!==chatMyRole())') && html.includes('chatSetDot(false)'), '');
+  // --- Estático: detalle 4 (fase 1 del pasajero sin mapa) ---
+  const liveMapFn91 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function renderLiveStrips(){'));
+  check('v1.4.91 D4: en fase 1 del PASAJERO (Quiero) renderLiveMap esconde el mapa con nolive-map y vuelve en fase 2', liveMapFn91.includes('if(livePhase1Quiero(r)){') && liveMapFn91.includes("document.getElementById('view-live').classList.add('nolive-map')"), liveMapFn91.slice(0, 200));
+  check('v1.4.91 D4: el cambio de regla queda registrado en comentario (la mototaxi en fase 1 queda REEMPLAZADA)', html.includes('CAMBIO DE REGLA') && html.includes('REEMPLAZADA'), '');
+  check('v1.4.91 D4: el sondeo ya no recrea el marcador de la mototaxi en fase 1 del pasajero (tampoco en la del chofer)', html.includes('!livePhase1QuieroDriver(r) && !livePhase1Quiero(r)'), '');
+  check('v1.4.91 D4: en fase 1 del pasajero se esconden brújula y recentrar (no sirven sin mapa)', html.includes("if(livePhase1Quiero(r)){ $('#live-compass').classList.add('hidden'); $('#live-recenter').classList.add('hidden'); }"), '');
+  check('v1.4.91 D4: la tarjeta de estado de fase 1 del pasajero sigue igual (comprando + Se compra en + Lleva $ + línea de tiempo)', html.includes('El conductor está comprando tu encargo') && html.includes('buytimeline') && html.includes('En camino a entregarte'), '');
+  // --- Estático: detalle 5 (regla de 30 min) ---
+  check('v1.4.91 D5: el servidor sella accepted_at al aceptar y lo expone en la solicitud', srv.includes("accepted_at=datetime('now')") && srv.includes("addCol('requests', 'accepted_at', 'TEXT')"), '');
+  check('v1.4.91 D5: el servidor bloquea cancelar el mandado aceptado antes de 30 min (solo mandados, solo antes de comprado, con sello)', srv.includes('30 * 60 * 1000') && srv.includes("r.status === 'aceptado' && r.kind === 'mandado'") && srv.includes('espera 30 minutos desde que el chofer lo aceptó'), '');
+  check('v1.4.91 D5: el cliente esconde el botón y pone la notita durante el bloqueo (mandadoCancelLocked)', html.includes('function mandadoCancelLocked(r){') && html.includes('Podrás cancelar a partir de los 30 minutos si el chofer aún no va a entregarte') && html.includes('cancelLock91'), '');
+  check('v1.4.91 D5: en comprado ya no se puede cancelar ni en el cliente (canCancel lo excluye)', html.includes("['recogido','comprado','en_viaje','entregado']"), '');
+  // --- Estático: detalle 6 (conteo del chofer) ---
+  check('v1.4.91 D6: la pantalla de fase 1 del chofer lleva el conteo #md-countdown que se actualiza cada segundo desde accepted_at', html.includes('id="md-countdown"') && html.includes('setInterval(updateMandadoCountdown, 1000)') && html.includes('function mandadoCountdownText(r){') && html.includes('El pasajero ya puede cancelar'), '');
+  // --- Evaluado: mandadoCancelLocked ---
+  let lock91 = null, lock91Err = '';
+  try {
+    const srcL91 = html.slice(html.indexOf('function mandadoCancelLocked(r){'), html.indexOf('\n}', html.indexOf('function mandadoCancelLocked(r){')) + 2);
+    const runL91 = new Function('r', srcL91 + '; return mandadoCancelLocked(r);');
+    const utc91 = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+    const now91 = Date.now();
+    lock91 = {
+      recien: runL91({ kind: 'mandado', status: 'aceptado', trip_stage: 'en_camino', accepted_at: utc91(now91) }),
+      min31: runL91({ kind: 'mandado', status: 'aceptado', trip_stage: 'en_camino', accepted_at: utc91(now91 - 31 * 60 * 1000) }),
+      sinSello: runL91({ kind: 'mandado', status: 'aceptado', trip_stage: 'en_camino', accepted_at: null }),
+      viaje: runL91({ kind: 'viaje', status: 'aceptado', trip_stage: 'en_camino', accepted_at: utc91(now91) }),
+      comprado: runL91({ kind: 'mandado', status: 'aceptado', trip_stage: 'comprado', accepted_at: utc91(now91) }),
+      buscando: runL91({ kind: 'mandado', status: 'buscando', trip_stage: null, accepted_at: null })
+    };
+  } catch (e) { lock91Err = String(e && e.message || e); }
+  check('v1.4.91 D5: evaluado — mandadoCancelLocked: bloqueado recién aceptado; libre a los 31 min, sin sello (fila vieja), en viajes, en comprado y buscando', !!lock91 && lock91.recien === true && lock91.min31 === false && lock91.sinSello === false && lock91.viaje === false && lock91.comprado === false && lock91.buscando === false, lock91Err || JSON.stringify(lock91));
+  // --- Evaluado: mandadoCountdownText ---
+  let cd91 = null, cd91Err = '';
+  try {
+    const srcC91 = html.slice(html.indexOf('function mandadoCountdownText(r){'), html.indexOf('\n}', html.indexOf('function mandadoCountdownText(r){')) + 2);
+    const runC91 = new Function('r', srcC91 + '; return mandadoCountdownText(r);');
+    const utc91b = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+    const now91b = Date.now();
+    cd91 = {
+      recien: runC91({ accepted_at: utc91b(now91b) }),
+      min28: runC91({ accepted_at: utc91b(now91b - 28 * 60 * 1000) }),
+      vencido: runC91({ accepted_at: utc91b(now91b - 31 * 60 * 1000) }),
+      sinSello: runC91({ accepted_at: null })
+    };
+  } catch (e) { cd91Err = String(e && e.message || e); }
+  check('v1.4.91 D6: evaluado — el conteo empieza en 30:00, a los 28 min marca 02:00 y vencido/sin sello dice "El pasajero ya puede cancelar"', !!cd91 && /^Tienes 30:00/.test(cd91.recien) && /^Tienes 02:00/.test(cd91.min28) && cd91.vencido === 'El pasajero ya puede cancelar' && cd91.sinSello === 'El pasajero ya puede cancelar', cd91Err || JSON.stringify(cd91));
+  // --- Evaluado: chatWideBtnHtml con conteo ---
+  let wide91 = null, wide91Err = '';
+  try {
+    const srcW91 = html.slice(html.indexOf('function chatWideBtnHtml(){'), html.indexOf('function chatShowBtn(){'));
+    const runW91 = new Function('liveAsDriver', 'chatUnread', srcW91 + '; return chatWideBtnHtml();');
+    wide91 = { con3: runW91(false, 3), sin: runW91(false, 0), chofer: runW91(true, 2) };
+  } catch (e) { wide91Err = String(e && e.message || e); }
+  check('v1.4.91 D3: evaluado — el botón ancho muestra "3" con 3 no leídos, nada con 0, y "Chat con el pasajero" del lado del chofer', !!wide91 && wide91.con3.includes('<span class="chatbadge">3</span>') && wide91.con3.includes('Chat con el conductor') && !wide91.sin.includes('chatbadge') && wide91.chofer.includes('Chat con el pasajero') && wide91.chofer.includes('<span class="chatbadge">2</span>'), wide91Err || JSON.stringify(wide91));
+  // --- Evaluado: livePhase1Quiero (fase 1 solo pasajero + Quiero + antes de comprado) ---
+  let ph91 = null, ph91Err = '';
+  try {
+    const span91 = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('function nextStage(r){'));
+    const runP91 = new Function('r', 'liveAsDriver', span91 + '; return livePhase1Quiero(r);');
+    const q91 = { kind: 'mandado', trip_stage: 'en_camino' };
+    const qC91 = { kind: 'mandado', trip_stage: 'comprado' };
+    const env91 = { kind: 'mandado', trip_stage: 'en_camino', recipient_phone: '9610000099' };
+    const trip91 = { kind: 'viaje', trip_stage: 'en_camino' };
+    ph91 = { paxQuiero: runP91(q91, false), paxComprado: runP91(qC91, false), paxEnviar: runP91(env91, false), paxViaje: runP91(trip91, false), choferQuiero: runP91(q91, true) };
+  } catch (e) { ph91Err = String(e && e.message || e); }
+  check('v1.4.91 D4: evaluado — fase 1 es solo pasajero + Quiero + antes de comprado (Enviar, viajes y chofer quedan fuera)', !!ph91 && ph91.paxQuiero === true && ph91.paxComprado === false && ph91.paxEnviar === false && ph91.paxViaje === false && ph91.choferQuiero === false, ph91Err || JSON.stringify(ph91));
+  // --- En vivo: mandado Quiero + Enviar + viaje para la regla de 30 min y el push ---
+  const lockOpen91 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.91: el admin abre el candado de Mandados para las pruebas en vivo', lockOpen91.ok && lockOpen91.mandados_locked === false, JSON.stringify(lockOpen91));
+  const subChat91 = await api('/api/subscribe-driver', { driver_id: chatDrv.driver.id, plan: 'yearly' });
+  check('v1.4.91: el chofer del chat queda suscrito (evita el límite gratis en las aceptas de la sección)', subChat91.ok, JSON.stringify(subChat91));
+  const man91 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.91: mandado Quiero de prueba se publica', man91.ok && man91.request.id, JSON.stringify(man91));
+  const acc91 = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: man91.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.91: el chofer acepta el mandado Quiero', acc91.ok && acc91.request.status === 'aceptado', JSON.stringify(acc91));
+  const row91 = (await api('/api/requests?id=' + man91.request.id)).requests[0];
+  check('v1.4.91 D5/D6: en vivo — la solicitud aceptada trae accepted_at (sello de la regla de 30 min)', !!row91.accepted_at && typeof row91.accepted_at === 'string', JSON.stringify({ accepted_at: row91.accepted_at }));
+  // --- En vivo: push (solo si el servidor tiene llaves VAPID; si no, el endpoint lo dice) ---
+  const cfg91 = await api('/api/config');
+  const crypto91 = require('node:crypto');
+  const mkSub91 = () => {
+    const ecdh = crypto91.createECDH('prime256v1'); ecdh.generateKeys();
+    return { endpoint: 'https://example.invalid/push-91-' + RUN + '-' + Math.random().toString(36).slice(2, 8), keys: { p256dh: ecdh.getPublicKey().toString('base64url'), auth: crypto91.randomBytes(16).toString('base64url') } };
+  };
+  if (cfg91.pushEnabled && cfg91.vapidPublicKey) {
+    const subDrv91 = mkSub91();
+    const ps1 = await api('/api/push/subscribe', { token: chatDrvAcc.token, subscription: subDrv91 });
+    check('v1.4.91 D2: en vivo — el chofer suscribe su navegador al push (se guarda endpoint + llaves)', ps1.ok && ps1.subscriptions === 1, JSON.stringify(ps1));
+    const ps1b = await api('/api/push/subscribe', { token: chatDrvAcc.token, subscription: subDrv91 });
+    check('v1.4.91 D2: en vivo — suscribir el mismo endpoint otra vez NO duplica (upsert, sigue 1)', ps1b.ok && ps1b.subscriptions === 1, JSON.stringify(ps1b));
+    const subPax91 = mkSub91();
+    const ps2 = await api('/api/push/subscribe', { token: chatPaxAcc.token, subscription: subPax91 });
+    check('v1.4.91 D2: en vivo — la pasajera suscribe su navegador al push', ps2.ok && ps2.subscriptions === 1, JSON.stringify(ps2));
+    const fcm91 = await api('/api/push/fcm-token', { token: chatDrvAcc.token, fcm_token: 'fcm-91-' + RUN });
+    check('v1.4.91 D2: en vivo — el token FCM de la app nativa se guarda (sin envío: no hay llave de Firebase)', fcm91.ok && fcm91.stored === true, JSON.stringify(fcm91));
+    const badSub91 = await api('/api/push/subscribe', { token: chatDrvAcc.token, subscription: { endpoint: 'https://example.invalid/x' } });
+    check('v1.4.91 D2: en vivo — suscripción sin llaves se rechaza (400)', !badSub91.ok, JSON.stringify(badSub91));
+    const noTokSub91 = await api('/api/push/subscribe', { subscription: subDrv91 });
+    check('v1.4.91 D2: en vivo — suscribirse sin sesión es 401', !noTokSub91.ok, JSON.stringify(noTokSub91));
+    // Envío al mandar un mensaje: el endpoint es falso (example.invalid),
+    // así que la entrega falla — lo que se verifica es que el servidor
+    // INTENTÓ avisar al otro lado (registro /api/push/log, solo con
+    // SANFERGO_PUSH_LOG=1). El mensaje igual se guarda.
+    const waitLog91 = async (pred) => {
+      // El endpoint es falso (example.invalid): el fallo TLS puede tardar
+      // varios segundos en saberse (proxy del entorno), así que se espera
+      // hasta 10 s.
+      for (let i = 0; i < 20; i++) {
+        const lg = await api('/api/push/log');
+        if (lg.ok && (lg.attempts || []).some(pred)) return lg.attempts.find(pred);
+        await new Promise(r => setTimeout(r, 500));
+      }
+      return null;
+    };
+    await new Promise(r => setTimeout(r, 1100));
+    const chat91a = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man91.request.id, text: 'Hola, ¿ya compraste todo?', role: 'pasajero' });
+    check('v1.4.91 D2: en vivo — la pasajera manda texto en el chat del mandado', chat91a.ok && chat91a.message.text === 'Hola, ¿ya compraste todo?', JSON.stringify(chat91a));
+    const att91a = await waitLog91(a => a.request_id === man91.request.id && a.endpoint === subDrv91.endpoint);
+    check('v1.4.91 D2: en vivo — al mandar la pasajera, el servidor intentó el push al CHOFER (endpoint suscrito, envío simulado)', !!att91a, JSON.stringify(att91a));
+    await new Promise(r => setTimeout(r, 1100));
+    const chat91b = await api('/api/chat/send', { token: chatDrvAcc.token, request_id: man91.request.id, photo: PHOTO, role: 'chofer' });
+    check('v1.4.91 D2: en vivo — el chofer manda foto en el chat del mandado', chat91b.ok && chat91b.message.kind === 'foto', JSON.stringify(chat91b));
+    const att91b = await waitLog91(a => a.request_id === man91.request.id && a.endpoint === subPax91.endpoint);
+    check('v1.4.91 D2: en vivo — al mandar el chofer (foto), el servidor intentó el push a la PASAJERA', !!att91b, JSON.stringify(att91b));
+  } else {
+    const psOff91 = await api('/api/push/subscribe', { token: chatDrvAcc.token, subscription: mkSub91() });
+    check('v1.4.91 D2: sin llaves VAPID el servidor dice que el push no está activado (la suite corre sin llaves)', !psOff91.ok && /no están activadas/.test(psOff91.error || ''), JSON.stringify(psOff91));
+  }
+  // --- En vivo: regla de 30 min (Quiero bloqueado, Enviar bloqueado, viaje libre) ---
+  const can91q = await api('/api/cancel-request', { request_id: man91.request.id });
+  check('v1.4.91 D5: en vivo — cancelar el mandado Quiero aceptado hace 0 min se RECHAZA (faltan 30 min)', !can91q.ok && /30 minutos/.test(can91q.error || ''), JSON.stringify(can91q));
+  const env91 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', type: 'enviar', origin_zone: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.87137, dest_lng: -93.20652, distance_km: 1.0, price: 30, payment_method: 'efectivo', description: 'Paquete', recipient_phone: '9610000099', recipient_name: 'Quien recibe', order_payment: 'pagado', order_amount: 0 });
+  const accEnv91 = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: env91.request.id, kind: 'acepta', price: 30 });
+  const can91e = await api('/api/cancel-request', { request_id: env91.request.id });
+  check('v1.4.91 D5: en vivo — Enviar aceptado TAMBIÉN está bloqueado los primeros 30 min (la regla cubre Quiero + Enviar)', env91.ok && accEnv91.ok && !can91e.ok && /30 minutos/.test(can91e.error || ''), JSON.stringify(can91e));
+  const trip91 = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_detail: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_detail: 'Mercado', dest_lat: 16.8675, dest_lng: -93.2105, distance_km: 1.0, eta_minutes: 5, price: 25, payment_method: 'efectivo' });
+  const accTrip91 = await api('/api/driver-respond', { driver_id: drv.driver.id, request_id: trip91.request.id, kind: 'acepta', price: 25 });
+  const can91t = await api('/api/cancel-request', { request_id: trip91.request.id });
+  check('v1.4.91 D5: en vivo — los VIAJES no cambian: el viaje aceptado sí se cancela al instante', trip91.ok && accTrip91.ok && can91t.ok, JSON.stringify(can91t));
+  // Fallback de filas viejas: sin accepted_at el mandado se trata como
+  // vencido y SÍ se puede cancelar (no queda bloqueado para siempre).
+  {
+    const { DatabaseSync } = require('node:sqlite');
+    const dbPath91 = path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'sanfergo.db');
+    const tdb91 = new DatabaseSync(dbPath91);
+    tdb91.prepare(`UPDATE requests SET accepted_at=NULL WHERE id=?`).run(man91.request.id);
+    tdb91.close();
+  }
+  const can91old = await api('/api/cancel-request', { request_id: man91.request.id });
+  check('v1.4.91 D5: en vivo — fila vieja sin accepted_at: se trata como vencida y el mandado SÍ se cancela', can91old.ok, JSON.stringify(can91old));
+  // El Enviar bloqueado se termina para no dejarlo activo.
+  for (const st91 of ['llego', 'en_viaje', 'entregado']) { const a91 = await api('/api/advance-stage', { driver_id: chatDrv.driver.id, request_id: env91.request.id, stage: st91 }); if (!a91.ok) break; }
+  const lockClose91 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.91: el candado de Mandados vuelve a quedar puesto', lockClose91.ok && lockClose91.mandados_locked === true, JSON.stringify(lockClose91));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
