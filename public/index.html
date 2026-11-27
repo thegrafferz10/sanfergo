@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SanFerGo — Viajes y mandados en San Fernando</title>
 <meta name="description" content="SanFerGo: pide tu mototaxi o mandado en San Fernando, Chiapas. Tú pones tu precio, el chofer acepta o contraoferta.">
+<meta property="og:title" content="SanFerGo — Viajes y mandados en San Fernando">
+<meta property="og:description" content="SanFerGo: pide tu mototaxi o mandado en San Fernando, Chiapas. Tú pones tu precio, el chofer acepta o contraoferta.">
+<meta property="og:image" content="https://sanfernandogo.com/og-image.jpg">
+<meta property="og:url" content="https://sanfernandogo.com/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0f7a3d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -700,7 +706,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.92'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.93'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
