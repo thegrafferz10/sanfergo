@@ -1,9 +1,16 @@
-# SanFerGo — versión pública (v1.4.93)
+# SanFerGo — versión pública (v1.4.94)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.94 (2026-11-27) — Botón de WhatsApp en Administrar choferes (mockup aprobado "Sí, así queda")
+
+- En el panel de administrador, cada tarjeta de chofer en "Administrar choferes" ahora tiene un segundo botón de ancho completo debajo de "Ver ficha completa": verde WhatsApp (#25d366), con el icono de WhatsApp y el texto "Enviar mensaje por WhatsApp". Aparece en todas las tarjetas al paginar (es parte del render de la lista, usa los datos del chofer de esa tarjeta).
+- Al tocarlo abre WhatsApp al teléfono registrado del chofer con el mensaje ya escrito: "Hola {primer nombre}, ¡gracias por registrarte como conductor en SanFerGo! Hay un viaje o un mandado disponible. Entra a la aplicación para aceptarlo: https://sanfernandogo.com" (el primer nombre es la primera palabra del nombre guardado; el teléfono se limpia de todo lo que no sean dígitos y se marca con el código 52). Es un botón MANUAL: nada se manda sin el toque del admin (no es un aviso automático — esos se dejaron en "ahorita no" en 2026-11-24).
+- Abre igual que el arreglo de la v1.4.92 (`mdAskLocation`): `whatsapp://send?phone=...&text=...` con `location.href` (sin pestaña nueva, sin pestaña en blanco en Safari al volver) y, si a los ~1200 ms la página sigue visible (WhatsApp no instalado), abre el enlace wa.me en una pestaña nueva.
+- Pruebas: suite completa contra BD limpia: **1502 OK, 0 FAIL** (1497 de antes + 5 nuevas de la 1.4.94: 5 estáticas — el botón existe en la tarjeta debajo de "Ver ficha completa", verde #25d366 con icono SVG, esquema whatsapp:// + fallback wa.me, mensaje prellenado exacto, teléfono limpio de no-dígitos y primer nombre del nombre guardado; checks actualizados: 8 de versión a 1.4.94).
 
 ## v1.4.93 (2026-11-27) — Vista previa de WhatsApp con el logo nuevo y chico (mockup aprobado "Sí, así queda")
 
