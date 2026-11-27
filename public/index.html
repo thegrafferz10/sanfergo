@@ -700,7 +700,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.91'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.92'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4326,13 +4326,17 @@ async function ensurePushSubscription(){
    Hoja inferior en el mapa en vivo de un servicio ACEPTADO (viaje o
    mandado). El pasajero y el chofer se escriben; el chofer además puede
    mandar foto de un producto (cámara o galería, mismo patrón verde/
-   naranja que el registro de chofer) cuando algo no está claro. Sin
-   acuses de lectura, sin push: con la hoja abierta se sondea cada 3 s;
-   con la hoja cerrada, el botón muestra un distintivo rojo con el
-   conteo de mensajes sin leer del otro lado (v1.4.91, detalle 3: antes
-   era solo un punto; se revisa en el sondeo en vivo, máx. 1 vez/5 s).
-   La foto se baja a 800 px JPEG 0.75 antes de mandarse.
-   v1.4.91 (detalle 2): el push con la app cerrada es aparte — ver la
+   naranja que el registro de chofer) cuando algo no está claro. Con
+   acuses de lectura POR ROL (v1.4.92, tabla chat_read del servidor): con
+   la hoja abierta se sondea cada 3 s; con la hoja cerrada, el botón
+   muestra un distintivo rojo con el conteo de mensajes sin leer del otro
+   lado (v1.4.91, detalle 3: antes era solo un punto; se revisa en el
+   sondeo en vivo, máx. 1 vez/5 s) y el conteo sale del servidor, no del
+   seed del cliente — el seed de antes marcaba como leído todo lo que
+   existía al entrar a la pantalla, así que el mensaje que llegó antes de
+   cambiar a la vista del chofer se tragaba y su distintivo nunca
+   aparecía. La foto se baja a 800 px JPEG 0.75 antes de mandarse.
+   Sin push: el push con la app cerrada es aparte — ver la
    suscripción push de arriba (solo se pide permiso al abrir un viaje en
    vivo, nunca al entrar). */
 let chatOpen = false, chatTimer = null, chatList = [], chatLastId = 0, chatSeeded = false, chatBadgeLast = 0, chatSending = false, chatPhotos = {}, chatUnread = 0; // v1.4.91 (detalle 3): chatUnread es el CONTEO de mensajes sin leer (antes era solo sí/no)
@@ -4377,12 +4381,17 @@ function chatSetDot(n){
   paint(document.getElementById('live-chat-btn-bottom'));
 }
 async function chatSeed(){
-  // Al entrar al mapa en vivo, marcar hasta dónde ya hay mensajes para
-  // que el punto rojo solo avise de los que lleguen después.
+  // v1.4.92: el seed ya NO marca nada como leído — solo deja el watermark
+  // del sondeo (after_id). El conteo de no leídos sale del SERVIDOR
+  // (j.unread, por rol, tabla chat_read): el seed de antes ponía
+  // chatLastId en el máximo al entrar, así que el mensaje que llegó antes
+  // de cambiar a la vista del chofer se tragaba y su distintivo nunca
+  // aparecía. Entrar a la pantalla en vivo no marca nada como leído.
   if(!liveReq) return;
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&token=' + encodeURIComponent(store.token));
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&role='+chatMyRole()+'&token=' + encodeURIComponent(store.token));
     chatLastId = (j.messages||[]).reduce((m,x)=>Math.max(m,x.id), 0);
+    if(typeof j.unread==='number' && !chatOpen) chatSetDot(j.unread);
   } catch(e){}
 }
 function chatTime(ts){
@@ -4415,17 +4424,21 @@ async function chatFetch(){
   // Si el diálogo se cerró por otro lado, la hoja ya no está abierta.
   if(chatOpen && document.getElementById('dialog').classList.contains('hidden')) chatCloseSheet(true);
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId+'&token=' + encodeURIComponent(store.token));
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId+'&role='+chatMyRole()+'&token=' + encodeURIComponent(store.token));
     const msgs = j.messages||[];
+    // v1.4.92: el distintivo sale del conteo del SERVIDOR (absoluto, por
+    // rol, tabla chat_read): así cuenta también el mensaje que llegó antes
+    // de entrar a esta vista. Con la hoja cerrada se pinta tal cual.
+    if(!chatOpen && typeof j.unread==='number') chatSetDot(j.unread);
     if(!msgs.length) return;
     chatLastId = Math.max(chatLastId, ...msgs.map(m=>m.id));
     if(chatOpen){
       chatList = chatList.concat(msgs);
       chatRenderList(chatList);
-    } else {
-      // v1.4.91 (detalle 3): cada mensaje nuevo DEL OTRO LADO suma al
-      // conteo del distintivo rojo del botón de chat (con la hoja
-      // cerrada). Los propios no cuentan.
+    } else if(typeof j.unread!=='number'){
+      // Respaldo si el servidor no trae el conteo: cada mensaje nuevo DEL
+      // OTRO LADO suma al conteo del distintivo rojo (los propios no
+      // cuentan).
       const n = msgs.filter(m=>m.sender_role!==chatMyRole()).length;
       if(n) chatSetDot(chatUnread+n);
     }
@@ -4459,6 +4472,10 @@ function chatTogglePhotoOpts(){
 async function openChatSheet(){
   if(!liveReq || liveReq.status!=='aceptado') return;
   chatOpen = true; chatList = []; chatLastId = 0; chatSetDot(false);
+  // v1.4.92: marcar leído en el servidor (por rol): al abrir, el
+  // distintivo se limpia y ya no vuelve a aparecer al re-entrar a la
+  // pantalla en vivo.
+  api('/api/chat/read', { token: store.token, request_id: liveReq.id, role: chatMyRole() }).catch(()=>{});
   // v1.4.87: la hoja es una "chat-sheet" (se desliza hacia arriba) y, en
   // mandados del PASAJERO, la tarjeta del conductor se oculta mientras el
   // chat está abierto (evita el nombre duplicado) y vuelve al cerrarlo.
@@ -4467,7 +4484,7 @@ async function openChatSheet(){
   if(liveReq.kind==='mandado' && !liveAsDriver){ const lb = document.getElementById('live-bottom'); if(lb) lb.classList.add('chat-open'); }
   openDialog(chatSheetHtml());
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&token=' + encodeURIComponent(store.token));
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&role='+chatMyRole()+'&token=' + encodeURIComponent(store.token));
     chatList = j.messages||[];
     chatLastId = chatList.length ? Math.max(...chatList.map(m=>m.id)) : 0;
   } catch(e){}
@@ -4478,12 +4495,16 @@ async function openChatSheet(){
   // de inmediato y tapaba la hoja; el usuario toca el campo para escribir).
 }
 function chatCloseSheet(silent){
+  const wasOpen = chatOpen;
   chatOpen = false;
   if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
   // v1.4.87: al cerrar, la tarjeta del conductor vuelve a aparecer y la
   // hoja deja de ser "chat-sheet".
   const lb = document.getElementById('live-bottom'); if(lb) lb.classList.remove('chat-open');
   const dlg = document.getElementById('dialog'); if(dlg) dlg.classList.remove('chat-sheet');
+  // v1.4.92: lo visto con la hoja abierta queda marcado como leído en el
+  // servidor (por rol): el distintivo no resucita al re-entrar.
+  if(wasOpen && liveReq) api('/api/chat/read', { token: store.token, request_id: liveReq.id, role: chatMyRole() }).catch(()=>{});
   if(!silent) closeDialog();
 }
 /* v1.4.87: tocar el fondo oscuro fuera de la hoja también la cierra
@@ -5448,7 +5469,7 @@ function renderMandadoEnviar(){
       + '<label class="mt">WhatsApp de quien recibe</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
       + '<div id="md-ask-btn" style="display:'+(valid?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
       + '<div id="md-ask-hint" style="display:'+(valid?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
-      + '<div class="dashbox" id="md-wa-box" style="display:'+(valid?'block':'none')+'"><b>¿Ya te mandaron la ubicación por WhatsApp?</b>'
+      + '<div class="dashbox" id="md-wa-box" style="display:'+(valid?'block':'none')+'"><b>'+(md.waDest ? '✓ Punto de entrega seleccionado' : '¿Ya te mandaron la ubicación por WhatsApp?')+'</b>'
       + (md.waDest ? '<p class="muted mt">📍 Punto de entrega marcado desde WhatsApp</p><p class="muted">'+md.waDest.lat.toFixed(5)+', '+md.waDest.lng.toFixed(5)+'</p><button class="btn ghost small" onclick="md.waDest=null;md.dest=null;md.destZone=\'\';renderMandados()">Quitar este punto</button>'
           : '<textarea id="md-wa-dest" rows="2" placeholder="Pega aquí el enlace de la ubicación o las coordenadas que te mandaron"></textarea>'
           + '<button class="btn" style="background:#25d366;color:#fff" onclick="mdResolveWaDest()">Marcar como punto de entrega</button>'
@@ -5515,7 +5536,14 @@ function mdAskLocation(){
   const phone = (md.recipient||'').replace(/\D/g,'');
   if(phone.length!==10) return toast('Escribe el número completo de quien recibe.');
   const msg = 'Hola, buen día. Soy de SanFerGo y te voy a entregar tu pedido. ¿Me podrías compartir tu ubicación, por favor, para poder entregártelo? ¡Muchas gracias!';
-  window.open('https://wa.me/52'+phone+'?text='+encodeURIComponent(msg), '_blank');
+  const waUrl = 'https://wa.me/52'+phone+'?text='+encodeURIComponent(msg);
+  // v1.4.92: en iOS Safari, window.open(wa.me, '_blank') dejaba una
+  // pestaña en blanco delante al volver de WhatsApp (había que darle X
+  // para volver a SanFerGo). El esquema whatsapp:// abre la app sin tocar
+  // la pestaña de SanFerGo; si WhatsApp no está instalado, a los ~1200 ms
+  // la página sigue visible y se abre el enlace wa.me en una pestaña nueva.
+  location.href = 'whatsapp://send?phone=52'+phone+'&text='+encodeURIComponent(msg);
+  setTimeout(function(){ if(!document.hidden) window.open(waUrl, '_blank'); }, 1200);
 }
 let mdDestList = [];
 function mdDestSearch(q){
@@ -5546,6 +5574,10 @@ async function mdResolveWaDest(){
     md.dest = { lat: j.lat, lng: j.lng, label: 'Punto de WhatsApp', zone: '' };
     md.destZone = '';
     toast('Punto de entrega marcado desde WhatsApp.');
+    // v1.4.92: cerrar el teclado de iOS — el campo del enlace tenía el foco
+    // y al re-renderizar el paso se quedaba abierto tapando «Continuar».
+    const waInp = document.getElementById('md-wa-dest'); if(waInp) waInp.blur();
+    if(document.activeElement) document.activeElement.blur();
     renderMandados();
   } catch(e){ if(err2) err2.classList.remove('hidden'); toast('No se pudo leer esa ubicación.'); }
 }
