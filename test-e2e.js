@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.87 en /api/health', h.ok && h.version === '1.4.87', JSON.stringify(h));
+  check('versión 1.4.88 en /api/health', h.ok && h.version === '1.4.88', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.87', h134.ok && h134.version === '1.4.87', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.88', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.87)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.87';") && h.version === '1.4.87', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.88)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.88';") && h.version === '1.4.88', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.87 en /api/health (sección)', h27.ok && h27.version === '1.4.87', JSON.stringify(h27));
+  check('versión 1.4.88 en /api/health (sección)', h27.ok && h27.version === '1.4.88', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.87 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.87', JSON.stringify(h28));
+  check('versión 1.4.88 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.88', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.87 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.87', JSON.stringify(h29));
+  check('versión 1.4.88 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.88', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.87 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.87', JSON.stringify(h30));
+  check('versión 1.4.88 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.88', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4513,9 +4513,10 @@ async function api(path, body) {
   // La pasajera ve la foto en la lista.
   const ch78list = await api('/api/chat?request_id=' + man78.request.id + '&token=' + encodeURIComponent(chatPaxAcc.token));
   check('v1.4.78: la pasajera recibe texto y foto del chofer en la lista del chat', ch78list.ok && ch78list.messages.length === 3 && ch78list.messages.some(m => m.kind === 'foto' && m.sender_role === 'chofer') && ch78list.messages.some(m => m.kind === 'texto' && m.sender_role === 'pasajero'), JSON.stringify(ch78list.messages && ch78list.messages.map(m => ({ k: m.kind, r: m.sender_role }))));
-  // Foto de pasajera: rechazada.
+  // Foto de pasajera: v1.4.88 — ya PUEDE mandar foto (antes solo el chofer;
+  // la 1.4.87 le dio el botón de cámara y el servidor la rechazaba).
   const ch78paxphoto = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, photo: PHOTO });
-  check('v1.4.78: la pasajera NO puede mandar foto (solo el chofer)', !ch78paxphoto.ok && /Solo el chofer/.test(ch78paxphoto.error || ''), JSON.stringify(ch78paxphoto));
+  check('v1.4.88: la pasajera SÍ puede mandar foto por el chat', ch78paxphoto.ok && ch78paxphoto.message.kind === 'foto' && ch78paxphoto.message.sender_role === 'pasajero', JSON.stringify(ch78paxphoto));
   // Límite 1 msg/s: dos textos seguidos de la misma cuenta, el segundo se rechaza.
   await new Promise(r => setTimeout(r, 1100));
   const rl1 = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man78.request.id, text: 'primero' });
@@ -4818,7 +4819,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.87 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.87', JSON.stringify(h85));
+  check('versión 1.4.88 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.88', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -4996,6 +4997,84 @@ async function api(path, body) {
   check('v1.4.87: evaluado — la hoja del chofer lleva el nombre del pasajero y foto también, SIN ocultar nada (la tarjeta que se oculta es solo la del pasajero)', !!chat87 && chat87.drvOpen87.isOpen && !chat87.drvOpen87.dlgHidden && !chat87.drvOpen87.lb && chat87.drvOpen87.html.includes('Ana') && chat87.drvOpen87.html.includes('chat-cam') && chat87.drvOpen87.html.includes('class="chatsend"'), chat87Err || JSON.stringify(chat87 && chat87.drvOpen87));
   check('v1.4.87: evaluado — deslizar hacia abajo POCO no cierra; deslizar MUCHO (>60px) sí cierra el chat', !!chat87 && chat87.swipeSmall87.isOpen && !chat87.swipeBig87.isOpen && chat87.swipeBig87.dlgHidden, chat87Err || JSON.stringify(chat87 && { small: chat87.swipeSmall87, big: chat87.swipeBig87 }));
   check('v1.4.87: evaluado — burbujas estilo WhatsApp: la mía verde a la derecha y la del otro gris a la izquierda, solo con la hora', !!chat87 && chat87.mine87.includes('chatmsg mine') && chat87.mine87.includes('Hola, ¿ya compraste?') && chat87.mine87.includes('chattime') && !chat87.mine87.includes('class="who"') && chat87.theirs87.includes('chatmsg theirs') && chat87.theirs87.includes('Ya voy') && chat87.theirs87.includes('chattime'), chat87Err || JSON.stringify(chat87 && { mine: chat87.mine87, theirs: chat87.theirs87 }));
+
+  // ===== v1.4.88 (2026-11-26): BUGFIX del chat — el historial nunca cargaba (los GET iban sin token, 401) + foto del pasajero + rol por vista + primer toque del botón =====
+  console.log('== v1.4.88: chat bugfix (token en los GET, foto pasajero, rol por vista, delegación del botón) ==');
+  // (a) GET /api/chat SIN token → 401 (esta era la causa: el cliente no mandaba token y el catch vacío lo tragaba).
+  const noTok88 = await api('/api/chat?request_id=' + man78.request.id);
+  check('v1.4.88: GET /api/chat SIN token es 401 (por eso el historial nunca cargaba)', !noTok88.ok && /Inicia sesión/.test(noTok88.error || ''), JSON.stringify(noTok88));
+  // (c) Entrega cruzada en un mandado NUEVO aceptado (man78 ya terminó: el
+  // envío exige status aceptado). Se abre el candado (quedó puesto al final
+  // de la 1.4.85) y se vuelve a poner al final de esta sección.
+  const lockOpen88 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
+  check('v1.4.88: se abre el candado de Mandados para crear el mandado de prueba', lockOpen88.ok && lockOpen88.mandados_locked === false, JSON.stringify(lockOpen88));
+  const man88 = await api('/api/create-request', { passenger_id: chatPaxAcc.passenger.id, kind: 'mandado', origin_zone: 'Bodega Aurrerá', origin_detail: 'Bodega Aurrerá', origin_lat: 16.87137, origin_lng: -93.20652, dest_zone: 'Centro', dest_detail: 'Centro', dest_lat: 16.8709, dest_lng: -93.2063, distance_km: 1.0, price: 30, payment_method: 'efectivo', order_payment: 'por_pagar', order_amount: 150, stops: [{ zone: 'Bodega Aurrerá', lat: 16.87137, lng: -93.20652, detail: '' }], extra_stops: 0 });
+  check('v1.4.88: mandado nuevo para la entrega cruzada', man88.ok && man88.request.id, JSON.stringify(man88));
+  const acc88 = await api('/api/driver-respond', { driver_id: chatDrv.driver.id, request_id: man88.request.id, kind: 'acepta', price: 30 });
+  check('v1.4.88: el chofer acepta el mandado nuevo', acc88.ok && acc88.request.status === 'aceptado', JSON.stringify(acc88));
+  const drv88a = await api('/api/chat/send', { token: chatDrvAcc.token, request_id: man88.request.id, text: 'Ya compré todo, voy para allá', role: 'chofer' });
+  check('v1.4.88: el chofer manda texto con role=chofer y queda guardado sender_role=chofer', drv88a.ok && drv88a.message.sender_role === 'chofer' && drv88a.message.text === 'Ya compré todo, voy para allá', JSON.stringify(drv88a));
+  await new Promise(r => setTimeout(r, 1100)); // anti-spam 1 msg/s: el último envío de la pasajera (rl1, 'primero') fue hace menos de 1 s en tiempo de suite
+  const pax88a = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man88.request.id, text: 'Perfecto, gracias', role: 'pasajero' });
+  check('v1.4.88: la pasajera manda texto con role=pasajero y queda guardado sender_role=pasajero (FIX 4: antes salía al revés con la misma cuenta)', pax88a.ok && pax88a.message.sender_role === 'pasajero' && pax88a.message.text === 'Perfecto, gracias', JSON.stringify(pax88a));
+  await new Promise(r => setTimeout(r, 1100));
+  const pax88bad = await api('/api/chat/send', { token: chatPaxAcc.token, request_id: man88.request.id, text: 'Rol inválido', role: 'chofer' });
+  check('v1.4.88: un rol inválido para la cuenta se ignora (la pasajera manda role=chofer y queda pasajero)', pax88bad.ok && pax88bad.message.sender_role === 'pasajero', JSON.stringify(pax88bad));
+  // (b) GET con token devuelve el historial completo para los dos lados.
+  const drvList88 = await api('/api/chat?request_id=' + man88.request.id + '&token=' + encodeURIComponent(chatDrvAcc.token));
+  check('v1.4.88: GET /api/chat CON token devuelve los 3 mensajes al chofer (el texto del chofer y los dos de la pasajera)', drvList88.ok && drvList88.messages.length === 3 && drvList88.messages.some(m => m.sender_role === 'chofer' && m.text === 'Ya compré todo, voy para allá') && drvList88.messages.some(m => m.sender_role === 'pasajero' && m.text === 'Perfecto, gracias') && drvList88.messages.some(m => m.sender_role === 'pasajero' && m.text === 'Rol inválido'), JSON.stringify(drvList88.messages && drvList88.messages.map(m => ({ k: m.kind, r: m.sender_role, t: (m.text || '').slice(0, 20) }))));
+  const paxList88 = await api('/api/chat?request_id=' + man88.request.id + '&token=' + encodeURIComponent(chatPaxAcc.token));
+  check('v1.4.88: GET /api/chat CON token devuelve el historial a la pasajera (incluye el texto del chofer)', paxList88.ok && paxList88.messages.length === 3 && paxList88.messages.some(m => m.sender_role === 'chofer' && m.text === 'Ya compré todo, voy para allá'), JSON.stringify(paxList88.messages && paxList88.messages.length));
+  // (d) La foto de la pasajera le llega al chofer (historial del mandado 78).
+  const drvList78b = await api('/api/chat?request_id=' + man78.request.id + '&token=' + encodeURIComponent(chatDrvAcc.token));
+  check('v1.4.88: la foto de la pasajera aparece en el historial del chofer', drvList78b.ok && drvList78b.messages.some(m => m.kind === 'foto' && m.sender_role === 'pasajero'), JSON.stringify(drvList78b.messages && drvList78b.messages.map(m => ({ k: m.kind, r: m.sender_role }))));
+  const lockClose88 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: true });
+  check('v1.4.88: el candado de Mandados vuelve a quedar puesto', lockClose88.ok && lockClose88.mandados_locked === true, JSON.stringify(lockClose88));
+  // (e) Estático: los tres GET del chat llevan el token; chatSend manda el rol; el botón ancho no tiene onclick y la delegación lo atiende.
+  check('v1.4.88: el cliente manda el token en los tres GET del chat (chatSeed, chatFetch y openChatSheet)', html.includes("api('/api/chat?request_id='+liveReq.id+'&after_id=0&token=' + encodeURIComponent(store.token))") && html.includes("api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId+'&token=' + encodeURIComponent(store.token))"), '');
+  check('v1.4.88: chatSend manda role según la vista (liveAsDriver) al enviar', html.includes("role: liveAsDriver ? 'chofer' : 'pasajero'"), '');
+  check('v1.4.88: el servidor acepta el rol de la vista si es válido para la cuenta (y si no, usa el de la cuenta)', srv.includes("body.role === 'chofer' && isDriver") && srv.includes("body.role === 'pasajero' && isPax"));
+  check('v1.4.88: el servidor ya NO rechaza la foto de la pasajera (se quitó el 400) y sigue el chequeo de JPEG y de peso', !srv.includes('Solo el chofer puede mandar fotos.') && srv.includes("if (photo && !/^data:image\\/jpeg;base64,/.test(photo))") && srv.includes('if (photo && photo.length > 2000000)'));
+  const wideSec88 = html.slice(html.indexOf('function chatWideBtnHtml(){'), html.indexOf('function chatShowBtn(){'));
+  check('v1.4.88: el botón ancho de chat ya no tiene onclick (el tap lo atiende la delegación en #live-bottom)', !wideSec88.includes('onclick'), wideSec88.slice(0, 200));
+  check('v1.4.88: la delegación en #live-bottom abre la hoja al tocar .chatwide (aunque el botón sea nuevo tras el repintado de 2 s)', html.includes("document.getElementById('live-bottom')") && html.includes("closest('.chatwide')") && html.includes('if(t) openChatSheet()'), '');
+  // --- Evaluado: la delegación abre al tocar el botón y no abre al tocar fuera de él ---
+  let deleg88 = null, deleg88Err = '';
+  try {
+    const src88 = html.slice(html.indexOf("(function(){ const b = document.getElementById('live-bottom')"), html.indexOf('let chatSwipeY = null;'));
+    let opened88 = 0;
+    const handlers88 = {};
+    const btn88 = { closest(sel){ return sel === '.chatwide' ? this : null; } };
+    const other88 = { closest(){ return null; } };
+    const fakeDoc88 = { getElementById(){ return { addEventListener(ev, fn){ handlers88[ev] = fn; } }; } };
+    new Function('document', 'openChatSheet', src88)(fakeDoc88, () => { opened88++; });
+    if(handlers88.click) handlers88.click({ target: btn88 });
+    const afterBtn88 = opened88;
+    if(handlers88.click) handlers88.click({ target: other88 });
+    deleg88 = { afterBtn: afterBtn88, afterOther: opened88 };
+  } catch(e){ deleg88Err = String(e && e.message || e); }
+  check('v1.4.88: evaluado — la delegación abre la hoja al tocar el botón ancho y no abre al tocar fuera de él', !!deleg88 && deleg88.afterBtn === 1 && deleg88.afterOther === 1, deleg88Err || JSON.stringify(deleg88));
+  // --- Evaluado: openChatSheet pide el historial con el token en la URL ---
+  let tok88 = null, tok88Err = '';
+  try {
+    const chatSrc88b = html.slice(html.indexOf('let chatOpen = false, chatTimer = null'), html.indexOf('/* GPS del chofer a nivel de app'));
+    const mk88 = () => { const cls = new Set(); const el = { classList: { add(c){ cls.add(c); }, remove(c){ cls.delete(c); }, contains(c){ return cls.has(c); }, toggle(c, f){ if(f === undefined){ if(cls.has(c)) cls.delete(c); else cls.add(c); } else if(f) cls.add(c); else cls.delete(c); } }, style: {}, innerHTML: '', textContent: '', value: '', focus(){}, click(){}, insertAdjacentHTML(){}, querySelector(){ return null; }, handlers: {}, addEventListener(ev, fn){ el.handlers[ev] = fn; }, scrollTop: 0, scrollHeight: 0 }; return el; };
+    const dlg88 = mk88(); dlg88.classList.add('hidden');
+    const box88 = mk88(); const msgs88 = mk88(); const lb88 = mk88();
+    const els88 = { 'dialog': dlg88, 'dialog-box': box88, 'chat-msgs': msgs88, 'live-bottom': lb88 };
+    const $88 = sel => ({ '#dialog': dlg88, '#dialog-box': box88 }[sel] || mk88());
+    const doc88 = { getElementById: id => els88[id] || null, createElement: () => mk88() };
+    const urls88 = [];
+    const api88 = async (p) => { urls88.push(p); return { messages: [] }; };
+    const f88 = new Function('$', 'document', 'api', 'toast', 'store', 'esc', 'setInterval', 'clearInterval',
+      'let liveAsDriver = false;\nlet liveReq = null;\nfunction openDialog(html){ $(\'#dialog-box\').innerHTML = html; $(\'#dialog\').classList.remove(\'hidden\'); }\nfunction closeDialog(){ $(\'#dialog\').classList.add(\'hidden\'); }\n' + chatSrc88b
+      + '\nreturn { open: openChatSheet, setReq(r, asDriver){ liveReq = r; liveAsDriver = asDriver; } };');
+    const h88 = f88($88, doc88, api88, () => {}, { token: 'tok123' }, s => String(s == null ? '' : s), () => 99, () => {});
+    h88.setReq({ id: 7, status: 'aceptado', kind: 'mandado', driver_name: 'D', driver_photo: null, passenger_name: 'P', passenger_photo: null }, false);
+    await h88.open();
+    tok88 = urls88;
+  } catch(e){ tok88Err = String(e && e.message || e); }
+  check('v1.4.88: evaluado — openChatSheet pide el historial con el token en la URL (antes iba sin token y el servidor daba 401)', !!tok88 && tok88.length === 1 && tok88[0] === '/api/chat?request_id=7&after_id=0&token=tok123', tok88Err || JSON.stringify(tok88));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');

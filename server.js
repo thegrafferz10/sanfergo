@@ -880,7 +880,7 @@ async function api(req, res, pathname) {
   const body = req.method === 'POST' ? await readBody(req) : {};
   const q = new URL(req.url, 'http://x').searchParams;
 
-  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.87' });
+  if (pathname === '/api/health') return send(res, 200, { ok: true, app: 'SanFerGo', version: '1.4.88' });
   // Config pública para el cliente (v1.4.17): el client ID de Google es un
   // identificador público (no un secreto) y emailCode dice si el código por
   // correo está activado; el cliente esconde o muestra cada opción según esto.
@@ -2316,8 +2316,9 @@ async function api(req, res, pathname) {
   }
   // v1.4.78: chat del servicio aceptado (pasajero ⇄ chofer). Solo los dos
   // del servicio pueden leer y escribir; un tercero (o sin sesión) recibe
-  // error. La foto solo la manda el chofer (el cliente la baja a 800 px
-  // JPEG 0.75; aquí se rechaza si pasa de ~1.5 MB). Sin acuses de lectura.
+  // error. La foto la mandan AMBOS lados (v1.4.88: antes solo el chofer; el
+  // cliente la baja a 800 px JPEG 0.75; aquí se rechaza si pasa de ~1.5 MB).
+  // Sin acuses de lectura.
   if (pathname === '/api/chat/send') {
     const a = accountFromToken(body.token);
     if (!a) return send(res, 401, { ok: false, error: 'Inicia sesión primero.' });
@@ -2329,10 +2330,13 @@ async function api(req, res, pathname) {
     const isDriver = a.driver_id && r.driver_id && Number(a.driver_id) === Number(r.driver_id);
     const isPax = a.passenger_id && r.passenger_id && Number(a.passenger_id) === Number(r.passenger_id);
     if (!isDriver && !isPax) return send(res, 403, { ok: false, error: 'Este chat no es tuyo.' });
-    const role = isDriver ? 'chofer' : 'pasajero';
+    // v1.4.88: el rol viene de la VISTA que manda (el cliente manda role
+    // según liveAsDriver). Con la misma cuenta en los dos lados el rol de
+    // la cuenta salía al revés en la vista del pasajero. Solo se acepta si
+    // es válido para esa cuenta; si no, se queda el rol de la cuenta.
+    const role = (body.role === 'chofer' && isDriver) ? 'chofer' : (body.role === 'pasajero' && isPax) ? 'pasajero' : (isDriver ? 'chofer' : 'pasajero');
     const text = String(body.text || '').trim().slice(0, 500);
     const photo = body.photo ? String(body.photo) : null;
-    if (role === 'pasajero' && photo) return send(res, 400, { ok: false, error: 'Solo el chofer puede mandar fotos.' });
     if (!text && !photo) return send(res, 400, { ok: false, error: 'Escribe un mensaje o manda una foto.' });
     if (photo && !/^data:image\/jpeg;base64,/.test(photo)) return send(res, 400, { ok: false, error: 'La foto no es válida.' });
     if (photo && photo.length > 2000000) return send(res, 400, { ok: false, error: 'La foto es muy pesada.' });
