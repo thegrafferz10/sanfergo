@@ -695,7 +695,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.88'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.89'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3527,9 +3527,12 @@ function renderLiveStrips(){
     // la pantalla es la lista de compra del mockup aprobado v2: tarjeta
     // COMPRANDO + "Dirígete a {lugar} para hacer el mandado" en grande +
     // "Lleva $X para comprar", la "Lista de compra" GRANDE en el medio, y
-    // abajo el botón verde "Ya tengo el pedido" (que sigue siendo el de
-    // siempre: en llego abre el diálogo del ticket y luego viene la fase 2;
-    // en etapas anteriores avanza como siempre). Se QUITAN la nota ("Cuando
+    // abajo el botón verde "Ya tengo el pedido". v1.4.89: ese botón es el
+    // ÚNICO en TODAS las etapas de fase 1 (confirmado/en_camino/llego) y
+    // siempre abre el diálogo del ticket y avanza a 'comprado' (luego viene
+    // la fase 2) — el texto viejo confundía al chofer (en Quiero no hay
+    // paquete que recoger; el usuario no sabía cómo terminar de comprar).
+    // Se QUITAN la nota ("Cuando
     // termines de comprar…") y la línea del pasajero (👤 … · $ · pago): esa
     // información no sirve aquí, dijo el usuario.
     if(livePhase1QuieroDriver(r)){
@@ -3541,7 +3544,9 @@ function renderLiveStrips(){
       items83 = items83.filter(Boolean);
       const listHtml83 = items83.length ? items83.map(i=>'• '+esc(i)).join('<br>') : (r.description ? '• '+esc(r.description) : '—');
       const nxt83 = nextStage(r);
-      const btnLabel83 = nxt83==='comprado' ? 'Ya tengo el pedido' : stageButtonLabel(r);
+      // v1.4.89: un solo botón en fase 1: "Ya tengo el pedido" (abre el
+      // diálogo del ticket → 'comprado'); nada del texto viejo de afuera.
+      const btnLabel83 = 'Ya tengo el pedido';
       const dirTxt83 = buyTxt83 ? 'Dirígete a '+esc(buyTxt83)+' para hacer el mandado' : 'Dirígete a comprar el mandado';
       top.innerHTML = '<div class="backrow" style="align-items:center;gap:8px"><button class="exitp" onclick="exitLive()">‹ Regresar</button></div>'
         + '<div class="statuscard"><div class="row"><span class="chip amber">COMPRANDO</span></div>'
@@ -3549,7 +3554,7 @@ function renderLiveStrips(){
         + '<div class="row" style="margin-top:6px"><span>Lleva '+fmt$(r.order_amount||0)+' para comprar</span></div></div>';
       bot.innerHTML = '<div class="drivercard"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:20px">🛒</span><b style="font-size:17px">Lista de compra</b></div>'
         + '<div style="margin-top:8px;font-size:18px;line-height:2;max-height:34dvh;overflow:auto">'+listHtml83+'</div>'
-        + (nxt83 ? '<button class="greenb" onclick="'+(nxt83==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt83+'\')')+'">'+btnLabel83+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
+        + (nxt83 ? '<button class="greenb" onclick="askTicketPhoto()">'+btnLabel83+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
         + '</div>'
         + chatWideBtnHtml(); // v1.4.84: el chat va abajo (botón ancho), no redondo flotante
       pill.classList.add('hidden');
@@ -3573,6 +3578,10 @@ function renderLiveStrips(){
       + '<div class="muted" style="margin-top:2px">'+(dd!=null ? 'faltan '+(dd<1 ? Math.round(dd*1000)+' m' : dd.toFixed(1)+' km')+' · ~'+etaMin(dd)+' min · '+dir : 'esperando tu ubicación…')+'</div>';
     pill.classList.add('hidden');
     const nxt = nextStage(r);
+    // v1.4.89 (FIX 5): en Quiero, una vez comprado, UN solo botón "Finalizar mandado" que va directo a 'entregado' (recibo) sin pasar por 'en_viaje' — el usuario veía "Ya voy en camino" y luego "Entregado" repetido. Enviar y viajes no cambian.
+    const finQ89 = isQuieroMandado(r) && r.trip_stage==='comprado';
+    const btnLbl89 = finQ89 ? 'Finalizar mandado' : stageButtonLabel(r);
+    const btnOn89 = finQ89 ? "advanceLive('entregado')" : (nxt==='comprado' ? 'askTicketPhoto()' : "advanceLive('"+nxt+"')");
     // v1.4.43: pantalla despejada — el mapa manda. La caja verde de
     // "Resumen del mandado" y el botón ancho de pegar ubicación NO van
     // aquí (tapaban la mototaxi y la ruta): Recibe y Pedido quedan en
@@ -3602,7 +3611,7 @@ function renderLiveStrips(){
       + callBtn60
       + (r.kind==='mandado' ? '<div id="driver-paste-box"></div>' : '')
       + '<div style="margin-top:6px;background:var(--amber);border-radius:14px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:800;color:#111">Precio final</span><b class="big2" style="color:#111">'+fmt$(r.final_price||r.price)+'</b></div>'
-      + (nxt ? '<button onclick="'+(nxt==='comprado' ? 'askTicketPhoto()' : 'advanceLive(\''+nxt+'\')')+'">'+stageButtonLabel(r)+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
+      + (nxt ? '<button onclick="'+btnOn89+'">'+btnLbl89+'</button>' : '<div class="center" style="padding:10px">Servicio terminado ✓</div>')
       + (r.kind==='mandado' ? chatWideBtnHtml() : ''); // v1.4.84: chat ancho abajo en mandados; en viajes sigue el redondo
   } else {
     const dKm = (r.driver_lat && r.origin_lat) ? havKm(r.driver_lat, r.driver_lng, r.origin_lat, r.origin_lng) : null;
