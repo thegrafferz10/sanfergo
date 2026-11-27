@@ -377,7 +377,7 @@ async function api(path, body) {
 
   console.log('== v1.3.0: pago al publicar y confirmación automática ==');
   const h = await api('/api/health');
-  check('versión 1.4.86 en /api/health', h.ok && h.version === '1.4.86', JSON.stringify(h));
+  check('versión 1.4.87 en /api/health', h.ok && h.version === '1.4.87', JSON.stringify(h));
   const drvList = await api('/api/drivers');
   check('choferes exponen precios de suscripción 50/150/500', drvList.ok && drvList.drivers.every(d => d.subscription_price === 50 && d.subscription_price_monthly === 150 && d.subscription_price_yearly === 500), JSON.stringify(drvList.drivers && drvList.drivers[0]));
   const noPay = await api('/api/create-request', { passenger_id: pax.passenger.id, kind: 'viaje', origin_zone: 'Centro', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Mercado', dest_lat: 16.87018, dest_lng: -93.20777, distance_km: 1.0, price: 25 });
@@ -478,7 +478,7 @@ async function api(path, body) {
 
   console.log('== v1.3.4: rótulos con nombre, ojo en contraseñas, reclamo amigable ==');
   const h134 = await api('/api/health');
-  check('versión 1.4.86', h134.ok && h134.version === '1.4.86', JSON.stringify(h134));
+  check('versión 1.4.87', h134.ok && h134.version === '1.4.87', JSON.stringify(h134));
   const pl = await api('/api/places');
   check('lugares con nombre (Meta) en /api/places', pl.ok && Array.isArray(pl.landmarks) && pl.landmarks.length >= 10, JSON.stringify((pl.landmarks || []).map(l => l.name)));
   for (const must of ['Clínica · Centro de Salud', 'Parque Central', 'Mercado Municipal', 'Arco de bienvenida', 'Carnicería Progreso', 'Farmacias Similares', 'Carnicería La Central']) {
@@ -640,7 +640,7 @@ async function api(path, body) {
   // enlace "Mi cuenta" sale "Versión X" en texto pequeño y discreto, de la
   // única constante APP_VERSION del cliente; el check compara con
   // /api/health para que ambas coincidan al subir de versión.
-  check('pie de versión en inicio (v1.4.86)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.86';") && h.version === '1.4.86', 'health=' + JSON.stringify(h));
+  check('pie de versión en inicio (v1.4.87)', html.includes('id="home-version"') && html.includes("ver.textContent = 'Versión ' + APP_VERSION;") && html.includes("const APP_VERSION = '1.4.87';") && h.version === '1.4.87', 'health=' + JSON.stringify(h));
   // Ícono de la app (v1.4.24): el logo final (pin dorado con la mototaxi
   // de frente, "SanFerGo") como icon.png; el manifest y el favicon lo
   // referencian, y el icon.svg viejo queda en su lugar sin usarse.
@@ -1434,7 +1434,7 @@ async function api(path, body) {
   // siguen funcionando de punta a punta.
   console.log('== v1.4.27: formularios de registro por pasos ==');
   const h27 = await api('/api/health');
-  check('versión 1.4.86 en /api/health (sección)', h27.ok && h27.version === '1.4.86', JSON.stringify(h27));
+  check('versión 1.4.87 en /api/health (sección)', h27.ok && h27.version === '1.4.87', JSON.stringify(h27));
   check('asistente de crear cuenta: 3 pasos, Terminar registro, Siguiente/Regresar y validación por paso', html.includes('id="rc-step0"') && html.includes('id="rc-step1"') && html.includes('id="rc-step2"') && html.includes('id="rc-steps-ind"') && html.includes('onclick="rcNext(0)"') && html.includes('onclick="rcNext(1)"') && html.includes('onclick="showRcStep(0)"') && html.includes('onclick="showRcStep(1)"') && html.includes('>Terminar registro</button>') && html.includes('function showRcStep(') && html.includes('function validateRegStep(') && html.includes('function wizSteps('));
   check('asistente de chofer: 4 pasos, Mandar mi solicitud de chofer, Siguiente/Regresar y validación por paso', html.includes('id="rd-step0"') && html.includes('id="rd-step1"') && html.includes('id="rd-step2"') && html.includes('id="rd-step3"') && html.includes('id="rd-steps-ind"') && html.includes('onclick="rdNext(0)"') && html.includes('onclick="rdNext(1)"') && html.includes('onclick="rdNext(2)"') && html.includes('onclick="showRegStep(0)"') && html.includes('onclick="showRegStep(1)"') && html.includes('onclick="showRegStep(2)"') && html.includes('>Mandar mi solicitud de chofer</button>') && html.includes('function showRegStep(') && html.includes('function validateDriverStep('));
   check('asistente de negocio: 5 pasos (v1.4.54: nombre+categoría en su propio paso con botones), Enviar la solicitud de mi negocio, Siguiente/Regresar y validación por paso', html.includes('id="nb-step0"') && html.includes('id="nb-step1"') && html.includes('id="nb-step2"') && html.includes('id="nb-step3"') && html.includes('id="nb-step4"') && html.includes('id="nb-steps-ind"') && html.includes('onclick="nbNext(0)"') && html.includes('onclick="nbNext(1)"') && html.includes('onclick="nbNext(2)"') && html.includes('onclick="nbNext(3)"') && html.includes('onclick="showBizStep(0)"') && html.includes('onclick="showBizStep(1)"') && html.includes('onclick="showBizStep(2)"') && html.includes('onclick="showBizStep(3)"') && html.includes('>Enviar la solicitud de mi negocio</button>') && html.includes('function showBizStep(') && html.includes('function validateBizStep(') && html.includes('function setBizType('));
@@ -1479,7 +1479,7 @@ async function api(path, body) {
   // tarjetas no cambian.
   console.log('== v1.4.28: Negocios, opciones arriba y compactas ==');
   const h28 = await api('/api/health');
-  check('versión 1.4.86 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.86', JSON.stringify(h28));
+  check('versión 1.4.87 en /api/health (sección v1.4.29)', h28.ok && h28.version === '1.4.87', JSON.stringify(h28));
   const rbm = html.indexOf('async function renderBizMain(){');
   const rbmBody = html.slice(rbm, html.indexOf('/* Carrusel de anuncios', rbm));
   check('Negocios: el orden en renderBizMain es buscador → atajos → carrusel → feed (v1.4.57)', rbmBody.indexOf('biz-search-input') !== -1 && rbmBody.indexOf('id="biz-options-row"') !== -1 && rbmBody.indexOf('id="biz-ads-carousel"') !== -1 && rbmBody.indexOf('id="biz-feed"') !== -1 && rbmBody.indexOf('biz-search-input') < rbmBody.indexOf('id="biz-options-row"') && rbmBody.indexOf('id="biz-options-row"') < rbmBody.indexOf('id="biz-ads-carousel"') && rbmBody.indexOf('id="biz-ads-carousel"') < rbmBody.indexOf('id="biz-feed"'));
@@ -1493,7 +1493,7 @@ async function api(path, body) {
   // abierta con el error. El endpoint y los campos no cambian.
   console.log('== v1.4.29: tarjeta de credenciales colapsada ==');
   const h29 = await api('/api/health');
-  check('versión 1.4.86 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.86', JSON.stringify(h29));
+  check('versión 1.4.87 en /api/health (sección v1.4.29)', h29.ok && h29.version === '1.4.87', JSON.stringify(h29));
   const rag = html.slice(html.indexOf('function renderAdminGrid(){'), html.indexOf('function downloadBackup(){'));
   check('credenciales colapsadas por defecto: fila compacta con toggle y formulario condicional', rag.includes('Cambiar usuario y contraseña') && rag.includes('onclick="adminCredsOpen=!adminCredsOpen;renderAdminGrid()"') && rag.includes("(adminCredsOpen ? '<div id=\"admin-creds-form\">'") && html.includes('let adminScreen = null, adminDrivers = [], adminIdx = 0, adminDetail = null, adminPoll = null, adminCredsOpen = false;') && html.includes("if(!adminScreen){ adminCredsOpen = false; renderAdminGrid(); return; }"));
   check('al expandir, el formulario muestra los cuatro campos y el botón de guardar', rag.includes("pwInput('adm-cur-pass'") && rag.includes('id="adm-new-user"') && rag.includes("pwInput('adm-new-pass'") && rag.includes("pwInput('adm-new-pass2'") && rag.includes('onclick="saveAdminCredentials()"'));
@@ -1502,7 +1502,7 @@ async function api(path, body) {
 
   console.log('== v1.4.30: anuncios por ubicación + administrar pasajeros ==');
   const h30 = await api('/api/health');
-  check('versión 1.4.86 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.86', JSON.stringify(h30));
+  check('versión 1.4.87 en /api/health (sección v1.4.30)', h30.ok && h30.version === '1.4.87', JSON.stringify(h30));
   // --- Anuncios: dos imágenes por anuncio (v1.4.30) ---
   const ADIMG2 = PHOTO + 'B'.repeat(120); // segunda imagen, distinta de ADIMG
   const adF = await api('/api/create-ad', { token: admLogin.token, label: 'Flotante ' + RUN, image: ADIMG, entries: ['viajes', 'mandados'] });
@@ -4540,7 +4540,7 @@ async function api(path, body) {
   check('v1.4.78: un "Enviar" NO puede marcar "Ya compré"', env78.ok && accEnv78.ok && advLlegoEnv.ok && !advCompradoEnv.ok && /no es de compras/.test(advCompradoEnv.error || ''), JSON.stringify(advCompradoEnv));
   // Cliente: chat y ticket.
   check('v1.4.78: el mapa en vivo trae el botón flotante 💬 Chat y la hoja con sondeo de 3 s', html.includes('id="live-chat-btn"') && html.includes('openChatSheet()') && html.includes('setInterval(chatFetch, 3000)') && html.includes('chatSetDot(true)'), '');
-  check('v1.4.78: la hoja del chat trae foto solo para el chofer (cámara + galería)', html.includes('Tomar foto') && html.includes('Subir de galería') && html.includes('chatSendPhoto') && html.includes('chat-cam'), '');
+  check('v1.4.78: la hoja del chat trae foto para AMBOS lados (cámara + galería) (v1.4.87: antes solo el chofer)', html.includes('Tomar foto') && html.includes('Subir de galería') && html.includes('chatSendPhoto') && html.includes('chat-cam'), '');
   check('v1.4.78: la foto del chat se toca para verla grande', html.includes('chatZoomPhoto') && html.includes('cursor:zoom-in'), '');
   check('v1.4.78: el chofer ve "Ya compré" y la hoja del ticket con "Sin ticket"', html.includes("comprado:'Ya compré'") && html.includes('askTicketPhoto()') && html.includes('Foto del ticket') && html.includes('Sin ticket'), '');
   check('v1.4.78: "Ya compré" solo sale en "Quiero un mandado" (Enviar sigue directo a "Ya voy en camino")', html.includes('isQuieroMandado(r)') && html.includes("isQuieroMandado(r) ? 'comprado' : 'en_viaje'"), '');
@@ -4789,9 +4789,11 @@ async function api(path, body) {
   check('v1.4.83: renderLiveMap oculta el mapa en fase 1 del chofer (nolive-map) y lo vuelve a mostrar en fase 2', liveMapSec83.includes('const phase1d = livePhase1QuieroDriver(r);') && liveMapSec83.includes("document.getElementById('view-live').classList.add('nolive-map');") && liveMapSec83.includes("document.getElementById('view-live').classList.remove('nolive-map');") && liveMapSec83.includes('if(phase1d){'));
   check('v1.4.83: ensureLiveRoute y el sondeo tampoco crean ruta ni mototaxi en fase 1 del chofer', html.includes('if(livePhase1QuieroDriver(liveReq)) return; // v1.4.83: fase de compra del chofer — sin ruta') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
   // --- Cliente: pantalla de fase 1 del chofer en renderLiveStrips + CSS sin mapa ---
-  check('v1.4.83: la pantalla de fase 1 del chofer dice "Vas a comprar el encargo" (COMPRANDO) con dónde se compra y cuánto lleva', liveSec.includes('Vas a comprar el encargo') && liveSec.includes('COMPRANDO') && liveSec.includes('Se compra en: ') && liveSec.includes('Lleva ') && liveSec.includes(' para comprar') && liveSec.includes('Mandado en curso'));
-  check('v1.4.83: la pantalla de fase 1 del chofer trae la "Lista de compra" (items_json) y el botón "Ya compré todo" con el diálogo del ticket', liveSec.includes('Lista de compra') && liveSec.includes("JSON.parse(r.items_json||'[]')") && liveSec.includes('Ya compré todo') && liveSec.includes('askTicketPhoto()') && liveSec.includes('te aparecerá el mapa para ir a entregarlo'));
-  check('v1.4.83: la pantalla de fase 1 del chofer trae la línea del pasajero (nombre · precio · pago) y esconde brújula y recentrar', liveSec.includes("esc(r.passenger_name||'Pasajero')") && liveSec.includes("$('#live-compass').classList.add('hidden')") && liveSec.includes("$('#live-recenter').classList.add('hidden')"));
+  // v1.4.87: el texto de la pantalla cambió (mockup v2 aprobado): ahora es
+  // "Dirígete a {lugar} para hacer el mandado" + COMPRANDO + "Lleva $X para comprar".
+  check('v1.4.83: la pantalla de fase 1 del chofer dice "Dirígete a {lugar} para hacer el mandado" (COMPRANDO) con cuánto lleva (v1.4.87: ya no "Vas a comprar el encargo" ni "Mandado en curso")', liveSec.includes('Dirígete a ') && liveSec.includes('para hacer el mandado') && liveSec.includes('COMPRANDO') && liveSec.includes('Lleva ') && liveSec.includes(' para comprar') && !liveSec.includes('Vas a comprar el encargo') && !liveSec.includes('Mandado en curso'));
+  check('v1.4.83: la pantalla de fase 1 del chofer trae la "Lista de compra" (items_json) y el botón "Ya tengo el pedido" con el diálogo del ticket (v1.4.87: ya no "Ya compré todo" ni la nota)', liveSec.includes('Lista de compra') && liveSec.includes("JSON.parse(r.items_json||'[]')") && liveSec.includes('Ya tengo el pedido') && liveSec.includes('askTicketPhoto()') && !liveSec.includes('Ya compré todo') && !liveSec.includes('te aparecerá el mapa para ir a entregarlo'));
+  check('v1.4.83: la pantalla de fase 1 del chofer esconde brújula y recentrar (v1.4.87: la línea del pasajero ya no va aquí; se verifica evaluada en v1.4.87)', liveSec.includes("$('#live-compass').classList.add('hidden')") && liveSec.includes("$('#live-recenter').classList.add('hidden')"));
   check('v1.4.83: el CSS esconde el mapa en fase 1 del chofer y deja el fondo claro', html.includes("#view-live.nolive-map #live-map{visibility:hidden}") && html.includes('#view-live.nolive-map .fullmap{background:#f4f6f5}'));
   check('v1.4.83: la fase 2 del chofer sigue con el mapa y el botón de etapa normal', liveSec.includes('Dirígete ') && liveSec.includes('stageButtonLabel(r)'));
 
@@ -4816,7 +4818,7 @@ async function api(path, body) {
   // ===== v1.4.85 (2026-11-26): mandado mínimo $20 + dinero para comprar mínimo $50 =====
   console.log('== v1.4.85: mandado mínimo $20, dinero para comprar mínimo $50 ==');
   const h85 = await api('/api/health');
-  check('versión 1.4.86 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.86', JSON.stringify(h85));
+  check('versión 1.4.87 en /api/health (sección v1.4.85)', h85.ok && h85.version === '1.4.87', JSON.stringify(h85));
   // El candado de Mandados quedó cerrado al final de la sección v1.4.79:
   // se abre para estas pruebas en vivo y se vuelve a cerrar al final.
   const lockOpen85 = await api('/api/admin/set-mandados-locked', { token: ADM.token, locked: false });
@@ -4869,6 +4871,131 @@ async function api(path, body) {
   let sumE86 = '', sumE86Err = '';
   try { sumE86 = runDrvSum86({ kind:'mandado', recipient_phone: '9610000083', recipient_name: 'Ana', order_payment: 'por_pagar', order_amount: 200, stops_json: '[]' }); } catch(e){ sumE86Err = String(e && e.message || e); }
   check('v1.4.86: evaluado — la tarjeta del chofer (Enviar) sigue "Se pagará · Lleva $200 para recogerlo", sin "para comprar"', !!sumE86 && sumE86.includes('Se pagará · Lleva $200 para recogerlo') && sumE86.includes('Recibe') && sumE86.includes('Ana · 9610000083') && !sumE86.includes('para comprar este mandado'), sumE86Err || sumE86.slice(0, 300));
+
+  // ===== v1.4.87 (2026-11-26): chat estilo WhatsApp + fase 1 del chofer (mockup v2) + botón ancho de chat VERDE + mapa fase 1 sin cambios =====
+  console.log('== v1.4.87: chat WhatsApp (X que cierra, fotos ambos lados, tarjeta oculta) + fase 1 chofer "Ya tengo el pedido" + chat verde ==');
+  // --- Estático: el botón ancho de chat es VERDE (la regla .strip button ámbar ganaba por especificidad y salía NARANJA en vivo) ---
+  check('v1.4.87: el botón ancho de chat es VERDE en los dos lados (override .strip button.chatwide)', html.includes('.strip button.chatwide{background:#16a34a;color:#fff;border-color:#15803d}'));
+  // --- Estático: la hoja de chat (CSS + HTML) ---
+  const chatSec87 = html.slice(html.indexOf('function chatSheetHtml(){'), html.indexOf('async function openChatSheet(){'));
+  check('v1.4.87: la hoja del chat es una "chat-sheet" que se desliza hacia arriba (animación + tirador + encabezado)', html.includes('.dialog.chat-sheet .box{') && html.includes('@keyframes chatSlideUp') && html.includes('chatgrab') && html.includes('chatsheet-head') && chatSec87.includes('ontouchstart="chatSwipeStart(event)"'));
+  check('v1.4.87: el encabezado del chat lleva foto + nombre + "En línea" + X GRANDE (chatx, 44px)', chatSec87.includes('chathead-photo') && chatSec87.includes('En línea') && chatSec87.includes('class="chatx"') && html.includes('.chatx{flex-shrink:0;width:44px;height:44px'));
+  check('v1.4.87: la barra del chat es cámara + campo + botón redondo verde de enviar (sin el botón "Enviar" ancho de antes)', chatSec87.includes('class="chatcam"') && chatSec87.includes('class="chatsend"') && chatSec87.includes('Escribe un mensaje…') && !chatSec87.includes('class="btn small" onclick="chatSendText()"'));
+  check('v1.4.87: la foto del chat es para AMBOS lados (la hoja ya no tiene el condicional isDriver en la fila de foto)', chatSec87.includes('chat-cam') && chatSec87.includes('chat-gal') && chatSec87.includes('Tomar foto') && chatSec87.includes('Subir de galería') && !chatSec87.includes('(isDriver') && !chatSec87.includes('isDriver ?'));
+  check('v1.4.87: la burbuja del chat es estilo WhatsApp (solo texto/foto + hora, sin el nombre)', html.includes('<span class="chattime">') && html.includes('.chattime{') && !html.slice(html.indexOf('function chatMsgHtml(m){'), html.indexOf('function chatZoomPhoto(')).includes('class="who"'));
+  // --- Estático: abrir/cerrar el chat ---
+  const openSec87 = html.slice(html.indexOf('async function openChatSheet(){'), html.indexOf('function chatCloseSheet('));
+  check('v1.4.87: al abrir el chat la hoja es "chat-sheet" y se oculta la tarjeta del conductor (mandado del pasajero)', openSec87.includes("dlg.classList.add('chat-sheet')") && openSec87.includes("lb.classList.add('chat-open')") && openSec87.includes("liveReq.kind==='mandado' && !liveAsDriver"));
+  check('v1.4.87: al abrir el chat ya NO se auto-enfoca el campo (el teclado tapaba la hoja en el teléfono)', !openSec87.includes('inp.focus()'));
+  const closeSec87 = html.slice(html.indexOf('function chatCloseSheet('), html.indexOf('async function chatSend('));
+  check('v1.4.87: al cerrar el chat la tarjeta del conductor vuelve y la hoja deja de ser "chat-sheet"', closeSec87.includes("lb.classList.remove('chat-open')") && closeSec87.includes("dlg.classList.remove('chat-sheet')"));
+  check('v1.4.87: el chat también se cierra tocando el fondo oscuro (backdrop) y deslizando hacia abajo (swipe)', html.includes("if(e.target === d && chatOpen) chatCloseSheet()") && html.includes('function chatSwipeStart') && html.includes('function chatSwipeEnd') && html.includes('if(dy > 60) chatCloseSheet()'));
+  check('v1.4.87: con el chat abierto la tarjeta del conductor se oculta por CSS (vuelve al cerrar)', html.includes('#live-bottom.chat-open .drivercard{display:none}'));
+  // --- Estático: el mapa de fase 1 NO cambia (corrección 19:06/19:07: la mototaxi SÍ se ve, sin ruta ni pines hasta la fase 2) ---
+  const liveMapSec87 = html.slice(html.indexOf('async function renderLiveMap(){'), html.indexOf('function showLiveRecenter(){'));
+  check('v1.4.87: en fase 1 del pasajero NO hay ruta (OSRM y la línea azul están detrás de if(!phase1); ensureLiveRoute sale antes)', liveMapSec87.includes("if(!phase1 && from){ try { rt = await osrmRoute") && liveMapSec87.includes("if(!phase1 && rt){ liveRouteCoords = rt.coords;") && html.includes('if(livePhase1Quiero(liveReq)) return; // v1.4.82: fase de compra — sin ruta'));
+  check('v1.4.87: en fase 1 del pasajero NO hay pines (recogida, destino y compra están dentro de if(!phase1))', (()=>{ const a = liveMapSec87.indexOf('if(!phase1){'); const b = liveMapSec87.indexOf('} // fin if(!phase1)'); const blk = liveMapSec87.slice(a, b); return a >= 0 && b > a && blk.includes('liveMarkers.dest') && blk.includes('liveMarkers.buy') && blk.includes('liveMarkers.pick'); })());
+  check('v1.4.87: en fase 1 del pasajero SÍ hay mototaxi (el marcador se crea FUERA del if(!phase1), en la posición real del chofer; el sondeo lo recupera)', liveMapSec87.indexOf('} // fin if(!phase1)') < liveMapSec87.indexOf('liveDriverMarker = new maplibregl.Marker({ element: motoIconEl() })') && html.includes('if(r.driver_lat && !liveDriverMarker && liveMap && !livePhase1QuieroDriver(r)){'));
+  // --- Evaluado: la pantalla de fase 1 del chofer (renderLiveStrips real) ---
+  let strips87 = null, strips87Err = '';
+  try {
+    const liveSec87b = html.slice(html.indexOf('function renderLiveStrips(){'), html.indexOf('function compassDir('));
+    const stageLabelSrc87 = html.slice(html.indexOf('const STAGE_LABEL'), html.indexOf('/* Hacia el destino'));
+    const htdSrc87 = html.slice(html.indexOf('function liveHeadingToDest(r){'), html.indexOf('/* Paradas intermedias'));
+    const quieroSrc87 = html.slice(html.indexOf('function isQuieroMandado(r){'), html.indexOf('function nextStage(r){'));
+    const nextSrc87 = html.slice(html.indexOf('function nextStage(r){'), html.indexOf('function passengerStageTitle(r){'));
+    const paxTitleSrc87 = html.slice(html.indexOf('function passengerStageTitle(r){'), html.indexOf('function stageHint(r){'));
+    const compassSrc87 = html.slice(html.indexOf('function compassDir(from, to){'), html.indexOf('async function cancelLiveRequest(rid){'));
+    function runStrips87(r, asDriver) {
+      const mkEl = () => ({ classList: { add(){}, remove(){} }, style: {}, innerHTML: '', textContent: '' });
+      const top = mkEl(), bot = mkEl(), pill = mkEl(), compass = mkEl(), recenter = mkEl();
+      const els = { '#live-top': top, '#live-bottom': bot, '#live-pill': pill, '#live-compass': compass, '#live-recenter': recenter };
+      const f = new Function('$', 'top', 'bot', 'let liveAsDriver = ' + asDriver + ';\nlet liveReq = null;\nfunction chatShowBtn(){}\nfunction chatWideBtnHtml(){ return \'<button class="chatwide">💬 \'+(liveAsDriver?\'Chat con el pasajero\':\'Chat con el conductor\')+\'</button>\'; }\n' + stageLabelSrc87 + '\n' + htdSrc87 + '\n' + quieroSrc87 + '\n' + nextSrc87 + '\n' + paxTitleSrc87 + '\n' + compassSrc87 + '\nfunction etaMin(km){ return Math.max(5, Math.round(km * 3.2)); }\nfunction havKm(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180; const x=r(c-a), y=r(d-b); return 2*R*Math.asin(Math.sqrt(Math.sin(x/2)**2 + Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2)); }\nfunction paxText(pax){ const n = Math.min(3, Math.max(1, Number(pax)||1)); return n + (n===1 ? \' persona\' : \' personas\'); }\nfunction esc(s){ return String(s==null?\'\':s); }\nfunction fmt$(n){ return \'$\' + Math.round(Number(n)||0); }\n' + liveSec87b + '\nreturn { run(r){ liveReq = r; renderLiveStrips(); } };');
+      const h = f(sel => els[sel] || mkEl(), top, bot);
+      h.run(r);
+      return { top: top.innerHTML, bot: bot.innerHTML };
+    }
+    const qd87 = { id: 201, kind: 'mandado', recipient_phone: null, recipient_name: null, status: 'aceptado', origin_zone: 'Madero', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.8675, dest_lng: -93.2105, driver_lat: 16.8727, driver_lng: -93.2081, driver_name: 'Josué Eduardo', driver_photo: null, driver_phone: '9614868605', driver_vehicle: 'Mototaxi', driver_unit: '0256', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', price: 30, final_price: 30, payment_method: 'efectivo', order_amount: 100, order_payment: 'por_pagar', items_json: JSON.stringify(['Dos kilos de tomate', '2 cebolla', 'Dos chile verde']), stops_json: JSON.stringify([{ zone: 'Madero', lat: 16.8709, lng: -93.2063 }]), description: '', distance_km: 0.8, eta_minutes: 5 };
+    const env87 = { id: 202, kind: 'mandado', recipient_phone: '9610000083', recipient_name: 'Ana', status: 'aceptado', origin_zone: 'Mi ubicación', origin_lat: 16.8709, origin_lng: -93.2063, dest_zone: 'Centro', dest_lat: 16.8675, dest_lng: -93.2105, driver_lat: 16.8727, driver_lng: -93.2081, driver_name: 'Josué Eduardo', driver_photo: null, driver_phone: '9614868605', driver_vehicle: 'Mototaxi', driver_unit: '0256', passenger_name: 'The Noob Gamer', passenger_phone: '9614868605', price: 30, final_price: 30, payment_method: 'efectivo', order_amount: 200, order_payment: 'por_pagar', items_json: null, stops_json: '[]', description: 'Paquete con documentos', distance_km: 1.0, eta_minutes: 5 };
+    strips87 = {
+      drvLlego: runStrips87({ ...qd87, trip_stage: 'llego' }, true),
+      drvConf: runStrips87({ ...qd87, trip_stage: 'confirmado' }, true),
+      drvEnv: runStrips87({ ...env87, trip_stage: 'llego' }, true),
+      paxP1: runStrips87({ ...qd87, trip_stage: 'en_camino' }, false),
+    };
+  } catch(e){ strips87Err = String(e && e.message || e); }
+  check('v1.4.87: evaluado — fase 1 del chofer en llego: "Dirígete a Madero para hacer el mandado" + "Lleva $100 para comprar" + COMPRANDO', !!strips87 && strips87.drvLlego.top.includes('Dirígete a Madero para hacer el mandado') && strips87.drvLlego.top.includes('Lleva $100 para comprar') && strips87.drvLlego.top.includes('COMPRANDO'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.top.slice(0, 300)));
+  check('v1.4.87: evaluado — fase 1 del chofer en llego: lista GRANDE + botón "Ya tengo el pedido" que abre el ticket', !!strips87 && strips87.drvLlego.bot.includes('Lista de compra') && strips87.drvLlego.bot.includes('Dos kilos de tomate') && strips87.drvLlego.bot.includes('font-size:18px') && strips87.drvLlego.bot.includes('Ya tengo el pedido') && strips87.drvLlego.bot.includes('askTicketPhoto()'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.bot.slice(0, 400)));
+  check('v1.4.87: evaluado — fase 1 del chofer en llego: SIN la nota y SIN la línea del pasajero', !!strips87 && !strips87.drvLlego.bot.includes('Cuando termines de comprar') && !strips87.drvLlego.bot.includes('👤') && !strips87.drvLlego.bot.includes('The Noob Gamer') && !strips87.drvLlego.bot.includes('para recogerlo'), strips87Err || JSON.stringify(strips87 && strips87.drvLlego.bot.slice(0, 400)));
+  check('v1.4.87: evaluado — fase 1 del chofer en confirmado: el botón sigue siendo "Ya estoy afuera para recoger el paquete" (avanza a llego)', !!strips87 && strips87.drvConf.bot.includes('Ya estoy afuera para recoger el paquete') && strips87.drvConf.bot.includes("advanceLive('llego')") && !strips87.drvConf.bot.includes('Ya tengo el pedido'), strips87Err || JSON.stringify(strips87 && strips87.drvConf.bot.slice(0, 300)));
+  check('v1.4.87: evaluado — Enviar del chofer NO cambia (sin "Ya tengo el pedido", sin lista; Pedido sigue "Se pagará · Lleva $200 para recogerlo")', !!strips87 && !strips87.drvEnv.bot.includes('Ya tengo el pedido') && !strips87.drvEnv.bot.includes('Lista de compra') && strips87.drvEnv.bot.includes('Se pagará · Lleva $200 para recogerlo'), strips87Err || JSON.stringify(strips87 && strips87.drvEnv.bot.slice(0, 400)));
+  check('v1.4.87: evaluado — fase 1 del pasajero NO cambia (tarjeta del chofer + botón ancho de chat; la tarjeta se oculta solo por CSS al abrir el chat)', !!strips87 && strips87.paxP1.bot.includes('Josué Eduardo') && strips87.paxP1.bot.includes('Chat con el conductor') && strips87.paxP1.top.includes('El conductor está comprando tu encargo'), strips87Err || JSON.stringify(strips87 && { top: strips87.paxP1.top.slice(0, 200), bot: strips87.paxP1.bot.slice(0, 200) }));
+  // --- Evaluado: la hoja de chat real (abrir → cerrar, pasajero y chofer) ---
+  let chat87 = null, chat87Err = '';
+  try {
+    const chatSrc87 = html.slice(html.indexOf('let chatOpen = false, chatTimer = null'), html.indexOf('/* GPS del chofer a nivel de app'));
+    const mkEl87 = () => {
+      const cls = new Set();
+      const el = {
+        classList: { add(c){ cls.add(c); }, remove(c){ cls.delete(c); }, contains(c){ return cls.has(c); }, toggle(c, f){ if(f===undefined){ if(cls.has(c)) cls.delete(c); else cls.add(c); } else if(f) cls.add(c); else cls.delete(c); } },
+        style: {}, innerHTML: '', textContent: '', value: '',
+        focus(){}, click(){}, insertAdjacentHTML(){}, querySelector(){ return null; },
+        handlers: {},
+        addEventListener(ev, fn){ el.handlers[ev] = fn; },
+        scrollTop: 0, scrollHeight: 0,
+        _cls(){ return [...cls]; }
+      };
+      return el;
+    };
+    const dlg87 = mkEl87(); dlg87.classList.add('hidden');
+    const box87 = mkEl87();
+    const msgs87 = mkEl87();
+    const lb87 = mkEl87();
+    const els87 = { 'dialog': dlg87, 'dialog-box': box87, 'chat-msgs': msgs87, 'live-bottom': lb87 };
+    const $87 = sel => ({ '#dialog': dlg87, '#dialog-box': box87 }[sel] || mkEl87());
+    const doc87 = { getElementById: id => els87[id] || null, createElement: () => mkEl87() };
+    const api87 = async () => ({ messages: [] });
+    const f87 = new Function('$', 'document', 'api', 'toast', 'store', 'esc', 'setInterval', 'clearInterval',
+      'let liveAsDriver = false;\nlet liveReq = null;\nfunction openDialog(html){ $(\'#dialog-box\').innerHTML = html; $(\'#dialog\').classList.remove(\'hidden\'); }\nfunction closeDialog(){ $(\'#dialog\').classList.add(\'hidden\'); }\n' + chatSrc87
+      + '\nreturn { open: openChatSheet, close: chatCloseSheet, sheet: chatSheetHtml, msg: chatMsgHtml, swipeStart: chatSwipeStart, swipeEnd: chatSwipeEnd, isOpen(){ return chatOpen; }, setReq(r, asDriver){ liveReq = r; liveAsDriver = asDriver; } };');
+    const h87 = f87($87, doc87, api87, () => {}, { token: 't' }, s => String(s == null ? '' : s), () => 99, () => {});
+    const paxReq87 = { id: 1, status: 'aceptado', kind: 'mandado', driver_name: 'Josué Eduardo', driver_photo: null, driver_phone: '9614868605', passenger_name: 'Pax', passenger_photo: null };
+    const drvReq87 = { id: 2, status: 'aceptado', kind: 'mandado', driver_name: 'Josué Eduardo', driver_photo: null, driver_phone: '9614868605', passenger_name: 'Ana', passenger_photo: null };
+    h87.setReq(paxReq87, false);
+    await h87.open();
+    const paxOpen87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden'), sheet: dlg87.classList.contains('chat-sheet'), lb: lb87.classList.contains('chat-open'), html: box87.innerHTML };
+    if(dlg87.handlers.click) dlg87.handlers.click({ target: box87 });
+    const paxBackdropInside87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden') };
+    if(dlg87.handlers.click) dlg87.handlers.click({ target: dlg87 });
+    const paxBackdrop87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden'), sheet: dlg87.classList.contains('chat-sheet'), lb: lb87.classList.contains('chat-open') };
+    await h87.open();
+    const paxReopen87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden') };
+    h87.close();
+    const paxClosed87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden'), sheet: dlg87.classList.contains('chat-sheet'), lb: lb87.classList.contains('chat-open') };
+    h87.setReq(drvReq87, true);
+    await h87.open();
+    const drvOpen87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden'), lb: lb87.classList.contains('chat-open'), html: box87.innerHTML };
+    h87.close();
+    h87.setReq(paxReq87, false);
+    await h87.open();
+    h87.swipeStart({ touches: [{ clientY: 100 }] });
+    h87.swipeEnd({ changedTouches: [{ clientY: 130 }] });
+    const swipeSmall87 = { isOpen: h87.isOpen() };
+    h87.swipeStart({ touches: [{ clientY: 100 }] });
+    h87.swipeEnd({ changedTouches: [{ clientY: 200 }] });
+    const swipeBig87 = { isOpen: h87.isOpen(), dlgHidden: dlg87.classList.contains('hidden') };
+    h87.close();
+    const mine87 = h87.msg({ sender_role: 'pasajero', kind: 'texto', text: 'Hola, ¿ya compraste?', created_at: '2026-11-26 18:00:00' });
+    const theirs87 = h87.msg({ sender_role: 'chofer', kind: 'texto', text: 'Ya voy', created_at: '2026-11-26 18:01:00' });
+    chat87 = { paxOpen87, paxBackdropInside87, paxBackdrop87, paxReopen87, paxClosed87, drvOpen87, swipeSmall87, swipeBig87, mine87, theirs87 };
+  } catch(e){ chat87Err = String(e && e.message || e); }
+  check('v1.4.87: evaluado — al abrir el chat del pasajero la hoja aparece (chat-sheet) y la tarjeta del conductor se oculta (chat-open)', !!chat87 && chat87.paxOpen87.isOpen && !chat87.paxOpen87.dlgHidden && chat87.paxOpen87.sheet && chat87.paxOpen87.lb, chat87Err || JSON.stringify(chat87 && chat87.paxOpen87));
+  check('v1.4.87: evaluado — la hoja del pasajero lleva foto + "Josué Eduardo" + "En línea" + X grande + cámara + envío redondo verde + foto (cámara/galería)', !!chat87 && chat87.paxOpen87.html.includes('chathead-photo') && chat87.paxOpen87.html.includes('Josué Eduardo') && chat87.paxOpen87.html.includes('En línea') && chat87.paxOpen87.html.includes('class="chatx"') && chat87.paxOpen87.html.includes('class="chatcam"') && chat87.paxOpen87.html.includes('class="chatsend"') && chat87.paxOpen87.html.includes('Escribe un mensaje…') && chat87.paxOpen87.html.includes('chat-cam') && chat87.paxOpen87.html.includes('chat-gal'), chat87Err || (chat87 && chat87.paxOpen87.html.slice(0, 300)));
+  check('v1.4.87: evaluado — tocar DENTRO de la hoja no la cierra; tocar el fondo oscuro SÍ la cierra (y la tarjeta vuelve)', !!chat87 && chat87.paxBackdropInside87.isOpen && !chat87.paxBackdropInside87.dlgHidden && !chat87.paxBackdrop87.isOpen && chat87.paxBackdrop87.dlgHidden && !chat87.paxBackdrop87.sheet && !chat87.paxBackdrop87.lb, chat87Err || JSON.stringify(chat87 && { inside: chat87.paxBackdropInside87, back: chat87.paxBackdrop87 }));
+  check('v1.4.87: evaluado — la X (chatCloseSheet) cierra la hoja y la tarjeta del conductor vuelve', !!chat87 && chat87.paxReopen87.isOpen && !chat87.paxReopen87.dlgHidden && !chat87.paxClosed87.isOpen && chat87.paxClosed87.dlgHidden && !chat87.paxClosed87.sheet && !chat87.paxClosed87.lb, chat87Err || JSON.stringify(chat87 && { re: chat87.paxReopen87, cl: chat87.paxClosed87 }));
+  check('v1.4.87: evaluado — la hoja del chofer lleva el nombre del pasajero y foto también, SIN ocultar nada (la tarjeta que se oculta es solo la del pasajero)', !!chat87 && chat87.drvOpen87.isOpen && !chat87.drvOpen87.dlgHidden && !chat87.drvOpen87.lb && chat87.drvOpen87.html.includes('Ana') && chat87.drvOpen87.html.includes('chat-cam') && chat87.drvOpen87.html.includes('class="chatsend"'), chat87Err || JSON.stringify(chat87 && chat87.drvOpen87));
+  check('v1.4.87: evaluado — deslizar hacia abajo POCO no cierra; deslizar MUCHO (>60px) sí cierra el chat', !!chat87 && chat87.swipeSmall87.isOpen && !chat87.swipeBig87.isOpen && chat87.swipeBig87.dlgHidden, chat87Err || JSON.stringify(chat87 && { small: chat87.swipeSmall87, big: chat87.swipeBig87 }));
+  check('v1.4.87: evaluado — burbujas estilo WhatsApp: la mía verde a la derecha y la del otro gris a la izquierda, solo con la hora', !!chat87 && chat87.mine87.includes('chatmsg mine') && chat87.mine87.includes('Hola, ¿ya compraste?') && chat87.mine87.includes('chattime') && !chat87.mine87.includes('class="who"') && chat87.theirs87.includes('chatmsg theirs') && chat87.theirs87.includes('Ya voy') && chat87.theirs87.includes('chattime'), chat87Err || JSON.stringify(chat87 && { mine: chat87.mine87, theirs: chat87.theirs87 }));
 
   console.log('== Listados ==');
   const all = await api('/api/requests');
