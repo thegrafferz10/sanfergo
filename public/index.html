@@ -695,7 +695,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.89'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.90'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -5335,10 +5335,10 @@ function renderMandadoEnviar(){
   } else if(md.step===3){
     page.innerHTML = backPill('Regresar', "mdBack(2)")
       + '<h2>¿Qué hay que entregar?</h2><p class="muted mt">Paso 3 de 4 · Cuéntale al conductor qué lleva.</p>'
-      + '<label class="mt">¿Qué hay que recoger o entregar?</label><textarea id="md-desc" rows="3" placeholder="Ej. llevar un paquete a mi hermana">'+esc(md.description||'')+'</textarea>'
+      + '<label class="mt">¿Qué hay que recoger o entregar?</label><textarea id="md-desc" rows="3" placeholder="Ej. llevar un paquete a mi hermana" oninput="md.description=this.value">'+esc(md.description||'')+'</textarea>'
       + '<div class="err hidden" id="md-err4">Cuéntanos qué hay que recoger o entregar.</div>'
       + '<div style="font-weight:700;margin-top:10px">¿Cómo se paga el pedido?</div>'
-      + '<div class="btnrow" style="margin-top:8px"><button type="button" class="pay-opt '+(md.orderPay==='pagado'?'sel':'')+'" onclick="md.orderPay=\'pagado\';md.orderAmount=\'\';renderMandados()">Pedido ya pagado</button><button type="button" class="pay-opt '+(md.orderPay==='por_pagar'?'sel':'')+'" onclick="md.orderPay=\'por_pagar\';renderMandados()">Se pagará el pedido</button></div>'
+      + '<div class="btnrow" style="margin-top:8px;flex-direction:column"><button type="button" class="pay-opt '+(md.orderPay==='por_pagar'?'sel':'')+'" onclick="md.orderPay=\'por_pagar\';renderMandados()">Se pagará el pedido</button><button type="button" class="pay-opt '+(md.orderPay==='pagado'?'sel':'')+'" onclick="md.orderPay=\'pagado\';md.orderAmount=\'\';renderMandados()">Pedido ya pagado</button></div>'
       + (md.orderPay==='por_pagar' ? '<label class="mt">Cantidad que el chofer necesita llevar para recoger el mandado</label><input id="md-order-amount" inputmode="decimal" placeholder="Ej. 150" value="'+esc(md.orderAmount||'')+'" oninput="md.orderAmount=this.value"><p class="muted mt">Es el dinero que el chofer paga al recoger tu pedido; se lo pagas cuando te lo entrega.</p>' : '')
       + '<div class="err hidden" id="md-err3b">Elige cómo se paga el pedido.</div>'
       + '<button class="btn" onclick="mdNextEnviar3()">Continuar</button>';
