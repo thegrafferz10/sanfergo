@@ -695,7 +695,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.87'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.88'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -4213,7 +4213,10 @@ function chatMyRole(){ return liveAsDriver ? 'chofer' : 'pasajero'; }
    (openChatSheet) y lleva el punto rojo si hay mensajes sin leer. */
 function chatWideBtnHtml(){
   const label = liveAsDriver ? 'Chat con el pasajero' : 'Chat con el conductor';
-  return '<button class="chatwide" id="live-chat-btn-bottom" onclick="openChatSheet()">💬 '+label+(chatUnread?'<span class="dot"></span>':'')+'</button>';
+  // v1.4.88: sin manejador en línea aquí — el tap lo atiende la delegación en
+  // #live-bottom (la columna se repinta cada 2 s y el nodo nuevo se
+  // tragaba el primer toque).
+  return '<button class="chatwide" id="live-chat-btn-bottom">💬 '+label+(chatUnread?'<span class="dot"></span>':'')+'</button>';
 }
 function chatShowBtn(){
   const b = document.getElementById('live-chat-btn');
@@ -4248,7 +4251,7 @@ async function chatSeed(){
   // que el punto rojo solo avise de los que lleguen después.
   if(!liveReq) return;
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0');
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&token=' + encodeURIComponent(store.token));
     chatLastId = (j.messages||[]).reduce((m,x)=>Math.max(m,x.id), 0);
   } catch(e){}
 }
@@ -4282,7 +4285,7 @@ async function chatFetch(){
   // Si el diálogo se cerró por otro lado, la hoja ya no está abierta.
   if(chatOpen && document.getElementById('dialog').classList.contains('hidden')) chatCloseSheet(true);
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId);
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id='+chatLastId+'&token=' + encodeURIComponent(store.token));
     const msgs = j.messages||[];
     if(!msgs.length) return;
     chatLastId = Math.max(chatLastId, ...msgs.map(m=>m.id));
@@ -4330,7 +4333,7 @@ async function openChatSheet(){
   if(liveReq.kind==='mandado' && !liveAsDriver){ const lb = document.getElementById('live-bottom'); if(lb) lb.classList.add('chat-open'); }
   openDialog(chatSheetHtml());
   try {
-    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0');
+    const j = await api('/api/chat?request_id='+liveReq.id+'&after_id=0&token=' + encodeURIComponent(store.token));
     chatList = j.messages||[];
     chatLastId = chatList.length ? Math.max(...chatList.map(m=>m.id)) : 0;
   } catch(e){}
@@ -4352,6 +4355,12 @@ function chatCloseSheet(silent){
 /* v1.4.87: tocar el fondo oscuro fuera de la hoja también la cierra
    (solo cuando el chat está abierto; los demás diálogos no se tocan). */
 (function(){ const d = document.getElementById('dialog'); if(d) d.addEventListener('click', function(e){ if(e.target === d && chatOpen) chatCloseSheet(); }); })();
+/* v1.4.88: el botón ancho de chat vive en #live-bottom, que renderLiveStrips
+   repinta cada 2 s: el tap que cae justo antes del repintado se tragaba
+   porque el nodo bajo el dedo desaparecía y el primer toque no abría nada.
+   La delegación en el contenedor (que nunca se recrea) abre la hoja al
+   primer toque, aunque el botón sea nuevo. */
+(function(){ const b = document.getElementById('live-bottom'); if(b) b.addEventListener('click', function(e){ const t = e.target && e.target.closest ? e.target.closest('.chatwide') : null; if(t) openChatSheet(); }); })();
 let chatSwipeY = null;
 function chatSwipeStart(e){ const t = e.touches && e.touches[0]; if(t) chatSwipeY = t.clientY; }
 function chatSwipeEnd(e){
@@ -4365,7 +4374,11 @@ async function chatSend(text, photo){
   if(chatSending || !liveReq) return;
   chatSending = true;
   try {
-    const j = await api('/api/chat/send', { token: store.token, request_id: liveReq.id, text: text||'', photo: photo||null });
+    // v1.4.88: el rol viene de la VISTA que manda (liveAsDriver), no solo de
+    // la cuenta: con la misma cuenta en los dos lados el rol de la cuenta
+    // salía al revés en la vista del pasajero (el 'Hola' del pasajero se
+    // veía gris, como del chofer).
+    const j = await api('/api/chat/send', { token: store.token, request_id: liveReq.id, text: text||'', photo: photo||null, role: liveAsDriver ? 'chofer' : 'pasajero' });
     chatList.push(j.message);
     chatLastId = Math.max(chatLastId, j.message.id);
     chatRenderList(chatList);
