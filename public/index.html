@@ -706,7 +706,7 @@ textarea{font-family:inherit;font-size:16px;width:100%;padding:12px;border:1px s
 <script src="maplibre-gl.js"></script>
 <script>
 /* ===== SanFerGo público — lógica del cliente (estado 2026-11-22, v1.4.13) ===== */
-const APP_VERSION = '1.4.96'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
+const APP_VERSION = '1.4.97'; // única fuente de la versión en el cliente: el pie de inicio la muestra y /api/health la confirma
 const API = '';
 const $ = s => document.querySelector(s);
 const SF = { lat: 16.87105, lng: -93.20664 }; // centro del mapa (app real)
@@ -3567,7 +3567,9 @@ function liveRecenter(){
   const c = liveAsDriver
     ? (liveDriverMarker ? liveDriverMarker.getLngLat() : null)
     : (liveReq.driver_lat ? { lng: liveReq.driver_lng, lat: liveReq.driver_lat } : { lng: liveReq.origin_lng, lat: liveReq.origin_lat });
-  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: 17, padding: liveFollowPadding(), duration: 500 });
+  // v1.4.97: en Quiero el recentrado va a 16, no a 17 (mismo tope que el
+  // zoom de proximidad, para que se vean las calles).
+  if(c) liveMap.easeTo({ center: [c.lng, c.lat], zoom: isQuieroMandado(liveReq) ? 16 : 17, padding: liveFollowPadding(), duration: 500 });
 }
 function liveResetNorth(){ if(liveMap) liveMap.easeTo({ bearing: 0, duration: 400 }); }
 /* heading-up del viaje en vivo: solo calcula el rumbo suavizado y lo
@@ -4149,6 +4151,10 @@ function liveApplyDriverPos(lat, lng, prevLat, prevLng){
   // que el chofer: destino en viaje, recogida antes de empezar.
   const tgtZoom = liveHeadingToDest(liveReq) ? { lat: liveReq.dest_lat, lng: liveReq.dest_lng } : { lat: liveReq.origin_lat, lng: liveReq.origin_lng };
   proxZoom = liveTargetZoom(havKm(lat, lng, tgtZoom.lat, tgtZoom.lng) * 1000);
+  // v1.4.97: en Quiero el zoom de proximidad no pasa de 16 — la entrega
+  // es un salto corto y a 17-18 solo se ve una cuadra; a 16 se ven bien
+  // las calles por donde va pasando. Enviar y viajes sin cambio.
+  if(proxZoom!=null && isQuieroMandado(liveReq)) proxZoom = Math.min(proxZoom, 16);
   if(liveFollow){
     const opts = { center: [ll.lng, ll.lat], zoom: liveMap.getZoom(), padding: liveFollowPadding(), duration: 600 };
     if(liveBearing!=null) opts.bearing = liveBearing;
@@ -5489,12 +5495,12 @@ function renderMandadoEnviar(){
       + '<div class="err hidden" id="md-err1">Activa tu ubicación para seguir: la recogida siempre es donde estás tú. Toca «Usar mi ubicación actual» y acepta el permiso.</div>'
       + '<button class="btn" onclick="if(!md.myLoc){document.getElementById(\'md-err1\').classList.remove(\'hidden\');return;}mdBack(2)">Continuar</button>';
   } else if(md.step===2){
-    const valid = (md.recipient||'').replace(/\D/g,'').length===10;
+    const valid = mdNormPhone(md.recipient).length===10;
     page.innerHTML = backPill('Regresar', "mdBack(1)")
       + '<h2>¿Dónde se entrega?</h2><p class="muted mt">Paso 2 de 4 · El lugar a donde va tu mandado.</p>'
       + (md.dest ? '<p class="muted mt">📍 Punto marcado: '+md.dest.lat.toFixed(5)+', '+md.dest.lng.toFixed(5)+(md.destZone ? ' · cerca de '+esc(md.destZone) : '')+'</p>' : '')
       + '<label class="mt">Nombre de quién recibe</label><input id="md-recipient-name" placeholder="Ej. María López" value="'+esc(md.recipientName||'')+'" oninput="md.recipientName=this.value">'
-      + '<label class="mt">WhatsApp de quien recibe</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=this.value;mdToggleAskBtn()">'
+      + '<label class="mt">WhatsApp de quien recibe</label><input id="md-recipient" inputmode="numeric" placeholder="Ej. 961 000 0000" value="'+esc(md.recipient||'')+'" oninput="md.recipient=mdNormPhone(this.value);this.value=md.recipient;mdToggleAskBtn()">'
       + '<div id="md-ask-btn" style="display:'+(valid?'block':'none')+'"><button class="btn" style="background:#25d366;color:#fff" onclick="mdAskLocation()">Pedir ubicación por WhatsApp</button></div>'
       + '<div id="md-ask-hint" style="display:'+(valid?'none':'block')+'"><p class="muted mt">Escribe su número para pedirle su ubicación por WhatsApp.</p></div>'
       + '<div class="dashbox" id="md-wa-box" style="display:'+(valid?'block':'none')+'"><b>'+(md.waDest ? '✓ Punto de entrega seleccionado' : '¿Ya te mandaron la ubicación por WhatsApp?')+'</b>'
@@ -5526,6 +5532,11 @@ function renderMandadoEnviar(){
     setTimeout(()=>drawMdMap(), 60);
   }
 }
+// v1.4.97: el número que se copia de WhatsApp viene con +52 (12
+// dígitos) y el campo exige 10: normaliza a 10 dígitos — quita todo lo
+// que no sea dígito y, si sobran, se queda con los últimos 10 (eso
+// quita el 52 y el viejo "52 1" de móvil).
+function mdNormPhone(v){ const d = String(v||'').replace(/\D/g,''); return d.length>10 ? d.slice(-10) : d; }
 function mdNextEnviar2(){
   // Paso 2 de Enviar: nombre + WhatsApp (10 dígitos) + punto de WhatsApp,
   // los tres obligatorios para seguir.
@@ -5533,7 +5544,7 @@ function mdNextEnviar2(){
   if(err) err.classList.add('hidden');
   md.recipientName = (md.recipientName||'').trim();
   if(!md.recipientName){ if(err){ err.textContent = 'Escribe el nombre de quién recibe el mandado.'; err.classList.remove('hidden'); } return; }
-  if((md.recipient||'').replace(/\D/g,'').length!==10){ if(err){ err.textContent = 'Escribe el WhatsApp completo de quien recibe: 10 dígitos.'; err.classList.remove('hidden'); } return; }
+  if(mdNormPhone(md.recipient).length!==10){ if(err){ err.textContent = 'Escribe el WhatsApp completo de quien recibe: 10 dígitos.'; err.classList.remove('hidden'); } return; }
   if(!md.dest||md.dest.lat==null){ if(err){ err.textContent = 'Pega la ubicación de WhatsApp y marca el punto de entrega.'; err.classList.remove('hidden'); } return; }
   mdBack(3);
 }
@@ -5554,14 +5565,14 @@ function mdNextEnviar3(){
 }
 function mdToggleAskBtn(){
   const v = ($('#md-recipient')||{}).value || md.recipient || '';
-  const valid = v.replace(/\D/g,'').length===10;
+  const valid = mdNormPhone(v).length===10;
   const b = document.getElementById('md-ask-btn'), h = document.getElementById('md-ask-hint');
   if(b) b.style.display = valid ? 'block' : 'none';
   if(h) h.style.display = valid ? 'none' : 'block';
   const w = document.getElementById('md-wa-box'); if(w) w.style.display = valid ? 'block' : 'none';
 }
 function mdAskLocation(){
-  const phone = (md.recipient||'').replace(/\D/g,'');
+  const phone = mdNormPhone(md.recipient);
   if(phone.length!==10) return toast('Escribe el número completo de quien recibe.');
   const msg = 'Hola, buen día. Soy de SanFerGo y te voy a entregar tu pedido. ¿Me podrías compartir tu ubicación, por favor, para poder entregártelo? ¡Muchas gracias!';
   const waUrl = 'https://wa.me/52'+phone+'?text='+encodeURIComponent(msg);
@@ -5676,7 +5687,7 @@ async function publishMandado(){
         dest_zone: dest.zone, dest_detail: (dest.label||dest.zone) + (md.destRef ? ' · '+md.destRef : ''), dest_lat: dest.lat, dest_lng: dest.lng,
         distance_km: md.km, eta_minutes: md.eta, price, payment_method: pay, paymentMethod: pay,
         vehicle: md.vehicle||'mototaxi',
-        description: md.description, recipient_phone: md.recipient,
+        description: md.description, recipient_phone: mdNormPhone(md.recipient),
         recipient_name: md.recipientName, order_payment: md.orderPay,
         order_amount: md.orderPay==='por_pagar' ? Number(md.orderAmount)||0 : 0 };
     }
