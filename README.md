@@ -1,9 +1,14 @@
-# SanFerGo — versión pública (v1.4.92)
+# SanFerGo — versión pública (v1.4.93)
 
 App real de SanFerGo para San Fernando, Chiapas: viajes en mototaxi y
 mandados en moto/mototaxi, con precio puesto por el pasajero y regateo en
 los dos sentidos. Un solo enlace público, datos compartidos en el servidor
 (las solicitudes de los pasajeros les llegan a los choferes de verdad).
+
+## v1.4.93 (2026-11-27) — Vista previa de WhatsApp con el logo nuevo y chico (mockup aprobado "Sí, así queda")
+
+- Al compartir sanfernandogo.com por WhatsApp salía el logo VIEJO (el pin ámbar) y ENORME: la página no tenía ninguna etiqueta og: y WhatsApp se agarraba del ícono viejo (icon.png, 1024×1024). Ahora el `<head>` lleva og:title y og:description (el mismo texto que WhatsApp ya mostraba), og:image apuntando a `public/og-image.jpg` (1200×630, fondo verde oscuro #0A6538, el logo nuevo del círculo verde chico en el centro), og:url, og:type y `twitter:card` summary_large_image. La imagen ancha hace que la tarjeta de la vista previa sea una franja corta en vez de ocupar media pantalla. El favicon (icon.png) NO se tocó: sigue el logo viejo, fuera de alcance. Límite honesto: WhatsApp guarda la vista previa en caché, así que en los chats viejos puede seguirse viendo el logo viejo un rato; los mensajes nuevos ya muestran el nuevo.
+- Pruebas: suite completa contra BD limpia: **1497 OK, 0 FAIL** (1494 de antes + 3 nuevas de la 1.4.93: 3 estáticas — og:title/og:description, og:image/og:url/og:type/twitter:card y og-image.jpg 1200×630; checks actualizados: 8 de versión a 1.4.93).
 
 ## v1.4.92 (2026-11-27) — 4 detalles de la prueba en el teléfono (el usuario dijo que todo lo demás estaba perfecto)
 
